@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flow Studio - Test Sandbox</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'fade-out': 'fadeOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'scale-in': 'scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+            'scale-out': 'scaleOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'toast-in': 'toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'toast-out': 'toastOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'progress': 'progress linear forwards'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style type="text/css">
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+      }
+
+      to {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+      }
+    }
+
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+      }
+
+      to {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.96) translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes scaleOut {
+      from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+
+      to {
+        opacity: 0;
+        transform: scale(0.98) translateY(2px);
+      }
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes toastOut {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+      }
+    }
+
+    /* Minimal Shadows */
+    .shadow-minimal-sm {
+      box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05), 0 1px 3px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    .shadow-minimal {
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.06), 0 1px 3px -1px rgba(0, 0, 0, 0.02);
+    }
+
+    .shadow-minimal-lg {
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 1px 5px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Double Bezel Card */
+    .double-bezel {
+      padding: 6px;
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      border-radius: 24px;
+    }
+
+    .double-bezel-inner {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+    }
+  </style>
+</head>
+
+<body class="bg-[#fafafa] text-slate-800 min-h-screen flex flex-col antialiased">
+
+  <!-- Hot Reload Client Integration -->
+  <script>
+      (function () {
+        const eventSource = new EventSource('http://localhost:35730/events');
+        eventSource.onmessage = function (event) {
+          if (event.data === 'reload') {
+            console.log('File changed. Reloading page...');
+            window.location.reload();
+          }
+        };
+      })();
+  </script>
+
+  <!-- Sandbox Header -->
+  <header data-line="113" data-component="HeaderBanner"
+    class="h-16 border-b border-slate-200/80 bg-white px-8 flex items-center justify-between z-10 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+        <i data-lucide="layers" class="size-4"></i>
+      </div>
+      <div>
+        <h1 class="text-xs font-black tracking-widest uppercase">Flow Studio</h1>
+        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Design &amp; Sandbox Environment</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2.5">
+      <span
+        class="text-[9px] font-black text-slate-400 uppercase tracking-widest border border-slate-200 px-2.5 py-1 rounded-md bg-slate-50 font-mono">
+        v2.1.0-alpha
+      </span>
+    </div>
+  </header>
+
+  <!-- Shell Layout -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside data-line="135" data-component="SidebarNav"
+      class="w-[260px] border-r border-slate-200/80 bg-white flex flex-col p-4 shrink-0">
+      <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 px-3 mb-3">Testing Elements</p>
+      <nav class="flex flex-col gap-1">
+        <button id="nav-dialogs" onclick="switchPage('dialogs')"
+          class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200/40 hover:bg-slate-50 transition-all select-none">
+          <i data-lucide="bell" class="size-3.5"></i> Custom Dialogs &amp; Toasts
+        </button>
+
+        <button id="nav-avatars" onclick="switchPage('avatars')"
+          class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all select-none">
+          <i data-lucide="user" class="size-3.5"></i> Custom Empty Avatars
+        </button>
+
+        <button id="nav-inputs" onclick="switchPage('inputs')"
+          class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all select-none">
+          <i data-lucide="sliders" class="size-3.5"></i> Buttons &amp; Form Fields
+        </button>
+
+        <button id="nav-grids" onclick="switchPage('grids')"
+          class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all select-none">
+          <i data-lucide="table" class="size-3.5"></i> Custom Sort &amp; Filters
+        </button>
+      </nav>
+
+      <div
+        class="mt-auto p-3 bg-slate-50 rounded-2xl border border-slate-200/50 text-[10px] text-slate-400 leading-relaxed font-bold">
+        <p class="text-slate-600 font-extrabold uppercase mb-1">Minimalism Rules</p>
+        Clean solids. Hairline borders. Subtle scales. Zero flash. Fits the Flow Studio aesthetic.
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+
+      <!-- ================= PAGE 1: DIALOGS & TOASTS ================= -->
+      <section id="page-dialogs" data-line="165" data-component="DialogsPage" class="flex flex-col gap-8 max-w-5xl">
+        <div class="flex items-start justify-between">
+          <div>
+            <h2 class="text-lg font-black text-slate-900 tracking-tight">Dialogs &amp; Toasts</h2>
+            <p class="text-xs text-slate-400 mt-1 font-bold uppercase tracking-wider">Replacing native browser
+              notifications &amp; confirm modals</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+          <!-- Column 1: Control Panel -->
+          <div class="flex flex-col gap-6">
+
+            <!-- Toast triggers -->
+            <div data-line="179" data-component="ToastTriggerCard"
+              class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-minimal-sm">
+              <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Toast Notifications</h3>
+              <div class="grid grid-cols-2 gap-3">
+                <button onclick="triggerToast('success')"
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  <span class="size-1.5 rounded-full bg-emerald-500"></span> Success Toast
+                </button>
+                <button onclick="triggerToast('error')"
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  <span class="size-1.5 rounded-full bg-rose-500"></span> Error Toast
+                </button>
+                <button onclick="triggerToast('info')"
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  <span class="size-1.5 rounded-full bg-blue-500"></span> Info Toast
+                </button>
+                <button onclick="triggerToast('warning')"
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  <span class="size-1.5 rounded-full bg-amber-500"></span> Warning Toast
+                </button>
+              </div>
+              <button onclick="triggerToast('sync')"
+                class="w-full mt-3 flex items-center gap-2 justify-center p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all">
+                <i data-lucide="refresh-cw" class="size-3.5"></i> Sync Process Notification
+              </button>
+            </div>
+
+            <!-- Confirmation Modal triggers -->
+            <div data-line="201" data-component="ConfirmTriggerCard"
+              class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-minimal-sm">
+              <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Confirmation Dialogs</h3>
+              <div class="flex flex-col gap-3">
+                <button onclick="triggerConfirm('standard')"
+                  class="flex items-center justify-between p-4 bg-white border border-slate-250/70 hover:border-slate-400 hover:shadow-minimal-sm rounded-xl text-left transition-all active:scale-[0.99]">
+                  <div>
+                    <h4 class="text-xs font-extrabold text-slate-900">Standard Confirmation</h4>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Prompt user for a yes/no decision</p>
+                  </div>
+                  <i data-lucide="arrow-right" class="size-4 text-slate-400"></i>
+                </button>
+
+                <button onclick="triggerConfirm('destructive')"
+                  class="flex items-center justify-between p-4 bg-white border border-slate-250/70 hover:border-slate-400 hover:shadow-minimal-sm rounded-xl text-left transition-all active:scale-[0.99]">
+                  <div>
+                    <h4 class="text-xs font-extrabold text-red-650">Destructive Warning</h4>
+                    <p class="text-[10px] text-slate-400 mt-0.5">High-risk warning modal with countdown delay</p>
+                  </div>
+                  <i data-lucide="arrow-right" class="size-4 text-slate-400"></i>
+                </button>
+
+                <button onclick="triggerConfirm('prompt')"
+                  class="flex items-center justify-between p-4 bg-white border border-slate-250/70 hover:border-slate-400 hover:shadow-minimal-sm rounded-xl text-left transition-all active:scale-[0.99]">
+                  <div>
+                    <h4 class="text-xs font-extrabold text-slate-900">Value Input Dialog</h4>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Prompt user for an input string</p>
+                  </div>
+                  <i data-lucide="arrow-right" class="size-4 text-slate-400"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Column 2: Return Console & Docs -->
+          <div class="flex flex-col gap-6">
+            <!-- Return Console -->
+            <div data-line="235" data-component="ConsoleLogCard"
+              class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-minimal-sm flex flex-col justify-between min-h-[180px]">
+              <div>
+                <h3
+                  class="text-xs font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center justify-between">
+                  <span>API Return Console</span>
+                  <button onclick="clearConsole()"
+                    class="text-[10px] text-indigo-650 hover:underline font-bold focus:outline-none">Clear</button>
+                </h3>
+                <div id="console-logs"
+                  class="font-mono text-[11px] text-slate-600 flex flex-col gap-1 max-h-[140px] overflow-y-auto pr-2 custom-scrollbar">
+                  <span class="text-slate-400">// Trigger prompts to view their exact return values in real-time.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Docs -->
+            <div data-line="248" data-component="CodeSnippetCard"
+              class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-minimal-sm text-zinc-350">
+              <h3 class="text-xs font-black uppercase tracking-widest text-zinc-550 mb-3">Minimal Code API</h3>
+              <p class="text-[11px] leading-relaxed mb-4">
+                Designed to run asynchronously and return native JavaScript values so you don't block the thread.
+              </p>
+              <pre
+                class="bg-black/40 text-[10px] font-mono p-4 rounded-xl text-indigo-300 border border-zinc-800 overflow-x-auto"><code>// 1. Toast Notification
+Toast.success('Saved', 'Template successfully loaded.');
+
+// 2. Destructive Confirmation Modal
+const confirm = await CustomConfirm.danger(
+  'Delete Lead?',
+  'This clears all billing details.'
+);
+if (confirm) {
+  // Execute delete logic...
+}</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= PAGE 2: AVATARS SHOWCASE ================= -->
+      <section id="page-avatars" data-line="271" data-component="AvatarsPage"
+        class="hidden flex flex-col gap-8 max-w-5xl">
+        <div>
+          <h2 class="text-lg font-black text-slate-900 tracking-tight">Custom Empty Avatars</h2>
+          <p class="text-xs text-slate-400 mt-1 font-bold uppercase tracking-wider">Premium default placeholders for
+            profiles without pictures</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Card 1 -->
+          <div
+            class="bg-white border border-slate-200 rounded-3xl p-6 shadow-minimal-sm flex flex-col items-center text-center gap-4">
+            <img
+              src="/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_abstract_3d_1783784802880.png"
+              class="size-20 rounded-2xl object-cover border border-slate-100 shadow-sm" alt="Abstract 3D Shape" />
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-wider text-slate-900">Abstract 3D Shape</h3>
+              <p class="text-[10px] text-slate-450 mt-1">Premium 3D geometric pebble floating over soft gradient
+                background</p>
+            </div>
+            <button
+              onclick="applyAvatar('/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_abstract_3d_1783784802880.png')"
+              class="mt-2 w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all">Apply
+              as Sandbox Avatar</button>
+          </div>
+
+          <!-- Card 2 -->
+          <div
+            class="bg-white border border-slate-200 rounded-3xl p-6 shadow-minimal-sm flex flex-col items-center text-center gap-4">
+            <img
+              src="/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_glass_silhouette_1783784820007.png"
+              class="size-20 rounded-2xl object-cover border border-slate-100 shadow-sm"
+              alt="Frosted Glass Silhouette" />
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-wider text-slate-900">Frosted Silhouette</h3>
+              <p class="text-[10px] text-slate-450 mt-1">Frosted glassmorphism user icon overlaying a warm mesh gradient
+              </p>
+            </div>
+            <button
+              onclick="applyAvatar('/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_glass_silhouette_1783784820007.png')"
+              class="mt-2 w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all">Apply
+              as Sandbox Avatar</button>
+          </div>
+
+          <!-- Card 3 -->
+          <div
+            class="bg-white border border-slate-200 rounded-3xl p-6 shadow-minimal-sm flex flex-col items-center text-center gap-4">
+            <img
+              src="/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_fluid_gradient_1783784853421.png"
+              class="size-20 rounded-2xl object-cover border border-slate-100 shadow-sm" alt="Fluid Mesh Gradient" />
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-wider text-slate-900">Fluid Mesh Gradient</h3>
+              <p class="text-[10px] text-slate-450 mt-1">Vibrant dynamic color mesh, adding clean abstract color to
+                components</p>
+            </div>
+            <button
+              onclick="applyAvatar('/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_fluid_gradient_1783784853421.png')"
+              class="mt-2 w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all">Apply
+              as Sandbox Avatar</button>
+          </div>
+        </div>
+
+        <!-- Live Sandbox component mockup using the applied avatar -->
+        <div class="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-minimal-sm max-w-2xl">
+          <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Component Mockup Preview</h3>
+
+          <div class="flex items-center gap-4 p-4 border border-slate-150 rounded-2xl bg-slate-50/50">
+            <img id="mockup-avatar-img"
+              src="/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_abstract_3d_1783784802880.png"
+              class="size-12 rounded-xl object-cover shadow-sm border border-white" alt="Mockup Avatar" />
+            <div class="flex-1 min-w-0">
+              <h4 class="text-xs font-bold text-slate-900">Leslie Alexander</h4>
+              <p class="text-[10px] text-slate-450 mt-0.5">Representative at Stripe Inc.</p>
+            </div>
+            <span
+              class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-700">Active
+              Client</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 3: BUTTONS & INPUTS ================= -->
+      <section id="page-inputs" data-line="325" data-component="InputsPage"
+        class="hidden flex flex-col gap-8 max-w-5xl">
+        <div>
+          <h2 class="text-lg font-black text-slate-900 tracking-tight">Buttons &amp; Form Fields</h2>
+          <p class="text-xs text-slate-400 mt-1 font-bold uppercase tracking-wider">Premium minimal design
+            specifications for interaction fields</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+          <!-- Double Bezel Card (Doppelrand) Specification -->
+          <div class="double-bezel shadow-minimal-sm">
+            <div class="double-bezel-inner p-6 flex flex-col gap-4">
+              <div>
+                <span class="text-[9px] font-black uppercase tracking-widest text-indigo-650">Machined UI Specs</span>
+                <h3 class="text-xs font-extrabold text-slate-900 mt-1">Double Bezel Enclosure</h3>
+              </div>
+              <p class="text-[11px] text-slate-500 leading-relaxed">
+                Machined physical feel using double border lines and nested curved corners.
+              </p>
+
+              <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex flex-col gap-2">
+                <label class="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Client E-Mail
+                  Address</label>
+                <input type="text" value="l.alexander@example.com"
+                  class="px-3.5 py-2.5 border border-slate-200 rounded-lg text-xs font-medium bg-white text-slate-800 placeholder-slate-400 outline-none focus:border-slate-400 transition-colors" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons & Switches -->
+          <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-minimal-sm flex flex-col gap-6">
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Button States &amp; CTAs</h3>
+              <div class="flex flex-wrap gap-3">
+                <button
+                  class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-extrabold transition-all shadow-sm">
+                  Primary Button
+                </button>
+                <button
+                  class="px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] text-slate-700 rounded-xl text-xs font-extrabold transition-all shadow-sm">
+                  Secondary Action
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Nested Button
+                (Button-in-Button)</h3>
+              <button
+                class="group inline-flex items-center gap-5 pl-5 pr-2 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-full text-xs font-extrabold transition-all">
+                Submit Strategy
+                <span
+                  class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
+                  <i data-lucide="arrow-right" class="size-3 text-white"></i>
+                </span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= PAGE 4: TABLE SORT & FILTERS ================= -->
+      <section id="page-grids" data-line="380" data-component="GridsPage" class="hidden flex flex-col gap-8 max-w-5xl">
+        <div>
+          <h2 class="text-lg font-black text-slate-900 tracking-tight">Custom Sort &amp; Filters</h2>
+          <p class="text-xs text-slate-400 mt-1 font-bold uppercase tracking-wider">Minimal table headers and query
+            filters built for Flow Studio</p>
+        </div>
+
+        <!-- Custom Filter Controls Mockup -->
+        <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-minimal-sm flex flex-col gap-4">
+          <div class="flex items-center justify-between flex-wrap gap-4">
+            <!-- Filter Pills -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-2">Filter Email:</span>
+              <button id="filter-all" onclick="setFilter('all')"
+                class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-900 bg-slate-900 text-white transition-all select-none">
+                All Leads
+              </button>
+              <button id="filter-has" onclick="setFilter('has')"
+                class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-950 transition-all select-none">
+                With Email
+              </button>
+              <button id="filter-nohas" onclick="setFilter('nohas')"
+                class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-950 transition-all select-none">
+                Without Email
+              </button>
+            </div>
+
+            <!-- Sort Toggle Button -->
+            <button onclick="toggleSort()"
+              class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold rounded-lg text-slate-650 transition-all">
+              <i data-lucide="arrow-up-down" class="size-3.5"></i>
+              Sort: <span id="sort-order-text" class="text-slate-950">Name (A-Z)</span>
+            </button>
+          </div>
+
+          <!-- Sample Table Grid -->
+          <div class="border border-slate-200 rounded-2xl overflow-hidden mt-2 bg-white">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr
+                  class="bg-slate-50 border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-widest text-[9px] select-none">
+                  <th class="p-4">Name</th>
+                  <th class="p-4">Company</th>
+                  <th class="p-4">Email Status</th>
+                </tr>
+              </thead>
+              <tbody id="table-grid-body">
+                <!-- Dynamic Rows injected via javascript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS WRAPPER CONTAINER -->
+  <div id="toasts-container"
+    class="fixed bottom-6 right-6 flex flex-col gap-3 z-50 w-full max-w-[380px] pointer-events-none"></div>
+
+  <!-- CUSTOM CONFIRM DIALOG OVERLAY CONTAINER -->
+  <div id="confirm-overlay-container" class="fixed inset-0 z-50 pointer-events-none"></div>
+
+  <!-- JS Sandbox Engine -->
+  <script type="text/javascript">
+
+    // Page switching
+    function switchPage(pageId) {
+      const pages = ['dialogs', 'avatars', 'inputs', 'grids'];
+      pages.forEach(p => {
+        const el = document.getElementById('page-' + p);
+        const nav = document.getElementById('nav-' + p);
+        if (p === pageId) {
+          el.classList.remove('hidden');
+          nav.classList.add('bg-slate-50', 'text-slate-900', 'border-slate-200/40');
+          nav.classList.remove('text-slate-500');
+        } else {
+          el.classList.add('hidden');
+          nav.classList.remove('bg-slate-50', 'text-slate-900', 'border-slate-200/40');
+          nav.classList.add('text-slate-500');
+        }
+      });
+    }
+
+    // Avatar Selection Mockup helper
+    function applyAvatar(avatarPath) {
+      document.getElementById('mockup-avatar-img').src = avatarPath;
+      Toast.show('success', 'Avatar Configured', 'Selected empty state profile image applied successfully.');
+    }
+
+    // ----------------------------------------------------
+    // Minimal High-End Toast Notification System
+    // ----------------------------------------------------
+    const Toast = {
+      container: document.getElementById('toasts-container'),
+
+      show(type, title, message, options = {}) {
+        const id = 'toast-' + Date.now();
+        const duration = options.duration || 4000;
+
+        const toast = document.createElement('div');
+        toast.id = id;
+
+        // High-end minimalist design: crisp white, left accent border, tiny clean icon
+        toast.className = 'bg-white border border-slate-200/90 rounded-2xl shadow-minimal overflow-hidden flex flex-col w-full pointer-events-auto select-none animate-toast-in relative';
+
+        let borderAccent = '';
+        let iconHtml = '';
+
+        switch (type) {
+          case 'success':
+            borderAccent = 'border-l-2 border-l-emerald-500';
+            iconHtml = '<i data-lucide="check" class="size-4 text-emerald-500"></i>';
+            break;
+          case 'error':
+            borderAccent = 'border-l-2 border-l-rose-500';
+            iconHtml = '<i data-lucide="alert-circle" class="size-4 text-rose-500"></i>';
+            break;
+          case 'warning':
+            borderAccent = 'border-l-2 border-l-amber-500';
+            iconHtml = '<i data-lucide="alert-triangle" class="size-4 text-amber-500"></i>';
+            break;
+          case 'info':
+            borderAccent = 'border-l-2 border-l-blue-500';
+            iconHtml = '<i data-lucide="info" class="size-4 text-blue-500"></i>';
+            break;
+          case 'sync':
+            borderAccent = 'border-l-2 border-l-indigo-500';
+            iconHtml = '<i data-lucide="refresh-cw" class="size-4 text-indigo-500 animate-spin"></i>';
+            break;
+        }
+
+        toast.className += ' ' + borderAccent;
+
+        toast.innerHTML = `
+          <div class="flex items-start p-4 gap-3">
+            <div class="shrink-0 mt-0.5">${iconHtml}</div>
+            <div class="flex-1 min-w-0 pr-2">
+              <h4 class="text-xs font-extrabold text-slate-900 leading-tight">${title}</h4>
+              <p class="text-[10px] text-slate-400 mt-0.5 leading-relaxed font-semibold">${message}</p>
+              ${options.actionText ? `
+                <button id="${id}-action" class="mt-2.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none">
+                  ${options.actionText}
+                </button>
+              ` : ''}
+            </div>
+            <button onclick="Toast.dismiss('${id}')" class="shrink-0 text-slate-350 hover:text-slate-650 transition-colors p-0.5 rounded-lg focus:outline-none">
+              <i data-lucide="x" class="size-3.5"></i>
+            </button>
+          </div>
+        `;
+
+        this.container.appendChild(toast);
+        lucide.createIcons({ scope: toast });
+
+        if (options.actionText && options.onAction) {
+          document.getElementById(`${id}-action`).addEventListener('click', () => {
+            options.onAction();
+            this.dismiss(id);
+          });
+        }
+
+        // Auto Dismiss Timers
+        const timer = setTimeout(() => {
+          this.dismiss(id);
+        }, duration);
+
+        toast.dataset.timerId = timer;
+      },
+
+      dismiss(id) {
+        const toast = document.getElementById(id);
+        if (!toast) return;
+
+        if (toast.dataset.timerId) {
+          clearTimeout(parseInt(toast.dataset.timerId));
+        }
+
+        toast.classList.remove('animate-toast-in');
+        toast.classList.add('animate-toast-out');
+
+        toast.addEventListener('animationend', (e) => {
+          if (e.animationName === 'toastOut') {
+            toast.remove();
+          }
+        });
+      }
+    };
+
+    // ----------------------------------------------------
+    // Minimal High-End Promise-Based Confirm Modals
+    // ----------------------------------------------------
+    const CustomConfirm = {
+      container: document.getElementById('confirm-overlay-container'),
+
+      createDialog({ title, message, type, placeholder = '', delay = false }) {
+        return new Promise((resolve) => {
+          const originalOverflow = document.body.style.overflow;
+          document.body.style.overflow = 'hidden';
+
+          this.container.classList.remove('pointer-events-none');
+          this.container.classList.add('pointer-events-auto');
+
+          const overlay = document.createElement('div');
+          overlay.className = 'absolute inset-0 bg-slate-950/20 flex items-center justify-center p-6 animate-fade-in';
+
+          let primaryBtnClass = '';
+          let iconHtml = '';
+
+          switch (type) {
+            case 'danger':
+              primaryBtnClass = 'bg-red-600 hover:bg-red-700 text-white';
+              iconHtml = '<i data-lucide="alert-circle" class="size-5 text-red-650"></i>';
+              break;
+            case 'prompt':
+              primaryBtnClass = 'bg-slate-900 hover:bg-slate-800 text-white';
+              iconHtml = '<i data-lucide="text-cursor" class="size-5 text-slate-650"></i>';
+              break;
+            default: // Standard
+              primaryBtnClass = 'bg-slate-900 hover:bg-slate-800 text-white';
+              iconHtml = '<i data-lucide="help-circle" class="size-5 text-slate-650"></i>';
+              break;
+          }
+
+          const hasInput = type === 'prompt';
+
+          overlay.innerHTML = `
+            <div class="bg-white w-full max-w-[400px] rounded-[24px] p-6 shadow-minimal-lg animate-scale-in border border-slate-200 flex flex-col gap-5">
+              <div class="flex items-start gap-3.5">
+                <div class="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                  ${iconHtml}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="text-xs font-black text-slate-900 tracking-tight leading-snug">${title}</h3>
+                  <p class="text-[10px] text-slate-400 mt-1 font-semibold leading-relaxed">${message}</p>
+                </div>
+              </div>
+
+              ${hasInput ? `
+                <div>
+                  <input type="text" id="dialog-prompt-input" placeholder="${placeholder}" class="w-full px-3.5 py-2.5 text-xs border border-slate-250 rounded-xl bg-white text-slate-800 placeholder-slate-400 outline-none focus:border-slate-400 transition-colors font-semibold" />
+                </div>
+              ` : ''}
+
+              <div class="flex items-center justify-end gap-2.5 mt-1">
+                <button id="dialog-cancel-btn" class="px-4 py-2 border border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-500 rounded-xl text-xs font-bold transition-all outline-none">
+                  Cancel
+                </button>
+                <button id="dialog-confirm-btn" class="px-4 py-2 rounded-xl text-xs font-bold transition-all outline-none flex items-center gap-1.5 ${primaryBtnClass}">
+                  ${type === 'danger' ? 'Confirm Delete' : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          `;
+
+          this.container.appendChild(overlay);
+          lucide.createIcons({ scope: overlay });
+
+          const confirmBtn = overlay.querySelector('#dialog-confirm-btn');
+          const cancelBtn = overlay.querySelector('#dialog-cancel-btn');
+          const inputEl = overlay.querySelector('#dialog-prompt-input');
+
+          if (hasInput && inputEl) {
+            setTimeout(() => inputEl.focus(), 100);
+          } else {
+            setTimeout(() => confirmBtn.focus(), 100);
+          }
+
+          if (delay && type === 'danger') {
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            let countdown = 2;
+            confirmBtn.innerText = `Confirm (${countdown}s)`;
+
+            const timer = setInterval(() => {
+              countdown--;
+              if (countdown <= 0) {
+                clearInterval(timer);
+                confirmBtn.disabled = false;
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                confirmBtn.innerText = 'Confirm Delete';
+              } else {
+                confirmBtn.innerText = `Confirm (${countdown}s)`;
+              }
+            }, 1000);
+          }
+
+          const cleanUp = (result) => {
+            document.body.style.overflow = originalOverflow;
+            overlay.classList.remove('animate-fade-in');
+            overlay.classList.add('animate-fade-out');
+            overlay.querySelector('.animate-scale-in').classList.remove('animate-scale-in');
+            overlay.querySelector('.rounded-\\[24px\\]').classList.add('animate-scale-out');
+
+            overlay.addEventListener('animationend', (e) => {
+              if (e.animationName === 'fadeOut') {
+                overlay.remove();
+                if (this.container.children.length === 0) {
+                  this.container.classList.remove('pointer-events-auto');
+                  this.container.classList.add('pointer-events-none');
+                }
+                resolve(result);
+              }
+            });
+          };
+
+          confirmBtn.onclick = () => {
+            if (hasInput) {
+              cleanUp(inputEl.value || '');
+            } else {
+              cleanUp(true);
+            }
+          };
+
+          cancelBtn.onclick = () => {
+            cleanUp(hasInput ? null : false);
+          };
+
+          const keyHandler = (e) => {
+            if (e.key === 'Escape') {
+              window.removeEventListener('keydown', keyHandler);
+              cleanUp(hasInput ? null : false);
+            }
+            if (e.key === 'Enter' && !hasInput) {
+              window.removeEventListener('keydown', keyHandler);
+              cleanUp(true);
+            }
+            if (e.key === 'Enter' && hasInput && document.activeElement === inputEl) {
+              window.removeEventListener('keydown', keyHandler);
+              cleanUp(inputEl.value || '');
+            }
+          };
+
+          window.addEventListener('keydown', keyHandler);
+        });
+      },
+
+      standard(title, message) {
+        return this.createDialog({ title, message, type: 'standard' });
+      },
+
+      danger(title, message) {
+        return this.createDialog({ title, message, type: 'danger', delay: true });
+      },
+
+      prompt(title, message, placeholder) {
+        return this.createDialog({ title, message, type: 'prompt', placeholder });
+      }
+    };
+
+    // ----------------------------------------------------
+    // Page Demo logic
+    // ----------------------------------------------------
+    const consoleLogsEl = document.getElementById('console-logs');
+
+    function addConsoleLog(message, isInfo = false) {
+      if (consoleLogsEl.children.length === 1 && consoleLogsEl.children[0].classList.contains('text-slate-400')) {
+        consoleLogsEl.innerHTML = '';
+      }
+
+      const log = document.createElement('div');
+      log.className = `py-0.5 font-bold ${isInfo ? 'text-slate-400 font-semibold' : 'text-slate-900'}`;
+      log.innerText = `> ${message}`;
+      consoleLogsEl.appendChild(log);
+      consoleLogsEl.scrollTop = consoleLogsEl.scrollHeight;
+    }
+
+    function clearConsole() {
+      consoleLogsEl.innerHTML = '<span class="text-slate-400">// Trigger prompts to view their exact return values in real-time.</span>';
+    }
+
+    function triggerToast(type) {
+      switch (type) {
+        case 'success':
+          Toast.show('success', 'Lead Status Shifted', 'Moved "Leslie Alexander" to Active Clients.');
+          addConsoleLog('Toast triggered: success("Lead Status Shifted", "...")', true);
+          break;
+        case 'error':
+          Toast.show('error', 'Connection Interrupted', 'Database connection refused. Check network config.');
+          addConsoleLog('Toast triggered: error("Connection Interrupted", "...")', true);
+          break;
+        case 'info':
+          Toast.show('info', 'Import Complete', 'Finished mapping 12 client headers.');
+          addConsoleLog('Toast triggered: info("Import Complete", "...")', true);
+          break;
+        case 'warning':
+          Toast.show('warning', 'Unsaved Changes', 'Some adjustments require sync.');
+          addConsoleLog('Toast triggered: warning("Unsaved Changes", "...")', true);
+          break;
+        case 'sync':
+          Toast.show('sync', 'Synchronizing Directory', 'Connecting to database server...');
+          addConsoleLog('Toast triggered: sync("Synchronizing Directory", "...")', true);
+          break;
+      }
+    }
+
+    async function triggerConfirm(type) {
+      if (type === 'standard') {
+        addConsoleLog('Waiting for: CustomConfirm.standard(...)', true);
+        const result = await CustomConfirm.standard(
+          'Confirm Invoice Delivery?',
+          'Are you sure you want to email this invoice to Leslie Alexander? This logs an official record.'
+        );
+        addConsoleLog(`CustomConfirm.standard resolved to: ${result}`);
+      }
+      else if (type === 'destructive') {
+        addConsoleLog('Waiting for: CustomConfirm.danger(...)', true);
+        const result = await CustomConfirm.danger(
+          'Delete Client Account?',
+          'This will permanently delete "Leslie Alexander" and all associated details. This cannot be undone.'
+        );
+        addConsoleLog(`CustomConfirm.danger resolved to: ${result}`);
+
+        if (result) {
+          Toast.show('success', 'Record Cleared', 'Client registry has been successfully erased.');
+        }
+      }
+      else if (type === 'prompt') {
+        addConsoleLog('Waiting for: CustomConfirm.prompt(...)', true);
+        const result = await CustomConfirm.prompt(
+          'Create Custom Folder Tag',
+          'Please enter a name for the folder tag grouping these clients.',
+          'e.g. Q3 Strategic Accounts'
+        );
+
+        if (result === null) {
+          addConsoleLog('CustomConfirm.prompt resolved to: null (Cancelled)');
+        } else {
+          addConsoleLog(`CustomConfirm.prompt resolved to: "${result}"`);
+          if (result.trim()) {
+            Toast.show('success', 'Tag Created', `Folder tag "${result}" applied successfully.`);
+          }
+        }
+      }
+    }
+
+    // ----------------------------------------------------
+    // Custom Sort & Filters logic mock table
+    // ----------------------------------------------------
+    const leadsData = [
+      { name: 'Leslie Alexander', company: 'Stripe Inc.', email: 'l.alexander@example.com' },
+      { name: 'Arlene McCoy', company: 'Linear App', email: 'arlene.mccoy@linear.app' },
+      { name: 'Cody Fisher', company: 'Vercel Platform', email: '' },
+      { name: 'Esther Howard', company: 'Notion Labs', email: 'esther.howard@notion.so' },
+      { name: 'Devon Lane', company: 'Cal.com', email: '' }
+    ];
+
+    let currentFilter = 'all'; // all, has, nohas
+    let currentSort = 'asc'; // asc, desc
+
+    function renderTable() {
+      const body = document.getElementById('table-grid-body');
+
+      // 1. Filter data
+      let data = leadsData.filter(lead => {
+        if (currentFilter === 'has') return lead.email !== '';
+        if (currentFilter === 'nohas') return lead.email === '';
+        return true;
+      });
+
+      // 2. Sort data
+      data.sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        if (currentSort === 'asc') return nameA.localeCompare(nameB);
+        return nameB.localeCompare(nameA);
+      });
+
+      // 3. Render rows
+      body.innerHTML = '';
+      if (data.length === 0) {
+        body.innerHTML = `
+          <tr>
+            <td colspan="3" class="p-6 text-center text-slate-400 font-semibold italic">
+              No matching records found.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      data.forEach(lead => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-slate-100 hover:bg-slate-50/50 transition-colors';
+        row.innerHTML = `
+          <td class="p-4 font-bold text-slate-900">${lead.name}</td>
+          <td class="p-4 text-slate-450 font-semibold">${lead.company}</td>
+          <td class="p-4">
+            ${lead.email ? `
+              <span class="inline-flex items-center gap-1 text-slate-800 font-semibold">
+                <i data-lucide="mail" class="size-3.5 text-slate-400"></i> ${lead.email}
+              </span>
+            ` : `
+              <span class="inline-flex items-center gap-1 text-slate-400 font-bold italic">
+                <i data-lucide="mail-x" class="size-3.5 text-slate-300"></i> No email
+              </span>
+            `}
+          </td>
+        `;
+        body.appendChild(row);
+      });
+      lucide.createIcons({ scope: body });
+    }
+
+    function setFilter(filterType) {
+      currentFilter = filterType;
+
+      // Update pills styles
+      const filters = ['all', 'has', 'nohas'];
+      filters.forEach(f => {
+        const btn = document.getElementById('filter-' + f);
+        if (f === filterType) {
+          btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-900 bg-slate-900 text-white transition-all select-none';
+        } else {
+          btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-950 transition-all select-none';
+        }
+      });
+
+      renderTable();
+      Toast.show('info', 'Filter Applied', `Filtered by: ${filterType === 'all' ? 'All Leads' : filterType === 'has' ? 'With Email' : 'Without Email'}`);
+    }
+
+    function toggleSort() {
+      currentSort = currentSort === 'asc' ? 'desc' : 'asc';
+      document.getElementById('sort-order-text').innerText = currentSort === 'asc' ? 'Name (A-Z)' : 'Name (Z-A)';
+      renderTable();
+      Toast.show('info', 'Sort Applied', `Sorted: ${currentSort === 'asc' ? 'A-Z' : 'Z-A'}`);
+    }
+
+    // Initialize Page
+    renderTable();
+    lucide.createIcons();
+
+    // ----------------------------------------------------
+    // Click to Open Code in IDE (Alt + Shift + Click) with Hover Overlay
+    // ----------------------------------------------------
+    let inspectorOverlay = null;
+    let hoveredEl = null;
+
+    function createInspectorOverlay() {
+      if (inspectorOverlay) return;
+      inspectorOverlay = document.createElement('div');
+      inspectorOverlay.id = 'inspector-overlay';
+      inspectorOverlay.className = 'fixed pointer-events-none z-50 border border-[#10b981] bg-[#10b981]/5 transition-all duration-75 flex items-start';
+      inspectorOverlay.innerHTML = `
+        <span id="inspector-tag" class="absolute -top-6 left-0 bg-[#10b981] text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow-md tracking-wide font-sans flex items-center whitespace-nowrap">
+          Element
+        </span>
+      `;
+      document.body.appendChild(inspectorOverlay);
+    }
+
+    function removeInspectorOverlay() {
+      if (inspectorOverlay) {
+        inspectorOverlay.remove();
+        inspectorOverlay = null;
+      }
+      hoveredEl = null;
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.altKey && e.shiftKey) {
+        createInspectorOverlay();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (!e.altKey || !e.shiftKey) {
+        removeInspectorOverlay();
+      }
+    });
+
+    window.addEventListener('blur', () => {
+      removeInspectorOverlay();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!inspectorOverlay) return;
+
+      const target = e.target;
+      if (!target || target === document.documentElement || target === document.body ||
+        target.closest('#inspector-overlay') || target.closest('#toasts-container') ||
+        target.closest('#confirm-overlay-container')) {
+        return;
+      }
+
+      if (hoveredEl !== target) {
+        hoveredEl = target;
+
+        let el = hoveredEl;
+        let line = null;
+        let componentName = null;
+        while (el && el !== document.documentElement) {
+          if (!line && el.hasAttribute('data-line')) {
+            line = el.getAttribute('data-line');
+          }
+          if (!componentName && el.hasAttribute('data-component')) {
+            componentName = el.getAttribute('data-component');
+          }
+          el = el.parentElement;
+        }
+
+        const rect = hoveredEl.getBoundingClientRect();
+
+        inspectorOverlay.style.top = rect.top + 'px';
+        inspectorOverlay.style.left = rect.left + 'px';
+        inspectorOverlay.style.width = rect.width + 'px';
+        inspectorOverlay.style.height = rect.height + 'px';
+
+        const tag = document.getElementById('inspector-tag');
+        const finalCompName = componentName || hoveredEl.tagName.toLowerCase();
+        tag.innerHTML = `<span class="font-bold text-white">&lt;${finalCompName}&gt;</span><span class="text-zinc-100/80 font-mono text-[9px] ml-1.5">index.html:${line || '1'}</span>`;
+      }
+    });
+
+    window.addEventListener('click', (e) => {
+      if (e.altKey && e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let el = e.target;
+        let line = null;
+        while (el && el !== document.documentElement) {
+          if (el.hasAttribute('data-line')) {
+            line = el.getAttribute('data-line');
+            break;
+          }
+          el = el.parentElement;
+        }
+
+        if (!line) line = '1';
+
+        console.log('Requesting IDE to open file at line:', line);
+        fetch(`http://localhost:35730/open-code?line=${line}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              removeInspectorOverlay();
+              Toast.show('success', 'Editor Focused', `Opened index.html at line ${line} in Antigravity IDE.`);
+            } else {
+              Toast.show('error', 'IDE Action Failed', data.error || 'Check server console.');
+            }
+          })
+          .catch(err => {
+            Toast.show('error', 'IDE Action Failed', 'Could not communicate with hot-reload server.');
+          });
+      }
+    });
+  </script>
+</body>
+
+</html>

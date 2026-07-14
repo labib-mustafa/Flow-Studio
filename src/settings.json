@@ -1,0 +1,59 @@
+{
+  "baseProjectPath": "Documents/Flowstudio Projects",
+  "shipFolderName": "ready to ship",
+  "metadataPath": ".flowstudio/metadata",
+  "defaultProjectName": "Untitled Project",
+  "defaultAuthor": "Design Pro",
+  "displayName": "Design Pro",
+  "role": "Product Lead",
+  "email": "alex.designer@studio.com",
+  "bio": "Lead product designer obsessed with typography and grid systems. Currently building the future of design tools.",
+  "profileImage": "https://lh3.googleusercontent.com/aida-public/AB6AXuBs17dTA6S59lpL-Qr2BPvlURDNRrdRIu8rHT_y_iqOah3Pnqerajt1bCDOYQz_Labm2b5i85NR-_IgeIsCFkVNUj2p25LpOKw2VjHER_xHhhICJ0azuJ9GgeREHVkO40TwmSwojnJDxQGAHRRsDFIfdIWiDbY2Pnsr52PfTaW4OAYo-ctBmeOsX5VpMjHaPhQ9CMeUTGUNemXAu4SvmjoXc9LPiieIpV1smMxu2peP25t-2urjITOi8MtEBUVBMnVMYiR5GW-FES4",
+  "editorExperience": {
+    "darkCanvas": true,
+    "pixelSnap": true,
+    "autoSave": false
+  },
+  "defaults": {
+    "canvasSize": "hd",
+    "initialStatus": "in-review",
+    "autoAssignTeam": ["Sarah M.", "Dev Team"],
+    "typography": {
+      "headingFont": "Inter",
+      "bodyFont": "Inter",
+      "baseSize": 16
+    }
+  },
+  "dataLocation": {
+    "currentPath": "/Users/AlexDesigner/Library/Application Support/CreativeManager/Data",
+    "storageUsage": {
+      "used": 45.2,
+      "total": 500,
+      "projects": 32,
+      "cache": 13.2
+    },
+    "cloudSync": {
+      "enabled": false,
+      "frequency": "every-hour",
+      "bandwidthLimit": "unlimited"
+    }
+  },
+  "notifications": {
+    "app": {
+      "newProject": true,
+      "taskCompleted": true,
+      "newComments": true,
+      "deadlineApproaching": false
+    },
+    "email": {
+      "dailyDigest": true,
+      "productUpdates": false
+    },
+    "sounds": {
+      "soundEffects": true
+    }
+  },
+  "trashSettings": {
+    "retentionDays": 30
+  }
+}

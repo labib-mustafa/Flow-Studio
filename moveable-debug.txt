@@ -1,0 +1,43 @@
+            _a[sizeName] = "".concat(absGap, "px"),
+            _a) },
+        renderInnerGuideline({
+            direction: type,
+            classNames: [prefix(lineType), className],
+            size: "100%",
+            posValue: [0, 0],
+            sizeValue: absGap,
+            zoom: zoom,
+        }, React),
+        React.createElement("div", { className: prefix("size-value", "gap"), style: {
+                transform: "translate".concat(scaleType, "(-50%) scale(").concat(zoom, ")"),
+            } }, snapSize > 0 ? snapDistFormat(snapSize, type) : ""));
+}
+function groupByElementGuidelines(type, guidelines, targetRect, isDisplayInnerSnapDigit) {
+    var index = type === "vertical" ? 0 : 1;
+    var otherIndex = type === "vertical" ? 1 : 0;
+    var names = index ? VERTICAL_NAMES_MAP : HORIZONTAL_NAMES_MAP;
+    var targetStart = targetRect[names.start];
+    var targetEnd = targetRect[names.end];
+    return groupBy(guidelines, function (guideline) {
+--
+        "verticalGuidelines",
+        "elementGuidelines",
+        "bounds",
+        "innerBounds",
+        "snapDistFormat",
+        "maxSnapElementGuidelineDistance",
+        "maxSnapElementGapDistance",
+    ],
+    events: ["snap", "bound"],
+    css: [
+        ":host {\n--bounds-color: #d66;\n}\n.guideline {\npointer-events: none;\nz-index: 2;\n}\n.guideline.bounds {\nbackground: #d66;\nbackground: var(--bounds-color);\n}\n.guideline-group {\nposition: absolute;\ntop: 0;\nleft: 0;\n}\n.guideline-group .size-value {\nposition: absolute;\ncolor: #f55;\nfont-size: 12px;\nfont-size: calc(12px * var(--zoom));\nfont-weight: bold;\n}\n.guideline-group.horizontal .size-value {\ntransform-origin: 50% 100%;\ntransform: translateX(-50%);\nleft: 50%;\nbottom: 5px;\nbottom: calc(2px + 3px * var(--zoom));\n}\n.guideline-group.vertical .size-value {\ntransform-origin: 0% 50%;\ntop: 50%;\ntransform: translateY(-50%);\nleft: 5px;\nleft: calc(2px + 3px * var(--zoom));\n}\n.guideline.gap {\nbackground: #f55;\n}\n.size-value.gap {\ncolor: #f55;\n}\n",
+    ],
+    render: function (moveable, React) {
+        var state = moveable.state;
+        var targetTop = state.top, targetLeft = state.left, pos1 = state.pos1, pos2 = state.pos2, pos3 = state.pos3, pos4 = state.pos4, snapRenderInfo = state.snapRenderInfo;
+        var _a = moveable.props.snapRenderThreshold, snapRenderThreshold = _a === void 0 ? 1 : _a;
+        if (!snapRenderInfo || !snapRenderInfo.render || !hasGuidelines(moveable, "")) {
+            // reset store
+            watchValue(moveable, "boundMap", getInitialBounds(), function (v) { return JSON.stringify(v); });
+            watchValue(moveable, "innerBoundMap", getInitialBounds(), function (v) { return JSON.stringify(v); });
+            return [];

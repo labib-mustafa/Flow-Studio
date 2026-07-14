@@ -1,0 +1,228 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Rotunda-ExtraBold';
+  src: url('./assets/fonts/Rotunda-Extra-Bold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+}
+
+@theme {
+  --color-primary: #1978e5;
+  --color-primary-hover: #1565c0;
+  --color-background-light: #f6f7f8;
+  --color-background-dark: #111821;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1e293b;
+  --color-border-light: #e2e8f0;
+  --color-border-dark: #334155;
+
+  --font-display: "Inter", sans-serif;
+  --font-sans: "Inter", sans-serif;
+
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+
+  --color-dash-primary: #3713ec;
+  --color-dash-bg: #F8F9FA;
+  --color-dash-card-black: #1e1e1e;
+  --color-dash-card-yellow: #fedb64;
+  --color-dash-card-blue: #dbeafe;
+  --color-dash-card-green: #d1fae5;
+  --color-dash-accent-lime: #bef264;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out forwards;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+}
+
+.active-icon {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+.custom-scrollbar {
+  scrollbar-gutter: stable;
+}
+
+.selecto-selection {
+  background: transparent !important;
+  border: none !important;
+}
+
+[contenteditable] {
+  caret-color: #000000 !important;
+}
+
+/* Basic styles for the editor since @tailwindcss/typography is not installed */
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose ul ul, .prose ol ul {
+  list-style-type: circle;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.prose ul ul ul, .prose ol ul ul {
+  list-style-type: square;
+}
+
+.prose ol ol, .prose ul ol {
+  list-style-type: lower-alpha;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.prose ol ol ol, .prose ul ol ol {
+  list-style-type: lower-roman;
+}
+
+.prose li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.prose a {
+  color: #1978e5;
+  text-decoration: underline;
+}
+
+/* Compact toolbar styles for smaller screens */
+@media (max-width: 1024px) {
+  .notes-toolbar-compact {
+    gap: 0.25rem;
+  }
+  .notes-toolbar-compact .border-r {
+    padding-right: 0.25rem;
+    margin-right: 0.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .notes-toolbar-compact {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .notes-toolbar-compact select {
+    max-width: 70px;
+    font-size: 11px;
+  }
+  .notes-toolbar-compact button:not(.px-3) {
+    padding: 0.25rem;
+  }
+}
+
+#notes-editor-content,
+#notes-editor-content *,
+#notes-editor-content [contenteditable="true"],
+#notes-editor-content [contenteditable=""] {
+  cursor: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cpath%20d%3D%22M11%2C6%20L20%2C6%20L20%2C9%20L17%2C9%20L17%2C23%20L20%2C23%20L20%2C26%20L11%2C26%20L11%2C23%20L14%2C23%20L14%2C9%20L11%2C9%20Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M12%2C7%20L19%2C7%20L19%2C8%20L16%2C8%20L16%2C24%20L19%2C24%20L19%2C25%20L12%2C25%20L12%2C24%20L15%2C24%20L15%2C8%20L12%2C8%20Z%22%20fill%3D%22black%22%2F%3E%3C%2Fsvg%3E') 15 16, text !important;
+}
+
+/* Moveable Snapping Guidelines customization */
+.moveable-guideline-group .moveable-size-value,
+.moveable-size-value,
+.moveable-control-box .size-value {
+  font-weight: 500 !important;
+  color: #0099ff !important;
+  font-size: 13px !important;
+}
+
+.moveable-guideline,
+.moveable-guideline.moveable-bounds,
+.moveable-guideline.moveable-gap,
+.moveable-control-box .guideline {
+  background-color: #0099ff !important;
+}
+
+.moveable-size-value.moveable-gap,
+.moveable-control-box .size-value.gap {
+  color: #0099ff !important;
+}
+
+:root {
+  --bounds-color: #0099ff !important;
+  --moveable-color: #0099ff !important;
+}
+
+/* Developer Mode Overrides */
+/* Show Hidden Bounds (Interactive Elements Only) */
+body.dev-showhiddenbuttons-enabled button.opacity-0,
+body.dev-showhiddenbuttons-enabled button.invisible,
+body.dev-showhiddenbuttons-enabled a.opacity-0,
+body.dev-showhiddenbuttons-enabled a.invisible,
+body.dev-showhiddenbuttons-enabled [class*="group-hover:opacity-100"]:not(.z-50):not(.z-\[100\]),
+body.dev-showhiddenbuttons-enabled [class*="group-hover/row:opacity-100"]:not(.z-50):not(.z-\[100\]),
+body.dev-showhiddenbuttons-enabled [class*="group-hover/col:opacity-100"]:not(.z-50):not(.z-\[100\]),
+body.dev-showhiddenbuttons-enabled [class*="group-hover/cell:opacity-100"]:not(.z-50):not(.z-\[100\]) {
+  opacity: 1 !important;
+  visibility: visible !important;
+  outline: 1px dashed rgba(239, 68, 68, 0.6) !important;
+}
+
+/* Force Show Tooltips (Non-interactive informational popups & overlays) */
+body.dev-forceshowtooltips-enabled [class*="group-hover/title:opacity-100"],
+body.dev-forceshowtooltips-enabled [class*="group-hover/comments-trigger:opacity-100"],
+body.dev-forceshowtooltips-enabled [class*="group-hover/col:opacity-100"].z-50,
+body.dev-forceshowtooltips-enabled [class*="group-hover:opacity-100"].z-50,
+body.dev-forceshowtooltips-enabled [class*="group-hover:opacity-100"].z-\[100\] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Component Borders */
+body.dev-showcomponentborders-enabled div,
+body.dev-showcomponentborders-enabled section,
+body.dev-showcomponentborders-enabled main,
+body.dev-showcomponentborders-enabled aside,
+body.dev-showcomponentborders-enabled header,
+body.dev-showcomponentborders-enabled nav,
+body.dev-showcomponentborders-enabled footer {
+  /* Using box-shadow inset to avoiding changing layout boxes */
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.15) !important;
+}
+

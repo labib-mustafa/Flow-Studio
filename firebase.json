@@ -1,0 +1,15 @@
+{
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Flow Studio",
+        "supportEmail": "labib.projects@gmail.com",
+        "authorizedRedirectUris": [
+          "http://localhost:5173",
+          "http://localhost:3000",
+          "http://localhost:3009"
+        ]
+      }
+    }
+  }
+}
