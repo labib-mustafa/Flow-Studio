@@ -74,7 +74,9 @@ Then open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run dev:vite` | Starts Vite frontend dev server at `http://localhost:3000` |
 | `npm run build` | Builds the production React frontend bundle into `dist/` |
 | `npm run build:server`| Compiles the backend server into `dist-server/server.cjs` |
-| `npm run package` | Builds and packages the standalone Windows desktop installer (`.exe`) |
+| `npm run package` | Builds the Windows standalone portable desktop package |
+| `npm run package:mac` | Builds the macOS installer (`.dmg` & `.zip` for Apple Silicon / Intel) |
+| `npm run package:all` | Compiles release builds for both Windows and macOS |
 | `npm run lint` | Runs TypeScript type checking (`tsc --noEmit`) |
 
 ---

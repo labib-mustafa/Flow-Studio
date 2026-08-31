@@ -15,7 +15,10 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "build:server": "node scripts/build-server.cjs",
-    "package": "node scripts/package-app.cjs"
+    "package": "node scripts/package-app.cjs",
+    "package:win": "node scripts/package-app.cjs",
+    "package:mac": "npm run build && npm run build:server && electron-builder --mac",
+    "package:all": "npm run build && npm run build:server && electron-builder -mw"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -116,6 +119,41 @@
           "arch": [
             "x64"
           ]
+        }
+      ]
+    },
+    "mac": {
+      "icon": "public/logo.png",
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Flow Studio ${version}",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
         }
       ]
     },
