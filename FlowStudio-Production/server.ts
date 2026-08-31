@@ -7,18 +7,91 @@ import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import imaps from 'imap-simple';
 import { simpleParser } from 'mailparser';
-import sharp from 'sharp';
+
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 
-const __filename = fileURLToPath(import.meta.url);
+// In CJS (production esbuild output), __filename is a global.
+// In ESM (dev), we derive it from import.meta.url.
+let __server_filename: string;
+try {
+  __server_filename = fileURLToPath(import.meta.url);
+} catch {
+  // @ts-ignore - __filename is available in CJS context
+  __server_filename = typeof __filename !== 'undefined' ? __filename : __dirname + '/server.cjs';
+}
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:3000';
+const CONFIG_FILE = path.resolve(process.cwd(), 'flowstudio.config.json');
 
-// Apply security headers
-app.use(helmet());
+const APP_LEVEL_STORES = ['settings', 'notifications', 'dev'];
+
+function getAppDataDir(): string {
+  const base = process.env.APPDATA || 
+    (process.platform === 'darwin' 
+      ? path.join(os.homedir(), 'Library', 'Application Support') 
+      : path.join(os.homedir(), '.config'));
+  const appDir = path.join(base, 'FlowStudio');
+  if (!fs.existsSync(appDir)) {
+    fs.mkdirSync(appDir, { recursive: true });
+  }
+  return appDir;
+}
+
+function getStoreFilePath(name: string): string {
+  if (APP_LEVEL_STORES.includes(name)) {
+    const appDir = getAppDataDir();
+    const appFilePath = path.join(appDir, `${name}.json`);
+    
+    // Auto-migrate settings from dataPath if it exists there but not in AppData
+    if (!fs.existsSync(appFilePath)) {
+      try {
+        const { dataPath } = getConfig();
+        const oldFilePath = path.join(dataPath, `${name}.json`);
+        if (fs.existsSync(oldFilePath)) {
+          fs.copyFileSync(oldFilePath, appFilePath);
+          console.log(`[FlowStudio Server] Migrated ${name}.json from dataPath to AppData directory: ${appFilePath}`);
+        }
+      } catch (e) {
+        console.error(`[FlowStudio Server] Error migrating ${name}.json:`, e);
+      }
+    }
+    return appFilePath;
+  }
+
+  const { dataPath } = getConfig();
+  if (!fs.existsSync(dataPath)) {
+    fs.mkdirSync(dataPath, { recursive: true });
+  }
+  return path.join(dataPath, `${name}.json`);
+}
+
+function getConfig(): { dataPath: string; backendPort?: number } {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const content = fs.readFileSync(CONFIG_FILE, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.dataPath) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('[FlowStudio Server] Error reading config:', e);
+  }
+  const defaultPath = path.join(os.homedir(), 'Documents', 'FlowStudio-Data');
+  return { dataPath: defaultPath, backendPort: 3010 };
+}
+
+const initialConfig = getConfig();
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : (initialConfig.backendPort || 3010);
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
+
+// Apply security headers (relaxed for dev/localhost proxy compatibility)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: false,
+  contentSecurityPolicy: false,
+}));
 
 // Apply CORS policy
 app.use(cors({
@@ -27,12 +100,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Global Rate Limiter
+// Global Rate Limiter (skip localhost/loopback for desktop app API sync)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  max: 10000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.includes('localhost');
+  },
   message: { error: "Too many requests from this IP, please try again later." }
 });
 app.use(globalLimiter);
@@ -40,9 +117,13 @@ app.use(globalLimiter);
 // Specific Rate Limiter for Mail / Auth-like endpoints
 const mailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 mail send/sync requests per window
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.includes('localhost');
+  },
   message: { error: "Too many mail requests from this IP, please try again later." }
 });
 
@@ -55,6 +136,24 @@ function sendError(res: any, error: any, customMessage: string = 'Internal Serve
   console.error(`[Error ${correlationId}]`, error);
   res.status(500).json({ error: customMessage, correlationId });
 }
+
+// Apify usage proxy endpoint
+app.get('/api/apify/usage', async (req, res) => {
+  try {
+    const token = req.query.token as string;
+    if (!token) return res.status(400).json({ error: 'Apify API token is required' });
+
+    const apifyRes = await fetch(`https://api.apify.com/v2/users/me?token=${encodeURIComponent(token.trim())}`);
+    if (!apifyRes.ok) {
+      return res.status(apifyRes.status).json({ error: `Apify API HTTP ${apifyRes.status}` });
+    }
+
+    const data = await apifyRes.json();
+    res.json(data);
+  } catch (error: any) {
+    sendError(res, error, 'Failed to fetch Apify usage details');
+  }
+});
 
 // Mail endpoints
 
@@ -225,24 +324,6 @@ app.post('/api/mail/drafts', mailLimiter, async (req, res) => {
 
 app.use('/api/store/*', express.text({ type: '*/*', limit: '50mb' }));
 
-const CONFIG_FILE = path.resolve(process.cwd(), 'flowstudio.config.json');
-
-function getConfig(): { dataPath: string; backendPort?: number } {
-  try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      const content = fs.readFileSync(CONFIG_FILE, 'utf-8');
-      const parsed = JSON.parse(content);
-      if (parsed && parsed.dataPath) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.error('[FlowStudio Server] Error reading config:', e);
-  }
-  const defaultPath = path.join(os.homedir(), 'Documents', 'FlowStudio-Data');
-  return { dataPath: defaultPath };
-}
-
 function saveConfig(config: { dataPath: string; backendPort?: number }): void {
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
@@ -300,50 +381,126 @@ const SEED_LEADS = {
 
 const SEED_PROJECTS = {
   projects: [
-    {"id":"rebrand-2024","name":"Rebrand 2024","title":"Rebrand 2024","image":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","category":"Portfolio","status":"In Progress","statusColor":"bg-blue-600/90","progress":90,"completion":90,"client":"Apex Architecture","deadline":"2024-10-24","isPortfolio":true,"tasksCount":12,"commentsCount":4,"tags":["Branding","Architecture","Premium"]},
-    {"id":"fintech-app","name":"Fintech App UI","title":"Fintech App UI","image":"https://lh3.googleusercontent.com/aida-public/AB6AXuBXmo8m29Yj_XDkfgZ4KejySYeWbqBAj51e0AvhN5-Fz20vW1qCtLYfA6dKJacCD2b0l7YY3qsVzBgYrDVEbhCDVpL5RNKRWjGked1_iRxa12qIZ8BVTvV-fPjnML6OYWRZ2BZ6e0QJS_uEjf_W6xYnMnIfrbyE0zpO8PT5Ne6hGSF2bMfj1ColCHGD5JKbbn1OA4pOTzrAEecn7iBerJZer4k4nHsXgPNCmJvYW0opn4xiC-njf-_o0zc2jD7zJbRl0eSaKNgMW4I","thumbnail":"https://lh3.googleusercontent.com/aida-public/AB6AXuBXmo8m29Yj_XDkfgZ4KejySYeWbqBAj51e0AvhN5-Fz20vW1qCtLYfA6dKJacCD2b0l7YY3qsVzBgYrDVEbhCDVpL5RNKRWjGked1_iRxa12qIZ8BVTvV-fPjnML6OYWRZ2BZ6e0QJS_uEjf_W6xYnMnIfrbyE0zpO8PT5Ne6hGSF2bMfj1ColCHGD5JKbbn1OA4pOTzrAEecn7iBerJZer4k4nHsXgPNCmJvYW0opn4xiC-njf-_o0zc2jD7zJbRl0eSaKNgMW4I","category":"App Design","status":"Review","statusColor":"bg-indigo-600/90","progress":65,"completion":65,"client":"Vault Bank","deadline":"2024-12-12","isPortfolio":false,"tasksCount":24,"commentsCount":8,"tags":["Branding","Fintech","Design"]},
-    {"id":"lumina-brand","name":"Lumina Brand Identity","title":"Lumina Brand Identity","image":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","category":"Brand Identity","status":"Completed","statusColor":"bg-green-500/90","progress":100,"completion":100,"client":"Lumina Store","deadline":"2024-05-15","isPortfolio":true,"tasksCount":18,"commentsCount":12,"tags":["Graphic Design","E-commerce","Identity"]},
-    {"id":"sonic-wave-posters","name":"Sonic Wave Posters","title":"Sonic Wave Posters","image":"https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=1000&auto=format&fit=crop","category":"Print Design","status":"Planning","statusColor":"bg-yellow-500/90","progress":15,"completion":15,"client":"Sonic Wave Fest","deadline":"2024-08-10","isPortfolio":false,"tasksCount":30,"commentsCount":5,"tags":["Print","Typography","Event"]},
-    {"id":"neon-ui-kit","name":"Neon UI Kit","title":"Neon UI Kit","image":"https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1000&auto=format&fit=crop","category":"UI Design","status":"In Progress","statusColor":"bg-blue-600/90","progress":45,"completion":45,"client":"Nexus Studios","deadline":"2024-11-30","isPortfolio":true,"tasksCount":42,"commentsCount":21,"tags":["UI/UX","Gaming","Cyberpunk"]},
-    {"id":"aura-packaging","name":"Aura Packaging","title":"Aura Packaging","image":"https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?q=80&w=1000&auto=format&fit=crop","category":"Packaging","status":"Review","statusColor":"bg-indigo-600/90","progress":85,"completion":85,"client":"Aura Naturals","deadline":"2024-09-05","isPortfolio":true,"tasksCount":15,"commentsCount":9,"tags":["Packaging","Illustration","Retail"]},
-    {"id":"devsummit-intros","name":"DevSummit Intros","title":"DevSummit Intros","image":"https://images.unsplash.com/photo-1557672172-298e090bd0f1?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1557672172-298e090bd0f1?q=80&w=1000&auto=format&fit=crop","category":"Motion Design","status":"In Progress","statusColor":"bg-blue-600/90","progress":60,"completion":60,"client":"DevSummit","deadline":"2024-07-20","isPortfolio":false,"tasksCount":22,"commentsCount":16,"tags":["Motion Graphics","Video","Event"]},
-    {"id":"vogue-editorial","name":"Vogue Editorial Spread","title":"Vogue Editorial Spread","image":"https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=1000&auto=format&fit=crop","category":"Editorial Design","status":"Review","statusColor":"bg-indigo-600/90","progress":75,"completion":75,"client":"Vogue Magazine","deadline":"2024-09-20","isPortfolio":true,"tasksCount":28,"commentsCount":14,"tags":["Editorial","Typography","Magazine"]},
-    {"id":"holo-campaign","name":"Holo Social Campaign","title":"Holo Social Campaign","image":"https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=1000&auto=format&fit=crop","category":"3D Design","status":"Planning","statusColor":"bg-yellow-500/90","progress":10,"completion":10,"client":"Holo Tech","deadline":"2024-12-01","isPortfolio":false,"tasksCount":15,"commentsCount":2,"tags":["3D","Animation","Social Media"]},
-    {"id":"streetwear-drop","name":"Urban Streetwear Drop","title":"Urban Streetwear Drop","image":"https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop","category":"Illustration","status":"Completed","statusColor":"bg-green-500/90","progress":100,"completion":100,"client":"Urban Outfitters","deadline":"2024-04-10","isPortfolio":true,"tasksCount":35,"commentsCount":19,"tags":["Illustration","Apparel","Merch"]},
-    {"id":"neon-brand-identity","name":"Neon Brand Identity","title":"Neon Brand Identity","image":"https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop","category":"Brand Design","status":"In Progress","statusColor":"bg-pink-600/90","progress":40,"completion":40,"client":"Luminal Studio","deadline":"2026-08-12","isPortfolio":true,"tasksCount":4,"commentsCount":3,"tags":["Branding","Neon","Graphic Design"]},
-    {"id":"psychedelic-poster-series","name":"Psychedelic Poster Series","title":"Psychedelic Poster Series","image":"https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop","category":"Graphic Design","status":"In Progress","statusColor":"bg-purple-600/90","progress":75,"completion":75,"client":"Vibe Music Fest","deadline":"2026-07-20","isPortfolio":true,"tasksCount":4,"commentsCount":6,"tags":["Poster","Vibrant","Illustration"]},
-    {"id":"retro-packaging-revival","name":"Retro Packaging Revival","title":"Retro Packaging Revival","image":"https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000&auto=format&fit=crop","category":"Packaging","status":"Review","statusColor":"bg-amber-600/90","progress":90,"completion":90,"client":"Soda Pop Co.","deadline":"2026-07-05","isPortfolio":true,"tasksCount":4,"commentsCount":8,"tags":["Packaging","Retro","Illustration"]},
-    {"id":"cyberpunk-zine","name":"Cyberpunk Zine Layout","title":"Cyberpunk Zine Layout","image":"https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop","category":"Editorial","status":"In Progress","statusColor":"bg-cyan-600/90","progress":25,"completion":25,"client":"Neo-Tokyo Press","deadline":"2026-09-15","isPortfolio":false,"tasksCount":4,"commentsCount":2,"tags":["Editorial","Cyberpunk","Layout"]},
-    {"id":"vibrant-vector-illustrations","name":"Vibrant Vector Illustrations","title":"Vibrant Vector Illustrations","image":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","category":"Illustration","status":"Completed","statusColor":"bg-green-500/90","progress":100,"completion":100,"client":"EduPlay Apps","deadline":"2026-06-25","isPortfolio":true,"tasksCount":3,"commentsCount":10,"tags":["Illustration","Vector","Flat Design"]}
+    {
+      id: "rebrand-2024",
+      name: "Apex Architecture Rebrand",
+      title: "Apex Architecture Rebrand",
+      description: "Complete visual identity overhaul, typography guidelines, and marketing collateral suite.",
+      image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop",
+      category: "Branding",
+      status: "In Progress",
+      statusColor: "bg-blue-600/90",
+      progress: 75,
+      completion: 75,
+      client: "Alexander Hamilton",
+      deadline: "2026-10-15",
+      isPortfolio: true,
+      tasksCount: 4,
+      commentsCount: 6,
+      tags: ["Branding", "Architecture", "Identity"]
+    },
+    {
+      id: "neon-brand-identity",
+      name: "Luminal Neon Brand Identity",
+      title: "Luminal Neon Brand Identity",
+      description: "Cyberpunk-inspired luminous branding system for immersive light studio storefront.",
+      image: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop",
+      category: "3D & Vector",
+      status: "In Progress",
+      statusColor: "bg-purple-600/90",
+      progress: 60,
+      completion: 60,
+      client: "Tech Flow Inc",
+      deadline: "2026-11-01",
+      isPortfolio: false,
+      tasksCount: 4,
+      commentsCount: 3,
+      tags: ["Neon", "3D", "Lighting"]
+    },
+    {
+      id: "psychedelic-poster-series",
+      name: "Sonic Wave Music Festival",
+      title: "Sonic Wave Music Festival",
+      description: "Silk-screened psychedelic festival poster series featuring custom typography and surreal vectors.",
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      category: "Print & Poster",
+      status: "In Progress",
+      statusColor: "bg-amber-600/90",
+      progress: 85,
+      completion: 85,
+      client: "Global Media",
+      deadline: "2026-09-30",
+      isPortfolio: true,
+      tasksCount: 4,
+      commentsCount: 2,
+      tags: ["Print", "Festival", "Posters"]
+    },
+    {
+      id: "retro-packaging-revival",
+      name: "Retro Soda Packaging",
+      title: "Retro Soda Packaging",
+      description: "1970s nostalgia-driven packaging design system for artisanal botanical soda craft cans.",
+      image: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=1000&auto=format&fit=crop",
+      category: "Packaging",
+      status: "Completed",
+      statusColor: "bg-emerald-600/90",
+      progress: 100,
+      completion: 100,
+      client: "Acme Corp",
+      deadline: "2026-07-20",
+      isPortfolio: true,
+      tasksCount: 4,
+      commentsCount: 5,
+      tags: ["Packaging", "Vintage", "Botanical"]
+    },
+    {
+      id: "vibrant-vector-illustrations",
+      name: "Fintech App UI & Mascot Suite",
+      title: "Fintech App UI & Mascot Suite",
+      description: "Custom isometric scenes, flat character illustrations, and 24 iconography vectors for mobile onboarding.",
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop",
+      category: "UI/UX",
+      status: "Completed",
+      statusColor: "bg-indigo-600/90",
+      progress: 100,
+      completion: 100,
+      client: "Next Gen",
+      deadline: "2026-06-30",
+      isPortfolio: false,
+      tasksCount: 3,
+      commentsCount: 1,
+      tags: ["Fintech", "UI/UX", "Illustration"]
+    }
   ],
-  currentProject: {"id":"rebrand-2024","name":"Rebrand 2024","title":"Rebrand 2024","client":"Apex Architecture","status":"In Progress","deadline":"2024-10-24","thumbnail":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","image":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","tags":["Branding","Architecture","Premium"],"completion":90,"progress":90,"category":"Portfolio","statusColor":"bg-blue-600/90"}
+  currentProject: null
 };
 
 const SEED_TASKS = {
   tasks: [
-    {"id":"1","projectId":"rebrand-2024","title":"Finalize Brand Guidelines","details":"Complete the final draft of the brand guidelines including color scales and typography pairings.","dueDate":"2026-05-20","priority":"high","phase":"todo","assignees":[{"id":"1","name":"Sarah Jenkins","avatar":"SJ"}],"status":"Incomplete"},
-    {"id":"2","projectId":"rebrand-2024","title":"Logo Exporting & Packaging","details":"Export all logo variants in SVG, PNG, and AI formats.","dueDate":"2026-05-21","priority":"medium","phase":"inprogress","assignees":[{"id":"2","name":"Marcus Chen","avatar":"MC"}],"status":"Incomplete"},
-    {"id":"3","projectId":"rebrand-2024","title":"Social Media Launch Assets","details":"Create banners and profile pictures for LinkedIn, Twitter, and Instagram.","dueDate":"2026-05-23","priority":"high","phase":"todo","assignees":[{"id":"1","name":"Sarah Jenkins","avatar":"SJ"},{"id":"2","name":"Marcus Chen","avatar":"MC"}],"status":"Incomplete"},
-    {"id":"4","projectId":"rebrand-2024","title":"Client Website Wireframes","details":"Draft initial wireframes for the new client portal.","dueDate":"2026-05-25","priority":"low","phase":"done","assignees":[],"status":"Complete"},
-    {"id":"n1","projectId":"neon-brand-identity","title":"Moodboard & Color Palette Selection","details":"Research neon aesthetics and define the primary/secondary color scales.","dueDate":"2026-07-15","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"n2","projectId":"neon-brand-identity","title":"Logo Concept Sketches","details":"Develop at least 3 distinct vector routes for the neon logo.","dueDate":"2026-08-01","priority":"medium","phase":"inprogress","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
-    {"id":"n3","projectId":"neon-brand-identity","title":"Typography System Definition","details":"Select neon-compatible display fonts and geometric body text.","dueDate":"2026-08-05","priority":"low","phase":"todo","assignees":[],"status":"Incomplete"},
-    {"id":"n4","projectId":"neon-brand-identity","title":"3D Brand Mockups","details":"Render neon signage mockup for Luminal Studio storefront.","dueDate":"2026-08-10","priority":"high","phase":"todo","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
-    {"id":"p1","projectId":"psychedelic-poster-series","title":"Concept ideation and sketch approval","details":"Draft initial layouts for the 3 festival posters.","dueDate":"2026-06-28","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
-    {"id":"p2","projectId":"psychedelic-poster-series","title":"First poster illustration (Acid Rock)","details":"Finalize vector artwork for the Acid Rock poster.","dueDate":"2026-07-05","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"p3","projectId":"psychedelic-poster-series","title":"Second poster illustration (Dream Pop)","details":"Finalize pastel-gradient vector artwork for Dream Pop.","dueDate":"2026-07-12","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"p4","projectId":"psychedelic-poster-series","title":"Typography layout & printing setup","details":"Set up print-ready PDF files with crop marks and Pantone colors.","dueDate":"2026-07-18","priority":"high","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
-    {"id":"r1","projectId":"retro-packaging-revival","title":"Historical brand research","details":"Gather reference material of 1970s soda cans and typography.","dueDate":"2026-06-15","priority":"low","phase":"done","assignees":[],"status":"Complete"},
-    {"id":"r2","projectId":"retro-packaging-revival","title":"Color palette & mascot design","details":"Create the vector mascot character and retro warm color theme.","dueDate":"2026-06-22","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
-    {"id":"r3","projectId":"retro-packaging-revival","title":"Die-line layout mapping","details":"Map the designs onto the official can manufacturer die-lines.","dueDate":"2026-06-29","priority":"medium","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"},
-    {"id":"r4","projectId":"retro-packaging-revival","title":"Client feedback round 3 modifications","details":"Make final minor edits to the nutrition facts label layout.","dueDate":"2026-07-04","priority":"low","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
-    {"id":"c1","projectId":"cyberpunk-zine","title":"Page budget & content outline","details":"Map out the 16-page spread and content blocks.","dueDate":"2026-08-15","priority":"low","phase":"done","assignees":[],"status":"Complete"},
-    {"id":"c2","projectId":"cyberpunk-zine","title":"Glitch art assets collection","details":"Generate and edit raw glitch art textures for background overlays.","dueDate":"2026-09-01","priority":"medium","phase":"todo","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
-    {"id":"c3","projectId":"cyberpunk-zine","title":"Grid template setup in InDesign","details":"Create a custom multi-column grid layout with radical margins.","dueDate":"2026-09-05","priority":"high","phase":"todo","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Incomplete"},
-    {"id":"c4","projectId":"cyberpunk-zine","title":"Cover page art direction","details":"Design a high-impact cover featuring custom neon typography.","dueDate":"2026-09-12","priority":"high","phase":"todo","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
-    {"id":"v1","projectId":"vibrant-vector-illustrations","title":"Character design sheets","details":"Draw 5 flat-design character illustrations with vibrant outfits.","dueDate":"2026-06-10","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"v2","projectId":"vibrant-vector-illustrations","title":"Interface background illustrations","details":"Create 3 detailed isometric backgrounds for the app scenes.","dueDate":"2026-06-18","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"v3","projectId":"vibrant-vector-illustrations","title":"Icon set exporting","details":"Export 24 vector icons in SVG and PDF formats.","dueDate":"2026-06-24","priority":"low","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"}
+    {"id":"1","projectId":"rebrand-2024","title":"Finalize Brand Guidelines","details":"Complete the final draft of the brand guidelines including color scales and typography pairings.","dueDate":"2026-09-20","priority":"high","phase":"todo","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
+    {"id":"2","projectId":"rebrand-2024","title":"Logo Exporting & Packaging","details":"Export all logo variants in SVG, PNG, and AI formats.","dueDate":"2026-09-21","priority":"medium","phase":"inprogress","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
+    {"id":"3","projectId":"rebrand-2024","title":"Social Media Launch Assets","details":"Create banners and profile pictures for LinkedIn, Twitter, and Instagram.","dueDate":"2026-09-23","priority":"high","phase":"todo","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"},{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
+    {"id":"4","projectId":"rebrand-2024","title":"Client Website Wireframes","details":"Draft initial wireframes for the new client portal.","dueDate":"2026-09-25","priority":"low","phase":"done","assignees":[],"status":"Complete"},
+    {"id":"n1","projectId":"neon-brand-identity","title":"Moodboard & Color Palette Selection","details":"Research neon aesthetics and define the primary/secondary color scales.","dueDate":"2026-09-15","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"n2","projectId":"neon-brand-identity","title":"Logo Concept Sketches","details":"Develop at least 3 distinct vector routes for the neon logo.","dueDate":"2026-09-18","priority":"medium","phase":"inprogress","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
+    {"id":"n3","projectId":"neon-brand-identity","title":"Typography System Definition","details":"Select neon-compatible display fonts and geometric body text.","dueDate":"2026-09-22","priority":"low","phase":"todo","assignees":[],"status":"Incomplete"},
+    {"id":"n4","projectId":"neon-brand-identity","title":"3D Brand Mockups","details":"Render neon signage mockup for Luminal Studio storefront.","dueDate":"2026-09-28","priority":"high","phase":"todo","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
+    {"id":"p1","projectId":"psychedelic-poster-series","title":"Concept ideation and sketch approval","details":"Draft initial layouts for the 3 festival posters.","dueDate":"2026-09-08","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
+    {"id":"p2","projectId":"psychedelic-poster-series","title":"First poster illustration (Acid Rock)","details":"Finalize vector artwork for the Acid Rock poster.","dueDate":"2026-09-15","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"p3","projectId":"psychedelic-poster-series","title":"Second poster illustration (Dream Pop)","details":"Finalize pastel-gradient vector artwork for Dream Pop.","dueDate":"2026-09-20","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"p4","projectId":"psychedelic-poster-series","title":"Typography layout & printing setup","details":"Set up print-ready PDF files with crop marks and Pantone colors.","dueDate":"2026-09-25","priority":"high","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
+    {"id":"r1","projectId":"retro-packaging-revival","title":"Historical brand research","details":"Gather reference material of 1970s soda cans and typography.","dueDate":"2026-08-15","priority":"low","phase":"done","assignees":[],"status":"Complete"},
+    {"id":"r2","projectId":"retro-packaging-revival","title":"Color palette & mascot design","details":"Create the vector mascot character and retro warm color theme.","dueDate":"2026-08-22","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
+    {"id":"r3","projectId":"retro-packaging-revival","title":"Die-line layout mapping","details":"Map the designs onto the official can manufacturer die-lines.","dueDate":"2026-08-29","priority":"medium","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"},
+    {"id":"r4","projectId":"retro-packaging-revival","title":"Client feedback round 3 modifications","details":"Make final minor edits to the nutrition facts label layout.","dueDate":"2026-09-04","priority":"low","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
+    {"id":"v1","projectId":"vibrant-vector-illustrations","title":"Character design sheets","details":"Draw 5 flat-design character illustrations with vibrant outfits.","dueDate":"2026-08-10","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"v2","projectId":"vibrant-vector-illustrations","title":"Interface background illustrations","details":"Create 3 detailed isometric backgrounds for the app scenes.","dueDate":"2026-08-18","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"v3","projectId":"vibrant-vector-illustrations","title":"Icon set exporting","details":"Export 24 vector icons in SVG and PDF formats.","dueDate":"2026-08-24","priority":"low","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"}
   ],
   columns: [],
   columnNames: {},
@@ -356,10 +513,10 @@ const SEED_TASKS = {
 
 const SEED_TEAM = {
   members: [
-    {"id":"m1","name":"John Doe","email":"john.doe@flowstudio.com","role":"Owner","phone":"+1 (555) 234-5678","bio":"Founder & Lead Product Designer driving creative vision across all major accounts.","department":"Leadership","status":"active","joinDate":"Jan 15, 2023","assignedProjects":["E-commerce Redesign","Brand Guide 2.0"],"activeFocus":"🎨 Designing Flow Studio visual guidelines & core architecture","skills":["Creative Direction","Brand Strategy","Product UI","Figma","Design Systems"]},
-    {"id":"m2","name":"Sarah Miller","email":"sarah.m@flowstudio.com","role":"Admin","phone":"+1 (555) 987-6543","bio":"Operations Director & Account Manager coordinating client feedback and sprints.","department":"Operations","status":"active","joinDate":"Mar 10, 2023","assignedProjects":["Mobile App MVP","Q3 Marketing Portal"],"activeFocus":"📊 Aligning Q3 sprint deliverables with stakeholder timelines","skills":["Client Relations","Agile Sprints","Account Management","Roadmapping","Notion"]},
-    {"id":"m3","name":"Alex Rivera","email":"alex.r@flowstudio.com","role":"Designer","phone":"+1 (555) 456-7890","bio":"Senior UX/UI Designer specializing in micro-interactions and design systems.","department":"Design","status":"active","joinDate":"Jun 22, 2023","assignedProjects":["E-commerce Redesign","Fintech Dashboard"],"activeFocus":"✨ Refining micro-interactions for the Fintech dashboard component library","skills":["UI/UX Design","Micro-interactions","Prototyping","Design Tokens","Figma"]},
-    {"id":"m4","name":"Elena Rostova","email":"elena.r@flowstudio.com","role":"Developer","phone":"+1 (555) 345-6789","bio":"Frontend Architect implementing responsive web apps and animations.","department":"Engineering","status":"active","joinDate":"Sep 05, 2023","assignedProjects":["Mobile App MVP","Fintech Dashboard"],"activeFocus":"⚡ Optimizing frontend rendering performance and web animation framerates","skills":["React","TypeScript","Tailwind CSS","Framer Motion","Zustand","Performance"]}
+    {"id":"m1","name":"John Doe","email":"john.doe@flowstudio.com","role":"Owner","phone":"+1 (555) 234-5678","bio":"Founder & Lead Product Designer driving creative vision across all major accounts.","department":"Leadership","status":"active","joinDate":"Jan 15, 2023","assignedProjects":["Apex Architecture Rebrand","Sonic Wave Music Festival"],"activeFocus":"🎨 Designing Flow Studio visual guidelines & core architecture","skills":["Creative Direction","Brand Strategy","Product UI","Figma","Design Systems"]},
+    {"id":"m2","name":"Sarah Miller","email":"sarah.m@flowstudio.com","role":"Admin","phone":"+1 (555) 987-6543","bio":"Operations Director & Account Manager coordinating client feedback and sprints.","department":"Operations","status":"active","joinDate":"Mar 10, 2023","assignedProjects":["Retro Soda Packaging","Apex Architecture Rebrand"],"activeFocus":"📊 Aligning Q3 sprint deliverables with stakeholder timelines","skills":["Client Relations","Agile Sprints","Account Management","Roadmapping","Notion"]},
+    {"id":"m3","name":"Alex Rivera","email":"alex.r@flowstudio.com","role":"Designer","phone":"+1 (555) 456-7890","bio":"Senior UX/UI Designer specializing in micro-interactions and design systems.","department":"Design","status":"active","joinDate":"Jun 22, 2023","assignedProjects":["Luminal Neon Brand Identity","Fintech App UI & Mascot Suite"],"activeFocus":"✨ Refining micro-interactions for the component library","skills":["UI/UX Design","Micro-interactions","Prototyping","Design Tokens","Figma"]},
+    {"id":"m4","name":"Elena Rostova","email":"elena.r@flowstudio.com","role":"Developer","phone":"+1 (555) 345-6789","bio":"Frontend Architect implementing responsive web apps and animations.","department":"Engineering","status":"active","joinDate":"Sep 05, 2023","assignedProjects":["Fintech App UI & Mascot Suite","Retro Soda Packaging"],"activeFocus":"⚡ Optimizing frontend rendering performance and web animation framerates","skills":["React","TypeScript","Tailwind CSS","Framer Motion","Zustand","Performance"]}
   ],
   invites: [
     {"id":"inv1","email":"david.kim@flowstudio.com","role":"Designer","sentDate":"Yesterday"},
@@ -370,35 +527,53 @@ const SEED_TEAM = {
 
 const SEED_MOODBOARD = {
   items: [
-    {"id":"1","type":"image","x":5080,"y":5080,"title":"Inspiration","content":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop","width":300,"height":200,"rotation":-2},
-    {"id":"2","type":"color","x":5400,"y":5160,"title":"Navy","color":"#0F172A","width":160,"height":160,"rotation":0},
-    {"id":"3","type":"color","x":5580,"y":5160,"title":"Electric","color":"#1978E5","width":160,"height":160,"rotation":0},
-    {"id":"4","type":"text","x":5800,"y":5040,"title":"Typography","content":"Inter - Body Copy / UI","width":250,"height":80,"rotation":0},
-    {"id":"5","type":"note","x":5200,"y":5400,"content":"Don't forget to check the contrast ratios on the primary button style!","width":240,"height":150,"rotation":2},
-    {"id":"6","type":"image","x":5600,"y":5350,"title":"Reference","content":"https://images.unsplash.com/photo-1558655146-d09347e92766?q=80&w=2600&auto=format&fit=crop","width":220,"height":150,"rotation":4},
-    {"id":"1774261600220","type":"shape","x":5850,"y":5200,"width":150,"height":150,"shapeType":"rectangle","title":"Primary Box","color":"#f8fafc","rotation":0,"borderWidth":2,"borderColor":"#e2e8f0"},
-    {"id":"1774261697046","type":"shape","x":6050,"y":5200,"width":150,"height":150,"shapeType":"circle","title":"Accent Circle","color":"#f1f5f9","rotation":0,"borderWidth":2,"borderColor":"#cbd5e1"},
-    {"id":"1774261713437","type":"note","x":5850,"y":5400,"content":"Review the new layout components for the dashboard.","width":240,"height":150,"rotation":-1,"color":"#fffbeb"}
+    {"id":"1","type":"image","x":100,"y":100,"title":"Editorial Typography Inspiration","content":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop","width":340,"height":240,"rotation":0,"category":"Inspiration"},
+    {"id":"2","type":"color","x":480,"y":100,"title":"Deep Obsidian","color":"#0F172A","content":"#0F172A","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+    {"id":"3","type":"color","x":660,"y":100,"title":"Electric Indigo","color":"#4F46E5","content":"#4F46E5","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+    {"id":"4","type":"color","x":840,"y":100,"title":"Luminous Amber","color":"#F59E0B","content":"#F59E0B","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+    {"id":"5","type":"sticky","x":480,"y":290,"title":"Typography Rule","content":"💡 Use Cabinet Grotesque for bold display headlines and Inter for ultra-clean body copy.","width":260,"height":180,"rotation":0,"color":"#fef3c7","category":"Typography"},
+    {"id":"6","type":"bookmark","x":100,"y":380,"title":"Modern Architecture Design System","url":"https://unsplash.com","width":340,"height":140,"rotation":0,"category":"References"},
+    {"id":"7","type":"image","x":760,"y":290,"title":"Minimalist Architectural Form","content":"https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=1200&auto=format&fit=crop","width":320,"height":220,"rotation":0,"category":"Inspiration"}
   ],
-  view: {"zoom":1,"pan":{"x":-4500,"y":-4500}}
+  projectItems: {
+    "rebrand-2024": [
+      {"id":"p-1","type":"image","x":100,"y":100,"title":"Architectural Minimal Grid","content":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","width":340,"height":240,"rotation":0,"category":"Inspiration"},
+      {"id":"p-2","type":"color","x":480,"y":100,"title":"Slate Dark","color":"#1E293B","content":"#1E293B","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+      {"id":"p-3","type":"color","x":660,"y":100,"title":"Warm Sand","color":"#E2D9CC","content":"#E2D9CC","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+      {"id":"p-4","type":"sticky","x":480,"y":290,"title":"Design Directive","content":"Preserve strong brutalist structural lines while softening secondary cards with 8px radius.","width":260,"height":180,"rotation":0,"color":"#e0f2fe","category":"Directives"}
+    ]
+  },
+  projectViews: {},
+  currentProjectId: null,
+  selectedIds: [],
+  view: { zoom: 1, pan: { x: 0, y: 0 } },
+  history: [],
+  historyIndex: -1,
+  activeCategoryFilter: null,
+  gridConfig: { type: 'dot', size: 20, opacity: 0.15, snapToGrid: false }
 };
 
 const SEED_BILLING = {
-  balance: 0,
-  nextPaymentAmount: 0,
-  nextPaymentDate: '',
+  balance: 14250,
+  nextPaymentAmount: 4800,
+  nextPaymentDate: '2026-09-15',
   savedCard: {
-    cardNumber: '',
-    cardHolder: '',
-    validThru: '',
-    brand: ''
+    cardNumber: '•••• •••• •••• 4242',
+    cardHolder: 'Alex Rivera',
+    validThru: '08/28',
+    brand: 'visa'
   },
   billingAddress: {
-    name: '',
-    addressLine1: '',
-    addressLine2: ''
+    name: 'Flow Studio HQ',
+    addressLine1: '540 Howard Street, Suite 300',
+    addressLine2: 'San Francisco, CA 94105'
   },
-  paymentHistory: []
+  paymentHistory: [
+    { id: 'INV-2026-001', clientName: 'Alexander Hamilton', project: 'Apex Architecture Rebrand', amount: 8500, date: '2026-08-15', status: 'Paid', method: 'Bank Transfer' },
+    { id: 'INV-2026-002', clientName: 'Tech Flow Inc', project: 'Luminal Neon Brand Identity', amount: 4200, date: '2026-08-20', status: 'Paid', method: 'Credit Card' },
+    { id: 'INV-2026-003', clientName: 'Global Media', project: 'Sonic Wave Music Festival', amount: 3500, date: '2026-08-28', status: 'Pending', method: 'PayPal' },
+    { id: 'INV-2026-004', clientName: 'Next Gen Hub', project: 'Fintech App UI & Mascot Suite', amount: 2800, date: '2026-08-30', status: 'Draft', method: 'Wire' }
+  ]
 };
 
 function getSeedSettings(dataPath: string) {
@@ -500,6 +675,24 @@ const SEED_TEAM_MESSAGES = {
   ]
 };
 
+const SEED_ACTIVITIES = {
+  activities: [
+    { id: "act-1", user: "Alex Rivera", action: "uploaded 4 moodboard concepts to", target: "Apex Architecture Rebrand", time: "15m ago", type: "moodboard" },
+    { id: "act-2", user: "Sarah Miller", action: "marked task as complete:", target: "Color palette & mascot design", time: "2h ago", type: "task" },
+    { id: "act-3", user: "John Doe", action: "generated new invoice INV-2026-003 for", target: "Global Media", time: "5h ago", type: "billing" },
+    { id: "act-4", user: "Elena Rostova", action: "exported vector icon package for", target: "Fintech App UI", time: "1d ago", type: "file" }
+  ]
+};
+
+const SEED_EVENTS = {
+  events: [
+    { id: "evt-1", title: "Apex Brand Architecture Review", description: "Final presentation of high-fidelity brand assets to Alexander Hamilton.", date: "2026-09-02", time: "10:30", type: "Design", participants: "Sarah M., Alex R., Alexander H." },
+    { id: "evt-2", title: "Sprint Planning & Backlog Grooming", description: "Bi-weekly studio sprint sync to assign upcoming packaging milestones.", date: "2026-09-04", time: "14:00", type: "Team Sync", participants: "All Studio Team" },
+    { id: "evt-3", title: "Global Media Discovery Call", description: "Initial brief sync on Sonic Wave merchandise expansion.", date: "2026-09-08", time: "11:00", type: "Call", participants: "John Doe, Sarah M." },
+    { id: "evt-4", title: "Fintech Design System Sign-off", description: "Design token export review with engineering architects.", date: "2026-09-12", time: "16:00", type: "Design", participants: "Elena R., Alex R." }
+  ]
+};
+
 function bootstrap(): void {
   const config = getConfig();
   const dataPath = config.dataPath;
@@ -521,8 +714,8 @@ function bootstrap(): void {
     settings: getSeedSettings(dataPath),
     billing: SEED_BILLING,
     trash: { trashItems: [] },
-    activities: { activities: [] },
-    events: { events: [] },
+    activities: SEED_ACTIVITIES,
+    events: SEED_EVENTS,
     mail: SEED_MAIL,
     mailTemplates: SEED_MAIL_TEMPLATES,
     time: SEED_TIME,
@@ -530,18 +723,118 @@ function bootstrap(): void {
     clientDetails: SEED_CLIENT_DETAILS,
     notes: SEED_NOTES,
     leadDummies: SEED_LEAD_DUMMIES,
-    teamMessages: SEED_TEAM_MESSAGES
+    teamMessages: SEED_TEAM_MESSAGES,
+    scraper: {
+      scrapedLeads: [],
+      selectedIds: [],
+      apiKey: '',
+      activeTab: 'google-maps',
+      logs: [],
+      mustHaveFilters: { email: false, phone: false, instagram: false, facebook: false, website: false },
+      gmapsConfig: { searchTerms: 'Design Agency', location: 'New York, NY', category: 'Marketing', maxResults: 15 },
+      igConfig: { searchTarget: 'creativeagency', searchType: 'hashtag', minFollowers: 1000, maxProfiles: 15 },
+      liConfig: { jobTitle: 'Founder', industry: 'Design & Marketing', location: 'San Francisco, CA', maxProfiles: 15 },
+      gsConfig: { query: 'Top branding agencies', targetDomain: '', extractEmails: true, extractPhones: true, maxResults: 15 }
+    }
   };
 
   for (const [name, state] of Object.entries(stores)) {
     const filePath = path.join(dataPath, `${name}.json`);
+    let needsWrite = false;
+
     if (!fs.existsSync(filePath)) {
+      needsWrite = true;
+    } else {
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const parsed = JSON.parse(content);
+        const st = parsed.state || parsed;
+
+        if (name === 'clients' && (!Array.isArray(st.clients) || st.clients.length === 0)) needsWrite = true;
+        if (name === 'leads' && (!Array.isArray(st.leads) || st.leads.length === 0)) needsWrite = true;
+        if (name === 'projects' && (!Array.isArray(st.projects) || st.projects.length === 0)) needsWrite = true;
+        if (name === 'team' && (!Array.isArray(st.members) || st.members.length === 0)) needsWrite = true;
+      } catch {
+        needsWrite = true;
+      }
+    }
+
+    if (needsWrite) {
       const payload = JSON.stringify({ state, version: 0 }, null, 2);
       fs.writeFileSync(filePath, payload, 'utf-8');
-      
+      console.log(`[FlowStudio Server] Seeded data for ${name}.json in ${dataPath}`);
+    }
+  }
+
+  setupDataWatcher(dataPath);
+}
+
+// Real-Time Event Sync via Server-Sent Events (SSE)
+const sseClients: express.Response[] = [];
+
+function broadcastStoreChange(storeName: string, source: 'api' | 'fs' = 'api') {
+  const payload = JSON.stringify({ type: 'store_updated', store: storeName, source, timestamp: Date.now() });
+  for (let i = sseClients.length - 1; i >= 0; i--) {
+    try {
+      sseClients[i].write(`data: ${payload}\n\n`);
+    } catch {
+      sseClients.splice(i, 1);
     }
   }
 }
+
+// Watch data folder for external file edits (e.g. from agent, scripts, tools)
+const fsWatchDebounceTimers = new Map<string, NodeJS.Timeout>();
+
+function setupDataWatcher(dirPath: string) {
+  try {
+    if (!fs.existsSync(dirPath)) return;
+    fs.watch(dirPath, { recursive: false }, (eventType, filename) => {
+      if (!filename || typeof filename !== 'string' || !filename.endsWith('.json') || filename.endsWith('.tmp')) return;
+      const storeName = path.basename(filename, '.json');
+      
+      if (fsWatchDebounceTimers.has(storeName)) {
+        clearTimeout(fsWatchDebounceTimers.get(storeName)!);
+      }
+
+      const timer = setTimeout(() => {
+        fsWatchDebounceTimers.delete(storeName);
+        broadcastStoreChange(storeName, 'fs');
+      }, 100);
+
+      fsWatchDebounceTimers.set(storeName, timer);
+    });
+    console.log(`[FlowStudio Server] Watching ${dirPath} for real-time live sync.`);
+  } catch (err) {
+    console.warn('[FlowStudio Server] fs.watch setup warning:', err);
+  }
+}
+
+// 0. GET /api/events (SSE Stream for Realtime Store Sync)
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.flushHeaders?.();
+
+  sseClients.push(res);
+  res.write(`data: ${JSON.stringify({ type: 'connected', clients: sseClients.length })}\n\n`);
+
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': keepalive\n\n');
+    } catch {
+      clearInterval(keepAlive);
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    const idx = sseClients.indexOf(res);
+    if (idx !== -1) sseClients.splice(idx, 1);
+  });
+});
 
 // 1. GET /api/config
 app.get('/api/config', (req, res) => {
@@ -579,6 +872,7 @@ app.put('/api/config', (req, res) => {
     }
 
     saveConfig({ dataPath: newPath });
+    setupDataWatcher(newPath);
     res.json({ dataPath: newPath });
   } catch (e: any) {
     sendError(res, e);
@@ -588,14 +882,13 @@ app.put('/api/config', (req, res) => {
 // 3. GET /api/store/:name
 app.get('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const { dataPath } = getConfig();
-    const filePath = path.join(dataPath, `${name}.json`);
+    const filePath = getStoreFilePath(name);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Store file not found' });
@@ -611,24 +904,25 @@ app.get('/api/store/:name', (req, res) => {
 // 4. PUT /api/store/:name
 app.put('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const { dataPath } = getConfig();
-    if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true });
+    const filePath = getStoreFilePath(name);
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
-    const filePath = path.join(dataPath, `${name}.json`);
-    const tmpPath = path.join(dataPath, `${name}.json.tmp`);
-
+    const tmpPath = `${filePath}.tmp`;
     const content = typeof req.body === 'string' ? req.body : JSON.stringify(req.body, null, 2);
 
     fs.writeFileSync(tmpPath, content, 'utf-8');
     fs.renameSync(tmpPath, filePath);
+
+    broadcastStoreChange(name, 'api');
 
     res.json({ success: true });
   } catch (e: any) {
@@ -645,11 +939,199 @@ app.delete('/api/store/:name', (req, res) => {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const { dataPath } = getConfig();
-    const filePath = path.join(dataPath, `${name}.json`);
+    const filePath = getStoreFilePath(name);
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+    }
+
+    broadcastStoreChange(name, 'api');
+
+    res.json({ success: true });
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+// Helper to sanitize project names
+const sanitizeProjectName = (name: string) => name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').trim() || 'Unnamed Project';
+
+// POST /api/projects/get-folder
+app.post('/api/projects/get-folder', (req, res) => {
+  try {
+    const { projectId, projectName } = req.body as { projectId?: string; projectName?: string };
+    if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    const directories = fs.readdirSync(projectsRoot, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory());
+
+    // 1. Try to find by .flow-id
+    for (const dirent of directories) {
+      const folderPath = path.join(projectsRoot, dirent.name);
+      const idFilePath = path.join(folderPath, '.flow-id');
+      if (fs.existsSync(idFilePath)) {
+        const id = fs.readFileSync(idFilePath, 'utf-8').trim();
+        if (id === projectId) {
+          return res.json({ path: folderPath, folderName: dirent.name, dataPath });
+        }
+      }
+    }
+
+    // 2. Try to find by exact name (Legacy fallback)
+    if (projectName) {
+      const safeName = sanitizeProjectName(projectName);
+      const legacyPath = path.join(projectsRoot, safeName);
+      if (fs.existsSync(legacyPath)) {
+        // Claim it by writing .flow-id
+        fs.writeFileSync(path.join(legacyPath, '.flow-id'), projectId, 'utf-8');
+        return res.json({ path: legacyPath, folderName: safeName, dataPath });
+      }
+    }
+
+    res.json({ path: null, dataPath });
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+// POST /api/projects/open-explorer
+app.post('/api/projects/open-explorer', (req, res) => {
+  try {
+    const { projectId, projectName } = req.body as { projectId?: string; projectName?: string };
+    if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    let targetPath: string | null = null;
+    const directories = fs.readdirSync(projectsRoot, { withFileTypes: true }).filter(d => d.isDirectory());
+
+    for (const dirent of directories) {
+      const folderPath = path.join(projectsRoot, dirent.name);
+      const idFilePath = path.join(folderPath, '.flow-id');
+      if (fs.existsSync(idFilePath)) {
+        const id = fs.readFileSync(idFilePath, 'utf-8').trim();
+        if (id === projectId) {
+          targetPath = folderPath;
+          break;
+        }
+      }
+    }
+
+    if (!targetPath && projectName) {
+      const safeName = sanitizeProjectName(projectName);
+      targetPath = path.join(projectsRoot, safeName);
+      if (!fs.existsSync(targetPath)) {
+        fs.mkdirSync(targetPath, { recursive: true });
+        fs.writeFileSync(path.join(targetPath, '.flow-id'), projectId, 'utf-8');
+      }
+    }
+
+    if (targetPath && fs.existsSync(targetPath)) {
+      const winPath = targetPath.replace(/\//g, '\\');
+
+      // Respond immediately — explorer.exe always exits with code 1 even on success,
+      // so we must NOT wait for the exec callback before sending the response.
+      res.json({ success: true, path: targetPath });
+
+      if (process.platform === 'win32') {
+        // exec with shell:true properly launches File Explorer in a foreground window
+        exec(`start "" "${winPath}"`, { shell: 'cmd.exe' }, (err) => {
+          if (err) console.error('[open-explorer] exec error (ignored):', err.message);
+        });
+      } else if (process.platform === 'darwin') {
+        exec(`open "${targetPath}"`);
+      } else {
+        exec(`xdg-open "${targetPath}"`);
+      }
+    } else {
+      res.status(404).json({ error: 'Project folder not found' });
+    }
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+// POST /api/projects/create-folder
+app.post('/api/projects/create-folder', (req, res) => {
+  try {
+    const { projectId, projectName } = req.body as { projectId?: string; projectName?: string };
+    if (!projectId || !projectName) return res.status(400).json({ error: 'projectId and projectName are required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    const safeName = sanitizeProjectName(projectName);
+    let folderName = safeName;
+    let newFolder = path.join(projectsRoot, folderName);
+    let counter = 2;
+
+    while (fs.existsSync(newFolder)) {
+      folderName = `${safeName} ${counter}`;
+      newFolder = path.join(projectsRoot, folderName);
+      counter++;
+    }
+
+    fs.mkdirSync(newFolder, { recursive: true });
+    fs.writeFileSync(path.join(newFolder, '.flow-id'), projectId, 'utf-8');
+
+    res.json({ path: newFolder, folderName, dataPath });
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+// POST /api/projects/rename-folder
+app.post('/api/projects/rename-folder', (req, res) => {
+  try {
+    const { projectId, newProjectName } = req.body as { projectId?: string; newProjectName?: string };
+    if (!projectId || !newProjectName) return res.status(400).json({ error: 'projectId and newProjectName are required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+    
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    const directories = fs.readdirSync(projectsRoot, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory());
+
+    let targetFolder = null;
+    for (const dirent of directories) {
+      const folderPath = path.join(projectsRoot, dirent.name);
+      const idFilePath = path.join(folderPath, '.flow-id');
+      if (fs.existsSync(idFilePath)) {
+        const id = fs.readFileSync(idFilePath, 'utf-8').trim();
+        if (id === projectId) {
+          targetFolder = dirent.name;
+          break;
+        }
+      }
+    }
+
+    if (targetFolder) {
+      const safeName = sanitizeProjectName(newProjectName);
+      
+      if (targetFolder !== safeName) {
+        let folderName = safeName;
+        let newPath = path.join(projectsRoot, folderName);
+        let counter = 2;
+
+        while (fs.existsSync(newPath)) {
+          folderName = `${safeName} ${counter}`;
+          newPath = path.join(projectsRoot, folderName);
+          counter++;
+        }
+
+        const oldPath = path.join(projectsRoot, targetFolder);
+        fs.renameSync(oldPath, newPath);
+      }
     }
 
     res.json({ success: true });
@@ -704,6 +1186,59 @@ app.post('/api/reveal', (req, res) => {
   }
 });
 
+// 7.5. POST /api/select-folder (Native OS folder selection dialog)
+app.post('/api/select-folder', (req, res) => {
+  try {
+    const initialPath = req.body?.currentPath && fs.existsSync(req.body.currentPath)
+      ? path.resolve(req.body.currentPath)
+      : getConfig().dataPath;
+
+    if (process.platform === 'win32') {
+      const sanitizedPath = initialPath.replace(/'/g, "''");
+      const psCommand = `
+        Add-Type -AssemblyName System.Windows.Forms;
+        $f = New-Object System.Windows.Forms.FolderBrowserDialog;
+        $f.Description = 'Select Data Storage Directory';
+        $f.ShowNewFolderButton = $true;
+        if (Test-Path '${sanitizedPath}') { $f.SelectedPath = '${sanitizedPath}' }
+        [void]$f.ShowDialog();
+        if ($f.SelectedPath) { Write-Output $f.SelectedPath }
+      `.replace(/\n/g, ' ');
+
+      exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCommand}"`, { maxBuffer: 1024 * 1024 }, (err, stdout) => {
+        if (err) {
+          console.error('[select-folder] PowerShell error:', err);
+          return res.status(500).json({ error: 'Failed to open native folder dialog' });
+        }
+        const selectedPath = stdout.trim();
+        if (selectedPath) {
+          res.json({ path: selectedPath });
+        } else {
+          res.json({ canceled: true });
+        }
+      });
+    } else if (process.platform === 'darwin') {
+      const osaScript = `osascript -e 'POSIX path of (choose folder with prompt "Select Data Storage Directory")'`;
+      exec(osaScript, (err, stdout) => {
+        if (err) return res.json({ canceled: true });
+        const selectedPath = stdout.trim();
+        if (selectedPath) res.json({ path: selectedPath });
+        else res.json({ canceled: true });
+      });
+    } else {
+      exec(`zenity --file-selection --directory --title="Select Data Storage Directory"`, (err, stdout) => {
+        if (err) return res.json({ canceled: true });
+        const selectedPath = stdout.trim();
+        if (selectedPath) res.json({ path: selectedPath });
+        else res.json({ canceled: true });
+      });
+    }
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+
 // 8. GET /api/storage-info
 app.get('/api/storage-info', (req, res) => {
   try {
@@ -729,7 +1264,8 @@ app.get('/api/storage-info', (req, res) => {
   }
 });
 
-const ports = [3009, 3010, 3011, 3012];
+const preferredPort = getConfig().backendPort || 3010;
+const ports = [preferredPort, 3010, 3009, 3011, 3012].filter((v, i, a) => a.indexOf(v) === i);
 
 // ==========================================
 // FILE SYSTEM ENDPOINTS (/api/fs/*)
@@ -741,6 +1277,12 @@ const getFsRoot = () => {
 };
 
 const resolveFsPath = (reqPath: string, mode?: string) => {
+  if (mode === 'global') {
+    if (reqPath && /^[a-zA-Z]:$/.test(reqPath)) {
+      return reqPath + path.sep;
+    }
+    return reqPath ? path.normalize(reqPath) : '';
+  }
   const root = getFsRoot();
   // Resolve the full path and normalize it
   const safePath = path.resolve(root, reqPath || '.');
@@ -829,7 +1371,12 @@ app.get('/api/fs/list', (req, res) => {
     }
 
     if (!fs.existsSync(targetPath)) {
-      return res.json({ files: [] });
+      // Auto-create the directory for project-scoped paths (not global)
+      if (mode !== 'global') {
+        fs.mkdirSync(targetPath, { recursive: true });
+      } else {
+        return res.json({ files: [] });
+      }
     }
     
     const entries = fs.readdirSync(targetPath, { withFileTypes: true });
@@ -911,6 +1458,24 @@ app.post('/api/fs/copy', (req, res) => {
   }
 });
 
+// POST /api/fs/create-file
+app.post('/api/fs/create-file', (req, res) => {
+  try {
+    const { path: reqPath, name, mode } = req.body;
+    const targetDir = resolveFsPath(reqPath, mode);
+    const targetFile = path.join(targetDir, name);
+    
+    // Ensure parent dir exists
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+    
+    // Create empty file
+    fs.writeFileSync(targetFile, '');
+    res.json({ success: true, path: targetFile });
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
 // POST /api/fs/delete
 app.post('/api/fs/delete', (req, res) => {
   try {
@@ -975,6 +1540,8 @@ app.get('/api/fs/file', async (req, res) => {
       const ext = path.extname(targetPath).toLowerCase();
       if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
          try {
+            const sharpModule = await import('sharp');
+            const sharp = (sharpModule.default || sharpModule) as any;
             const data = await sharp(targetPath).resize(256, 256, { fit: 'cover' }).toBuffer();
             res.setHeader('Content-Type', `image/${ext.replace('.', '')}`);
             return res.send(data);
@@ -1000,7 +1567,26 @@ app.get('/api/fs/file', async (req, res) => {
 });
 
 // Serve static frontend files in production if dist folder exists
-const distPath = path.resolve(path.dirname(__filename), 'dist');
+let serverDir = path.dirname(__server_filename);
+if (serverDir.includes('app.asar') && !serverDir.includes('app.asar.unpacked')) {
+  serverDir = serverDir.replace('app.asar', 'app.asar.unpacked');
+}
+
+let cwdDir = process.cwd();
+if (cwdDir.includes('app.asar') && !cwdDir.includes('app.asar.unpacked')) {
+  cwdDir = cwdDir.replace('app.asar', 'app.asar.unpacked');
+}
+
+const candidateDistPaths = [
+  path.resolve(serverDir, 'dist'),
+  path.resolve(serverDir, '../dist'),
+  path.resolve(cwdDir, 'dist'),
+  path.resolve(cwdDir, '../dist')
+];
+
+let distPath = candidateDistPaths.find(p => fs.existsSync(p)) || candidateDistPaths[0];
+console.log('[FlowStudio Server] Resolved distPath:', distPath, 'exists:', fs.existsSync(distPath));
+
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
   // Serve React index.html for all non-API requests (client-side routing fallback)
@@ -1008,6 +1594,19 @@ if (fs.existsSync(distPath)) {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
+
+app.get('/debug-dist', (req, res) => {
+  res.json({
+    __server_filename,
+    serverDir,
+    cwdDir,
+    candidateDistPaths,
+    distPath,
+    exists: fs.existsSync(distPath),
+    cwd: process.cwd(),
+    resourcesPath: process.env.RESOURCES_PATH || 'unknown'
+  });
+});
 
 function startServer(portIndex: number = 0) {
   if (portIndex >= ports.length) {

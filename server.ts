@@ -382,23 +382,99 @@ const SEED_LEADS = {
 const SEED_PROJECTS = {
   projects: [
     {
-      id: "38n80o124",
-      name: "Posters",
-      title: "Posters",
-      description: "Custom made Poster Designs",
+      id: "rebrand-2024",
+      name: "Apex Architecture Rebrand",
+      title: "Apex Architecture Rebrand",
+      description: "Complete visual identity overhaul, typography guidelines, and marketing collateral suite.",
       image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop",
       thumbnail: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop",
-      category: "Design",
+      category: "Branding",
       status: "In Progress",
       statusColor: "bg-blue-600/90",
-      progress: 45,
-      completion: 45,
-      client: "John Doe",
-      deadline: "2024-12-31",
+      progress: 75,
+      completion: 75,
+      client: "Alexander Hamilton",
+      deadline: "2026-10-15",
+      isPortfolio: true,
+      tasksCount: 4,
+      commentsCount: 6,
+      tags: ["Branding", "Architecture", "Identity"]
+    },
+    {
+      id: "neon-brand-identity",
+      name: "Luminal Neon Brand Identity",
+      title: "Luminal Neon Brand Identity",
+      description: "Cyberpunk-inspired luminous branding system for immersive light studio storefront.",
+      image: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop",
+      category: "3D & Vector",
+      status: "In Progress",
+      statusColor: "bg-purple-600/90",
+      progress: 60,
+      completion: 60,
+      client: "Tech Flow Inc",
+      deadline: "2026-11-01",
       isPortfolio: false,
-      tasksCount: 2,
+      tasksCount: 4,
+      commentsCount: 3,
+      tags: ["Neon", "3D", "Lighting"]
+    },
+    {
+      id: "psychedelic-poster-series",
+      name: "Sonic Wave Music Festival",
+      title: "Sonic Wave Music Festival",
+      description: "Silk-screened psychedelic festival poster series featuring custom typography and surreal vectors.",
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      category: "Print & Poster",
+      status: "In Progress",
+      statusColor: "bg-amber-600/90",
+      progress: 85,
+      completion: 85,
+      client: "Global Media",
+      deadline: "2026-09-30",
+      isPortfolio: true,
+      tasksCount: 4,
+      commentsCount: 2,
+      tags: ["Print", "Festival", "Posters"]
+    },
+    {
+      id: "retro-packaging-revival",
+      name: "Retro Soda Packaging",
+      title: "Retro Soda Packaging",
+      description: "1970s nostalgia-driven packaging design system for artisanal botanical soda craft cans.",
+      image: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=1000&auto=format&fit=crop",
+      category: "Packaging",
+      status: "Completed",
+      statusColor: "bg-emerald-600/90",
+      progress: 100,
+      completion: 100,
+      client: "Acme Corp",
+      deadline: "2026-07-20",
+      isPortfolio: true,
+      tasksCount: 4,
+      commentsCount: 5,
+      tags: ["Packaging", "Vintage", "Botanical"]
+    },
+    {
+      id: "vibrant-vector-illustrations",
+      name: "Fintech App UI & Mascot Suite",
+      title: "Fintech App UI & Mascot Suite",
+      description: "Custom isometric scenes, flat character illustrations, and 24 iconography vectors for mobile onboarding.",
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop",
+      category: "UI/UX",
+      status: "Completed",
+      statusColor: "bg-indigo-600/90",
+      progress: 100,
+      completion: 100,
+      client: "Next Gen",
+      deadline: "2026-06-30",
+      isPortfolio: false,
+      tasksCount: 3,
       commentsCount: 1,
-      tags: ["Posters", "Design"]
+      tags: ["Fintech", "UI/UX", "Illustration"]
     }
   ],
   currentProject: null
@@ -406,29 +482,25 @@ const SEED_PROJECTS = {
 
 const SEED_TASKS = {
   tasks: [
-    {"id":"1","projectId":"rebrand-2024","title":"Finalize Brand Guidelines","details":"Complete the final draft of the brand guidelines including color scales and typography pairings.","dueDate":"2026-05-20","priority":"high","phase":"todo","assignees":[{"id":"1","name":"Sarah Jenkins","avatar":"SJ"}],"status":"Incomplete"},
-    {"id":"2","projectId":"rebrand-2024","title":"Logo Exporting & Packaging","details":"Export all logo variants in SVG, PNG, and AI formats.","dueDate":"2026-05-21","priority":"medium","phase":"inprogress","assignees":[{"id":"2","name":"Marcus Chen","avatar":"MC"}],"status":"Incomplete"},
-    {"id":"3","projectId":"rebrand-2024","title":"Social Media Launch Assets","details":"Create banners and profile pictures for LinkedIn, Twitter, and Instagram.","dueDate":"2026-05-23","priority":"high","phase":"todo","assignees":[{"id":"1","name":"Sarah Jenkins","avatar":"SJ"},{"id":"2","name":"Marcus Chen","avatar":"MC"}],"status":"Incomplete"},
-    {"id":"4","projectId":"rebrand-2024","title":"Client Website Wireframes","details":"Draft initial wireframes for the new client portal.","dueDate":"2026-05-25","priority":"low","phase":"done","assignees":[],"status":"Complete"},
-    {"id":"n1","projectId":"neon-brand-identity","title":"Moodboard & Color Palette Selection","details":"Research neon aesthetics and define the primary/secondary color scales.","dueDate":"2026-07-15","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"n2","projectId":"neon-brand-identity","title":"Logo Concept Sketches","details":"Develop at least 3 distinct vector routes for the neon logo.","dueDate":"2026-08-01","priority":"medium","phase":"inprogress","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
-    {"id":"n3","projectId":"neon-brand-identity","title":"Typography System Definition","details":"Select neon-compatible display fonts and geometric body text.","dueDate":"2026-08-05","priority":"low","phase":"todo","assignees":[],"status":"Incomplete"},
-    {"id":"n4","projectId":"neon-brand-identity","title":"3D Brand Mockups","details":"Render neon signage mockup for Luminal Studio storefront.","dueDate":"2026-08-10","priority":"high","phase":"todo","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
-    {"id":"p1","projectId":"psychedelic-poster-series","title":"Concept ideation and sketch approval","details":"Draft initial layouts for the 3 festival posters.","dueDate":"2026-06-28","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
-    {"id":"p2","projectId":"psychedelic-poster-series","title":"First poster illustration (Acid Rock)","details":"Finalize vector artwork for the Acid Rock poster.","dueDate":"2026-07-05","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"p3","projectId":"psychedelic-poster-series","title":"Second poster illustration (Dream Pop)","details":"Finalize pastel-gradient vector artwork for Dream Pop.","dueDate":"2026-07-12","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"p4","projectId":"psychedelic-poster-series","title":"Typography layout & printing setup","details":"Set up print-ready PDF files with crop marks and Pantone colors.","dueDate":"2026-07-18","priority":"high","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
-    {"id":"r1","projectId":"retro-packaging-revival","title":"Historical brand research","details":"Gather reference material of 1970s soda cans and typography.","dueDate":"2026-06-15","priority":"low","phase":"done","assignees":[],"status":"Complete"},
-    {"id":"r2","projectId":"retro-packaging-revival","title":"Color palette & mascot design","details":"Create the vector mascot character and retro warm color theme.","dueDate":"2026-06-22","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
-    {"id":"r3","projectId":"retro-packaging-revival","title":"Die-line layout mapping","details":"Map the designs onto the official can manufacturer die-lines.","dueDate":"2026-06-29","priority":"medium","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"},
-    {"id":"r4","projectId":"retro-packaging-revival","title":"Client feedback round 3 modifications","details":"Make final minor edits to the nutrition facts label layout.","dueDate":"2026-07-04","priority":"low","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
-    {"id":"c1","projectId":"cyberpunk-zine","title":"Page budget & content outline","details":"Map out the 16-page spread and content blocks.","dueDate":"2026-08-15","priority":"low","phase":"done","assignees":[],"status":"Complete"},
-    {"id":"c2","projectId":"cyberpunk-zine","title":"Glitch art assets collection","details":"Generate and edit raw glitch art textures for background overlays.","dueDate":"2026-09-01","priority":"medium","phase":"todo","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
-    {"id":"c3","projectId":"cyberpunk-zine","title":"Grid template setup in InDesign","details":"Create a custom multi-column grid layout with radical margins.","dueDate":"2026-09-05","priority":"high","phase":"todo","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Incomplete"},
-    {"id":"c4","projectId":"cyberpunk-zine","title":"Cover page art direction","details":"Design a high-impact cover featuring custom neon typography.","dueDate":"2026-09-12","priority":"high","phase":"todo","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
-    {"id":"v1","projectId":"vibrant-vector-illustrations","title":"Character design sheets","details":"Draw 5 flat-design character illustrations with vibrant outfits.","dueDate":"2026-06-10","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"v2","projectId":"vibrant-vector-illustrations","title":"Interface background illustrations","details":"Create 3 detailed isometric backgrounds for the app scenes.","dueDate":"2026-06-18","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
-    {"id":"v3","projectId":"vibrant-vector-illustrations","title":"Icon set exporting","details":"Export 24 vector icons in SVG and PDF formats.","dueDate":"2026-06-24","priority":"low","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"}
+    {"id":"1","projectId":"rebrand-2024","title":"Finalize Brand Guidelines","details":"Complete the final draft of the brand guidelines including color scales and typography pairings.","dueDate":"2026-09-20","priority":"high","phase":"todo","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
+    {"id":"2","projectId":"rebrand-2024","title":"Logo Exporting & Packaging","details":"Export all logo variants in SVG, PNG, and AI formats.","dueDate":"2026-09-21","priority":"medium","phase":"inprogress","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
+    {"id":"3","projectId":"rebrand-2024","title":"Social Media Launch Assets","details":"Create banners and profile pictures for LinkedIn, Twitter, and Instagram.","dueDate":"2026-09-23","priority":"high","phase":"todo","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"},{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
+    {"id":"4","projectId":"rebrand-2024","title":"Client Website Wireframes","details":"Draft initial wireframes for the new client portal.","dueDate":"2026-09-25","priority":"low","phase":"done","assignees":[],"status":"Complete"},
+    {"id":"n1","projectId":"neon-brand-identity","title":"Moodboard & Color Palette Selection","details":"Research neon aesthetics and define the primary/secondary color scales.","dueDate":"2026-09-15","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"n2","projectId":"neon-brand-identity","title":"Logo Concept Sketches","details":"Develop at least 3 distinct vector routes for the neon logo.","dueDate":"2026-09-18","priority":"medium","phase":"inprogress","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Incomplete"},
+    {"id":"n3","projectId":"neon-brand-identity","title":"Typography System Definition","details":"Select neon-compatible display fonts and geometric body text.","dueDate":"2026-09-22","priority":"low","phase":"todo","assignees":[],"status":"Incomplete"},
+    {"id":"n4","projectId":"neon-brand-identity","title":"3D Brand Mockups","details":"Render neon signage mockup for Luminal Studio storefront.","dueDate":"2026-09-28","priority":"high","phase":"todo","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Incomplete"},
+    {"id":"p1","projectId":"psychedelic-poster-series","title":"Concept ideation and sketch approval","details":"Draft initial layouts for the 3 festival posters.","dueDate":"2026-09-08","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
+    {"id":"p2","projectId":"psychedelic-poster-series","title":"First poster illustration (Acid Rock)","details":"Finalize vector artwork for the Acid Rock poster.","dueDate":"2026-09-15","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"p3","projectId":"psychedelic-poster-series","title":"Second poster illustration (Dream Pop)","details":"Finalize pastel-gradient vector artwork for Dream Pop.","dueDate":"2026-09-20","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"p4","projectId":"psychedelic-poster-series","title":"Typography layout & printing setup","details":"Set up print-ready PDF files with crop marks and Pantone colors.","dueDate":"2026-09-25","priority":"high","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
+    {"id":"r1","projectId":"retro-packaging-revival","title":"Historical brand research","details":"Gather reference material of 1970s soda cans and typography.","dueDate":"2026-08-15","priority":"low","phase":"done","assignees":[],"status":"Complete"},
+    {"id":"r2","projectId":"retro-packaging-revival","title":"Color palette & mascot design","details":"Create the vector mascot character and retro warm color theme.","dueDate":"2026-08-22","priority":"high","phase":"done","assignees":[{"id":"m1","name":"John Doe","avatar":"JD"}],"status":"Complete"},
+    {"id":"r3","projectId":"retro-packaging-revival","title":"Die-line layout mapping","details":"Map the designs onto the official can manufacturer die-lines.","dueDate":"2026-08-29","priority":"medium","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"},
+    {"id":"r4","projectId":"retro-packaging-revival","title":"Client feedback round 3 modifications","details":"Make final minor edits to the nutrition facts label layout.","dueDate":"2026-09-04","priority":"low","phase":"inprogress","assignees":[{"id":"m2","name":"Sarah Miller","avatar":"SM"}],"status":"Incomplete"},
+    {"id":"v1","projectId":"vibrant-vector-illustrations","title":"Character design sheets","details":"Draw 5 flat-design character illustrations with vibrant outfits.","dueDate":"2026-08-10","priority":"high","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"v2","projectId":"vibrant-vector-illustrations","title":"Interface background illustrations","details":"Create 3 detailed isometric backgrounds for the app scenes.","dueDate":"2026-08-18","priority":"medium","phase":"done","assignees":[{"id":"m3","name":"Alex Rivera","avatar":"AR"}],"status":"Complete"},
+    {"id":"v3","projectId":"vibrant-vector-illustrations","title":"Icon set exporting","details":"Export 24 vector icons in SVG and PDF formats.","dueDate":"2026-08-24","priority":"low","phase":"done","assignees":[{"id":"m4","name":"Elena Rostova","avatar":"ER"}],"status":"Complete"}
   ],
   columns: [],
   columnNames: {},
@@ -441,10 +513,10 @@ const SEED_TASKS = {
 
 const SEED_TEAM = {
   members: [
-    {"id":"m1","name":"John Doe","email":"john.doe@flowstudio.com","role":"Owner","phone":"+1 (555) 234-5678","bio":"Founder & Lead Product Designer driving creative vision across all major accounts.","department":"Leadership","status":"active","joinDate":"Jan 15, 2023","assignedProjects":["E-commerce Redesign","Brand Guide 2.0"],"activeFocus":"🎨 Designing Flow Studio visual guidelines & core architecture","skills":["Creative Direction","Brand Strategy","Product UI","Figma","Design Systems"]},
-    {"id":"m2","name":"Sarah Miller","email":"sarah.m@flowstudio.com","role":"Admin","phone":"+1 (555) 987-6543","bio":"Operations Director & Account Manager coordinating client feedback and sprints.","department":"Operations","status":"active","joinDate":"Mar 10, 2023","assignedProjects":["Mobile App MVP","Q3 Marketing Portal"],"activeFocus":"📊 Aligning Q3 sprint deliverables with stakeholder timelines","skills":["Client Relations","Agile Sprints","Account Management","Roadmapping","Notion"]},
-    {"id":"m3","name":"Alex Rivera","email":"alex.r@flowstudio.com","role":"Designer","phone":"+1 (555) 456-7890","bio":"Senior UX/UI Designer specializing in micro-interactions and design systems.","department":"Design","status":"active","joinDate":"Jun 22, 2023","assignedProjects":["E-commerce Redesign","Fintech Dashboard"],"activeFocus":"✨ Refining micro-interactions for the Fintech dashboard component library","skills":["UI/UX Design","Micro-interactions","Prototyping","Design Tokens","Figma"]},
-    {"id":"m4","name":"Elena Rostova","email":"elena.r@flowstudio.com","role":"Developer","phone":"+1 (555) 345-6789","bio":"Frontend Architect implementing responsive web apps and animations.","department":"Engineering","status":"active","joinDate":"Sep 05, 2023","assignedProjects":["Mobile App MVP","Fintech Dashboard"],"activeFocus":"⚡ Optimizing frontend rendering performance and web animation framerates","skills":["React","TypeScript","Tailwind CSS","Framer Motion","Zustand","Performance"]}
+    {"id":"m1","name":"John Doe","email":"john.doe@flowstudio.com","role":"Owner","phone":"+1 (555) 234-5678","bio":"Founder & Lead Product Designer driving creative vision across all major accounts.","department":"Leadership","status":"active","joinDate":"Jan 15, 2023","assignedProjects":["Apex Architecture Rebrand","Sonic Wave Music Festival"],"activeFocus":"🎨 Designing Flow Studio visual guidelines & core architecture","skills":["Creative Direction","Brand Strategy","Product UI","Figma","Design Systems"]},
+    {"id":"m2","name":"Sarah Miller","email":"sarah.m@flowstudio.com","role":"Admin","phone":"+1 (555) 987-6543","bio":"Operations Director & Account Manager coordinating client feedback and sprints.","department":"Operations","status":"active","joinDate":"Mar 10, 2023","assignedProjects":["Retro Soda Packaging","Apex Architecture Rebrand"],"activeFocus":"📊 Aligning Q3 sprint deliverables with stakeholder timelines","skills":["Client Relations","Agile Sprints","Account Management","Roadmapping","Notion"]},
+    {"id":"m3","name":"Alex Rivera","email":"alex.r@flowstudio.com","role":"Designer","phone":"+1 (555) 456-7890","bio":"Senior UX/UI Designer specializing in micro-interactions and design systems.","department":"Design","status":"active","joinDate":"Jun 22, 2023","assignedProjects":["Luminal Neon Brand Identity","Fintech App UI & Mascot Suite"],"activeFocus":"✨ Refining micro-interactions for the component library","skills":["UI/UX Design","Micro-interactions","Prototyping","Design Tokens","Figma"]},
+    {"id":"m4","name":"Elena Rostova","email":"elena.r@flowstudio.com","role":"Developer","phone":"+1 (555) 345-6789","bio":"Frontend Architect implementing responsive web apps and animations.","department":"Engineering","status":"active","joinDate":"Sep 05, 2023","assignedProjects":["Fintech App UI & Mascot Suite","Retro Soda Packaging"],"activeFocus":"⚡ Optimizing frontend rendering performance and web animation framerates","skills":["React","TypeScript","Tailwind CSS","Framer Motion","Zustand","Performance"]}
   ],
   invites: [
     {"id":"inv1","email":"david.kim@flowstudio.com","role":"Designer","sentDate":"Yesterday"},
@@ -455,35 +527,53 @@ const SEED_TEAM = {
 
 const SEED_MOODBOARD = {
   items: [
-    {"id":"1","type":"image","x":5080,"y":5080,"title":"Inspiration","content":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop","width":300,"height":200,"rotation":-2},
-    {"id":"2","type":"color","x":5400,"y":5160,"title":"Navy","color":"#0F172A","width":160,"height":160,"rotation":0},
-    {"id":"3","type":"color","x":5580,"y":5160,"title":"Electric","color":"#1978E5","width":160,"height":160,"rotation":0},
-    {"id":"4","type":"text","x":5800,"y":5040,"title":"Typography","content":"Inter - Body Copy / UI","width":250,"height":80,"rotation":0},
-    {"id":"5","type":"note","x":5200,"y":5400,"content":"Don't forget to check the contrast ratios on the primary button style!","width":240,"height":150,"rotation":2},
-    {"id":"6","type":"image","x":5600,"y":5350,"title":"Reference","content":"https://images.unsplash.com/photo-1558655146-d09347e92766?q=80&w=2600&auto=format&fit=crop","width":220,"height":150,"rotation":4},
-    {"id":"1774261600220","type":"shape","x":5850,"y":5200,"width":150,"height":150,"shapeType":"rectangle","title":"Primary Box","color":"#f8fafc","rotation":0,"borderWidth":2,"borderColor":"#e2e8f0"},
-    {"id":"1774261697046","type":"shape","x":6050,"y":5200,"width":150,"height":150,"shapeType":"circle","title":"Accent Circle","color":"#f1f5f9","rotation":0,"borderWidth":2,"borderColor":"#cbd5e1"},
-    {"id":"1774261713437","type":"note","x":5850,"y":5400,"content":"Review the new layout components for the dashboard.","width":240,"height":150,"rotation":-1,"color":"#fffbeb"}
+    {"id":"1","type":"image","x":100,"y":100,"title":"Editorial Typography Inspiration","content":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop","width":340,"height":240,"rotation":0,"category":"Inspiration"},
+    {"id":"2","type":"color","x":480,"y":100,"title":"Deep Obsidian","color":"#0F172A","content":"#0F172A","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+    {"id":"3","type":"color","x":660,"y":100,"title":"Electric Indigo","color":"#4F46E5","content":"#4F46E5","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+    {"id":"4","type":"color","x":840,"y":100,"title":"Luminous Amber","color":"#F59E0B","content":"#F59E0B","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+    {"id":"5","type":"sticky","x":480,"y":290,"title":"Typography Rule","content":"💡 Use Cabinet Grotesque for bold display headlines and Inter for ultra-clean body copy.","width":260,"height":180,"rotation":0,"color":"#fef3c7","category":"Typography"},
+    {"id":"6","type":"bookmark","x":100,"y":380,"title":"Modern Architecture Design System","url":"https://unsplash.com","width":340,"height":140,"rotation":0,"category":"References"},
+    {"id":"7","type":"image","x":760,"y":290,"title":"Minimalist Architectural Form","content":"https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=1200&auto=format&fit=crop","width":320,"height":220,"rotation":0,"category":"Inspiration"}
   ],
-  view: {"zoom":1,"pan":{"x":-4500,"y":-4500}}
+  projectItems: {
+    "rebrand-2024": [
+      {"id":"p-1","type":"image","x":100,"y":100,"title":"Architectural Minimal Grid","content":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","width":340,"height":240,"rotation":0,"category":"Inspiration"},
+      {"id":"p-2","type":"color","x":480,"y":100,"title":"Slate Dark","color":"#1E293B","content":"#1E293B","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+      {"id":"p-3","type":"color","x":660,"y":100,"title":"Warm Sand","color":"#E2D9CC","content":"#E2D9CC","width":160,"height":160,"rotation":0,"category":"Brand Colors"},
+      {"id":"p-4","type":"sticky","x":480,"y":290,"title":"Design Directive","content":"Preserve strong brutalist structural lines while softening secondary cards with 8px radius.","width":260,"height":180,"rotation":0,"color":"#e0f2fe","category":"Directives"}
+    ]
+  },
+  projectViews: {},
+  currentProjectId: null,
+  selectedIds: [],
+  view: { zoom: 1, pan: { x: 0, y: 0 } },
+  history: [],
+  historyIndex: -1,
+  activeCategoryFilter: null,
+  gridConfig: { type: 'dot', size: 20, opacity: 0.15, snapToGrid: false }
 };
 
 const SEED_BILLING = {
-  balance: 0,
-  nextPaymentAmount: 0,
-  nextPaymentDate: '',
+  balance: 14250,
+  nextPaymentAmount: 4800,
+  nextPaymentDate: '2026-09-15',
   savedCard: {
-    cardNumber: '',
-    cardHolder: '',
-    validThru: '',
-    brand: ''
+    cardNumber: '•••• •••• •••• 4242',
+    cardHolder: 'Alex Rivera',
+    validThru: '08/28',
+    brand: 'visa'
   },
   billingAddress: {
-    name: '',
-    addressLine1: '',
-    addressLine2: ''
+    name: 'Flow Studio HQ',
+    addressLine1: '540 Howard Street, Suite 300',
+    addressLine2: 'San Francisco, CA 94105'
   },
-  paymentHistory: []
+  paymentHistory: [
+    { id: 'INV-2026-001', clientName: 'Alexander Hamilton', project: 'Apex Architecture Rebrand', amount: 8500, date: '2026-08-15', status: 'Paid', method: 'Bank Transfer' },
+    { id: 'INV-2026-002', clientName: 'Tech Flow Inc', project: 'Luminal Neon Brand Identity', amount: 4200, date: '2026-08-20', status: 'Paid', method: 'Credit Card' },
+    { id: 'INV-2026-003', clientName: 'Global Media', project: 'Sonic Wave Music Festival', amount: 3500, date: '2026-08-28', status: 'Pending', method: 'PayPal' },
+    { id: 'INV-2026-004', clientName: 'Next Gen Hub', project: 'Fintech App UI & Mascot Suite', amount: 2800, date: '2026-08-30', status: 'Draft', method: 'Wire' }
+  ]
 };
 
 function getSeedSettings(dataPath: string) {
@@ -585,6 +675,24 @@ const SEED_TEAM_MESSAGES = {
   ]
 };
 
+const SEED_ACTIVITIES = {
+  activities: [
+    { id: "act-1", user: "Alex Rivera", action: "uploaded 4 moodboard concepts to", target: "Apex Architecture Rebrand", time: "15m ago", type: "moodboard" },
+    { id: "act-2", user: "Sarah Miller", action: "marked task as complete:", target: "Color palette & mascot design", time: "2h ago", type: "task" },
+    { id: "act-3", user: "John Doe", action: "generated new invoice INV-2026-003 for", target: "Global Media", time: "5h ago", type: "billing" },
+    { id: "act-4", user: "Elena Rostova", action: "exported vector icon package for", target: "Fintech App UI", time: "1d ago", type: "file" }
+  ]
+};
+
+const SEED_EVENTS = {
+  events: [
+    { id: "evt-1", title: "Apex Brand Architecture Review", description: "Final presentation of high-fidelity brand assets to Alexander Hamilton.", date: "2026-09-02", time: "10:30", type: "Design", participants: "Sarah M., Alex R., Alexander H." },
+    { id: "evt-2", title: "Sprint Planning & Backlog Grooming", description: "Bi-weekly studio sprint sync to assign upcoming packaging milestones.", date: "2026-09-04", time: "14:00", type: "Team Sync", participants: "All Studio Team" },
+    { id: "evt-3", title: "Global Media Discovery Call", description: "Initial brief sync on Sonic Wave merchandise expansion.", date: "2026-09-08", time: "11:00", type: "Call", participants: "John Doe, Sarah M." },
+    { id: "evt-4", title: "Fintech Design System Sign-off", description: "Design token export review with engineering architects.", date: "2026-09-12", time: "16:00", type: "Design", participants: "Elena R., Alex R." }
+  ]
+};
+
 function bootstrap(): void {
   const config = getConfig();
   const dataPath = config.dataPath;
@@ -606,8 +714,8 @@ function bootstrap(): void {
     settings: getSeedSettings(dataPath),
     billing: SEED_BILLING,
     trash: { trashItems: [] },
-    activities: { activities: [] },
-    events: { events: [] },
+    activities: SEED_ACTIVITIES,
+    events: SEED_EVENTS,
     mail: SEED_MAIL,
     mailTemplates: SEED_MAIL_TEMPLATES,
     time: SEED_TIME,

@@ -15,7 +15,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "build:server": "node scripts/build-server.cjs",
-    "package": "npm run build && npm run build:server && electron-builder"
+    "package": "node scripts/package-app.cjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -85,6 +85,8 @@
     "vite": "^6.2.0",
     "wait-on": "^9.0.10"
   },
+  "description": "Flow Studio - All-in-One Design & Project Management Suite",
+  "author": "Labib Mustafa",
   "build": {
     "appId": "com.flowstudio.app",
     "productName": "Flow Studio",
@@ -94,7 +96,7 @@
       "dist-server/**/*"
     ],
     "directories": {
-      "output": "../Flow-Studio-Release"
+      "output": "build-release"
     },
     "files": [
       "dist/**/*",

@@ -8,6 +8,9 @@ dist/
 dist-server/
 build/
 release/
+build-release/
+Flow-Studio-Windows-x64/
+*.zip
 ../Flow-Studio-Release/
 
 # Logs
