@@ -23,6 +23,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 !.env.example
+flowstudio.config.json
 
 # IDE & AI Assistant scratch directories
 .gemini/
