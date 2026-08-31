@@ -60,8 +60,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
+      // Hot Module Replacement (HMR) configuration
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
         '/api': `http://127.0.0.1:${backendPort}`,
