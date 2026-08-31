@@ -119,6 +119,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ onCancel, onSubmit, pr
               </label>
               <DatePickerInput 
                 name="startDate"
+                defaultValue={isEditing ? project?.startDate : ''}
                 placeholder="Select start date..."
               />
             </div>

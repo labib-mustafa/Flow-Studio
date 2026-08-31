@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTrashStore, TrashItemType, TrashItem } from '../../stores/trashStore';
 import { useSettings } from '../../hooks/useSettings';
 import { PillTab } from '../GlobalComponents/PillTab';
-import { Database, Trash2, Settings2, FolderKanban, Users, CheckSquare, Briefcase, FileUser, Search } from 'lucide-react';
+import { Server, Trash2, Settings2, FolderKanban, Users, CheckSquare, Briefcase, FileUser, Search } from 'lucide-react';
 import { DataLocationTab } from './DataLocationTab';
 
 import {
@@ -34,6 +34,7 @@ export const DataPage: React.FC = () => {
 
   const [viewingItem, setViewingItem] = useState<TrashItem | null>(null);
   const [projectTab, setProjectTab] = useState<'overview' | 'tasks' | 'files' | 'notes' | 'moodboard'>('overview');
+  const { currentProject } = useProjectStore();
 
   useEffect(() => {
     let originalCurrentProject: any = null;
@@ -74,7 +75,7 @@ export const DataPage: React.FC = () => {
             onTabChange={(tab) => setProjectTab(tab as any)}
           >
             {projectTab === 'overview' && <OverviewPage />}
-            {projectTab === 'tasks' && <TaskPage onTabChange={(tab) => setProjectTab(tab as any)} />}
+            {projectTab === 'tasks' && <TaskPage projectId={currentProject?.id} onTabChange={(tab) => setProjectTab(tab as any)} />}
             {projectTab === 'files' && <FilesPage onTabChange={(tab) => setProjectTab(tab as any)} />}
             {projectTab === 'notes' && <NotesPage onTabChange={(tab) => setProjectTab(tab as any)} onFullScreenToggle={() => { }} />}
             {projectTab === 'moodboard' && <MoodboardPage onTabChange={(tab) => setProjectTab(tab as any)} onEditSidebarToggle={() => { }} />}
@@ -143,7 +144,7 @@ export const DataPage: React.FC = () => {
       <header className="px-6 py-4 border-b border-slate-200/80 bg-white shrink-0 flex items-center justify-between gap-4 z-10 relative">
         <div className="flex items-center gap-4 w-auto lg:w-1/3">
           <div className="flex items-center gap-2">
-            <Database className="size-5 text-slate-900 shrink-0" />
+            <Server className="size-5 text-slate-900 shrink-0" />
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">Data Management</h2>
           </div>
 

@@ -2,34 +2,162 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import imaps from 'imap-simple';
 import { simpleParser } from 'mailparser';
-import sharp from 'sharp';
 
-const __filename = fileURLToPath(import.meta.url);
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+
+// In CJS (production esbuild output), __filename is a global.
+// In ESM (dev), we derive it from import.meta.url.
+let __server_filename: string;
+try {
+  __server_filename = fileURLToPath(import.meta.url);
+} catch {
+  // @ts-ignore - __filename is available in CJS context
+  __server_filename = typeof __filename !== 'undefined' ? __filename : __dirname + '/server.cjs';
+}
 const app = express();
-const PORT = 3001;
+const CONFIG_FILE = path.resolve(process.cwd(), 'flowstudio.config.json');
 
-// Middleware for CORS and JSON body parsing
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+const APP_LEVEL_STORES = ['settings', 'notifications', 'dev'];
+
+function getAppDataDir(): string {
+  const base = process.env.APPDATA || 
+    (process.platform === 'darwin' 
+      ? path.join(os.homedir(), 'Library', 'Application Support') 
+      : path.join(os.homedir(), '.config'));
+  const appDir = path.join(base, 'FlowStudio');
+  if (!fs.existsSync(appDir)) {
+    fs.mkdirSync(appDir, { recursive: true });
   }
-  next();
+  return appDir;
+}
+
+function getStoreFilePath(name: string): string {
+  if (APP_LEVEL_STORES.includes(name)) {
+    const appDir = getAppDataDir();
+    const appFilePath = path.join(appDir, `${name}.json`);
+    
+    // Auto-migrate settings from dataPath if it exists there but not in AppData
+    if (!fs.existsSync(appFilePath)) {
+      try {
+        const { dataPath } = getConfig();
+        const oldFilePath = path.join(dataPath, `${name}.json`);
+        if (fs.existsSync(oldFilePath)) {
+          fs.copyFileSync(oldFilePath, appFilePath);
+          console.log(`[FlowStudio Server] Migrated ${name}.json from dataPath to AppData directory: ${appFilePath}`);
+        }
+      } catch (e) {
+        console.error(`[FlowStudio Server] Error migrating ${name}.json:`, e);
+      }
+    }
+    return appFilePath;
+  }
+
+  const { dataPath } = getConfig();
+  if (!fs.existsSync(dataPath)) {
+    fs.mkdirSync(dataPath, { recursive: true });
+  }
+  return path.join(dataPath, `${name}.json`);
+}
+
+function getConfig(): { dataPath: string; backendPort?: number } {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const content = fs.readFileSync(CONFIG_FILE, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.dataPath) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('[FlowStudio Server] Error reading config:', e);
+  }
+  const defaultPath = path.join(os.homedir(), 'Documents', 'FlowStudio-Data');
+  return { dataPath: defaultPath, backendPort: 3010 };
+}
+
+const initialConfig = getConfig();
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : (initialConfig.backendPort || 3010);
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
+
+// Apply security headers (relaxed for dev/localhost proxy compatibility)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: false,
+  contentSecurityPolicy: false,
+}));
+
+// Apply CORS policy
+app.use(cors({
+  origin: ALLOWED_ORIGIN,
+  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Global Rate Limiter (skip localhost/loopback for desktop app API sync)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.includes('localhost');
+  },
+  message: { error: "Too many requests from this IP, please try again later." }
+});
+app.use(globalLimiter);
+
+// Specific Rate Limiter for Mail / Auth-like endpoints
+const mailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.includes('localhost');
+  },
+  message: { error: "Too many mail requests from this IP, please try again later." }
 });
 
 app.use(express.raw({ type: ['application/octet-stream', 'image/*', 'video/*', 'application/pdf'], limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 
+// Error handling helper
+function sendError(res: any, error: any, customMessage: string = 'Internal Server Error') {
+  const correlationId = Math.random().toString(36).substring(2, 15);
+  console.error(`[Error ${correlationId}]`, error);
+  res.status(500).json({ error: customMessage, correlationId });
+}
+
+// Apify usage proxy endpoint
+app.get('/api/apify/usage', async (req, res) => {
+  try {
+    const token = req.query.token as string;
+    if (!token) return res.status(400).json({ error: 'Apify API token is required' });
+
+    const apifyRes = await fetch(`https://api.apify.com/v2/users/me?token=${encodeURIComponent(token.trim())}`);
+    if (!apifyRes.ok) {
+      return res.status(apifyRes.status).json({ error: `Apify API HTTP ${apifyRes.status}` });
+    }
+
+    const data = await apifyRes.json();
+    res.json(data);
+  } catch (error: any) {
+    sendError(res, error, 'Failed to fetch Apify usage details');
+  }
+});
+
 // Mail endpoints
 
-app.post('/api/mail/send', async (req, res) => {
+app.post('/api/mail/send', mailLimiter, async (req, res) => {
   try {
     const { host, port, secure, user, pass, accessToken, to, subject, html, text, fromName } = req.body;
     
@@ -59,12 +187,11 @@ app.post('/api/mail/send', async (req, res) => {
 
     res.json({ success: true, messageId: info.messageId });
   } catch (error: any) {
-    console.error('SMTP Error:', error);
-    res.status(500).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
-app.post('/api/mail/sync', async (req, res) => {
+app.post('/api/mail/sync', mailLimiter, async (req, res) => {
   try {
     const { host, port, tls, user, pass, accessToken, since } = req.body;
     if (!user || (!pass && !accessToken)) return res.status(400).json({ error: 'Missing IMAP credentials' });
@@ -119,12 +246,11 @@ app.post('/api/mail/sync', async (req, res) => {
     connection.end();
     res.json({ success: true, messages: parsedMessages });
   } catch (error: any) {
-    console.error('IMAP Error:', error);
-    res.status(500).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
-app.post('/api/mail/drafts', async (req, res) => {
+app.post('/api/mail/drafts', mailLimiter, async (req, res) => {
   try {
     const { host, port, tls, user, pass, accessToken } = req.body;
     if (!user || (!pass && !accessToken)) return res.status(400).json({ error: 'Missing IMAP credentials' });
@@ -192,30 +318,11 @@ app.post('/api/mail/drafts', async (req, res) => {
     connection.end();
     res.json({ success: true, drafts: parsedMessages });
   } catch (error: any) {
-    console.error('IMAP Drafts Error:', error);
-    res.status(500).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
-app.use(express.text({ type: '*/*', limit: '50mb' }));
-
-const CONFIG_FILE = path.resolve(process.cwd(), 'flowstudio.config.json');
-
-function getConfig(): { dataPath: string; backendPort?: number } {
-  try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      const content = fs.readFileSync(CONFIG_FILE, 'utf-8');
-      const parsed = JSON.parse(content);
-      if (parsed && parsed.dataPath) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.error('[FlowStudio Server] Error reading config:', e);
-  }
-  const defaultPath = path.join(os.homedir(), 'Documents', 'FlowStudio-Data');
-  return { dataPath: defaultPath };
-}
+app.use('/api/store/*', express.text({ type: '*/*', limit: '50mb' }));
 
 function saveConfig(config: { dataPath: string; backendPort?: number }): void {
   try {
@@ -274,23 +381,27 @@ const SEED_LEADS = {
 
 const SEED_PROJECTS = {
   projects: [
-    {"id":"rebrand-2024","name":"Rebrand 2024","title":"Rebrand 2024","image":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","category":"Portfolio","status":"In Progress","statusColor":"bg-blue-600/90","progress":90,"completion":90,"client":"Apex Architecture","deadline":"2024-10-24","isPortfolio":true,"tasksCount":12,"commentsCount":4,"tags":["Branding","Architecture","Premium"]},
-    {"id":"fintech-app","name":"Fintech App UI","title":"Fintech App UI","image":"https://lh3.googleusercontent.com/aida-public/AB6AXuBXmo8m29Yj_XDkfgZ4KejySYeWbqBAj51e0AvhN5-Fz20vW1qCtLYfA6dKJacCD2b0l7YY3qsVzBgYrDVEbhCDVpL5RNKRWjGked1_iRxa12qIZ8BVTvV-fPjnML6OYWRZ2BZ6e0QJS_uEjf_W6xYnMnIfrbyE0zpO8PT5Ne6hGSF2bMfj1ColCHGD5JKbbn1OA4pOTzrAEecn7iBerJZer4k4nHsXgPNCmJvYW0opn4xiC-njf-_o0zc2jD7zJbRl0eSaKNgMW4I","thumbnail":"https://lh3.googleusercontent.com/aida-public/AB6AXuBXmo8m29Yj_XDkfgZ4KejySYeWbqBAj51e0AvhN5-Fz20vW1qCtLYfA6dKJacCD2b0l7YY3qsVzBgYrDVEbhCDVpL5RNKRWjGked1_iRxa12qIZ8BVTvV-fPjnML6OYWRZ2BZ6e0QJS_uEjf_W6xYnMnIfrbyE0zpO8PT5Ne6hGSF2bMfj1ColCHGD5JKbbn1OA4pOTzrAEecn7iBerJZer4k4nHsXgPNCmJvYW0opn4xiC-njf-_o0zc2jD7zJbRl0eSaKNgMW4I","category":"App Design","status":"Review","statusColor":"bg-indigo-600/90","progress":65,"completion":65,"client":"Vault Bank","deadline":"2024-12-12","isPortfolio":false,"tasksCount":24,"commentsCount":8,"tags":["Branding","Fintech","Design"]},
-    {"id":"lumina-brand","name":"Lumina Brand Identity","title":"Lumina Brand Identity","image":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","category":"Brand Identity","status":"Completed","statusColor":"bg-green-500/90","progress":100,"completion":100,"client":"Lumina Store","deadline":"2024-05-15","isPortfolio":true,"tasksCount":18,"commentsCount":12,"tags":["Graphic Design","E-commerce","Identity"]},
-    {"id":"sonic-wave-posters","name":"Sonic Wave Posters","title":"Sonic Wave Posters","image":"https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=1000&auto=format&fit=crop","category":"Print Design","status":"Planning","statusColor":"bg-yellow-500/90","progress":15,"completion":15,"client":"Sonic Wave Fest","deadline":"2024-08-10","isPortfolio":false,"tasksCount":30,"commentsCount":5,"tags":["Print","Typography","Event"]},
-    {"id":"neon-ui-kit","name":"Neon UI Kit","title":"Neon UI Kit","image":"https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1000&auto=format&fit=crop","category":"UI Design","status":"In Progress","statusColor":"bg-blue-600/90","progress":45,"completion":45,"client":"Nexus Studios","deadline":"2024-11-30","isPortfolio":true,"tasksCount":42,"commentsCount":21,"tags":["UI/UX","Gaming","Cyberpunk"]},
-    {"id":"aura-packaging","name":"Aura Packaging","title":"Aura Packaging","image":"https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?q=80&w=1000&auto=format&fit=crop","category":"Packaging","status":"Review","statusColor":"bg-indigo-600/90","progress":85,"completion":85,"client":"Aura Naturals","deadline":"2024-09-05","isPortfolio":true,"tasksCount":15,"commentsCount":9,"tags":["Packaging","Illustration","Retail"]},
-    {"id":"devsummit-intros","name":"DevSummit Intros","title":"DevSummit Intros","image":"https://images.unsplash.com/photo-1557672172-298e090bd0f1?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1557672172-298e090bd0f1?q=80&w=1000&auto=format&fit=crop","category":"Motion Design","status":"In Progress","statusColor":"bg-blue-600/90","progress":60,"completion":60,"client":"DevSummit","deadline":"2024-07-20","isPortfolio":false,"tasksCount":22,"commentsCount":16,"tags":["Motion Graphics","Video","Event"]},
-    {"id":"vogue-editorial","name":"Vogue Editorial Spread","title":"Vogue Editorial Spread","image":"https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=1000&auto=format&fit=crop","category":"Editorial Design","status":"Review","statusColor":"bg-indigo-600/90","progress":75,"completion":75,"client":"Vogue Magazine","deadline":"2024-09-20","isPortfolio":true,"tasksCount":28,"commentsCount":14,"tags":["Editorial","Typography","Magazine"]},
-    {"id":"holo-campaign","name":"Holo Social Campaign","title":"Holo Social Campaign","image":"https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=1000&auto=format&fit=crop","category":"3D Design","status":"Planning","statusColor":"bg-yellow-500/90","progress":10,"completion":10,"client":"Holo Tech","deadline":"2024-12-01","isPortfolio":false,"tasksCount":15,"commentsCount":2,"tags":["3D","Animation","Social Media"]},
-    {"id":"streetwear-drop","name":"Urban Streetwear Drop","title":"Urban Streetwear Drop","image":"https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop","category":"Illustration","status":"Completed","statusColor":"bg-green-500/90","progress":100,"completion":100,"client":"Urban Outfitters","deadline":"2024-04-10","isPortfolio":true,"tasksCount":35,"commentsCount":19,"tags":["Illustration","Apparel","Merch"]},
-    {"id":"neon-brand-identity","name":"Neon Brand Identity","title":"Neon Brand Identity","image":"https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop","category":"Brand Design","status":"In Progress","statusColor":"bg-pink-600/90","progress":40,"completion":40,"client":"Luminal Studio","deadline":"2026-08-12","isPortfolio":true,"tasksCount":4,"commentsCount":3,"tags":["Branding","Neon","Graphic Design"]},
-    {"id":"psychedelic-poster-series","name":"Psychedelic Poster Series","title":"Psychedelic Poster Series","image":"https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=1000&auto=format&fit=crop","category":"Graphic Design","status":"In Progress","statusColor":"bg-purple-600/90","progress":75,"completion":75,"client":"Vibe Music Fest","deadline":"2026-07-20","isPortfolio":true,"tasksCount":4,"commentsCount":6,"tags":["Poster","Vibrant","Illustration"]},
-    {"id":"retro-packaging-revival","name":"Retro Packaging Revival","title":"Retro Packaging Revival","image":"https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000&auto=format&fit=crop","category":"Packaging","status":"Review","statusColor":"bg-amber-600/90","progress":90,"completion":90,"client":"Soda Pop Co.","deadline":"2026-07-05","isPortfolio":true,"tasksCount":4,"commentsCount":8,"tags":["Packaging","Retro","Illustration"]},
-    {"id":"cyberpunk-zine","name":"Cyberpunk Zine Layout","title":"Cyberpunk Zine Layout","image":"https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop","category":"Editorial","status":"In Progress","statusColor":"bg-cyan-600/90","progress":25,"completion":25,"client":"Neo-Tokyo Press","deadline":"2026-09-15","isPortfolio":false,"tasksCount":4,"commentsCount":2,"tags":["Editorial","Cyberpunk","Layout"]},
-    {"id":"vibrant-vector-illustrations","name":"Vibrant Vector Illustrations","title":"Vibrant Vector Illustrations","image":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","thumbnail":"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop","category":"Illustration","status":"Completed","statusColor":"bg-green-500/90","progress":100,"completion":100,"client":"EduPlay Apps","deadline":"2026-06-25","isPortfolio":true,"tasksCount":3,"commentsCount":10,"tags":["Illustration","Vector","Flat Design"]}
+    {
+      id: "38n80o124",
+      name: "Posters",
+      title: "Posters",
+      description: "Custom made Poster Designs",
+      image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop",
+      category: "Design",
+      status: "In Progress",
+      statusColor: "bg-blue-600/90",
+      progress: 45,
+      completion: 45,
+      client: "John Doe",
+      deadline: "2024-12-31",
+      isPortfolio: false,
+      tasksCount: 2,
+      commentsCount: 1,
+      tags: ["Posters", "Design"]
+    }
   ],
-  currentProject: {"id":"rebrand-2024","name":"Rebrand 2024","title":"Rebrand 2024","client":"Apex Architecture","status":"In Progress","deadline":"2024-10-24","thumbnail":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","image":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000&auto=format&fit=crop","tags":["Branding","Architecture","Premium"],"completion":90,"progress":90,"category":"Portfolio","statusColor":"bg-blue-600/90"}
+  currentProject: null
 };
 
 const SEED_TASKS = {
@@ -358,84 +469,21 @@ const SEED_MOODBOARD = {
 };
 
 const SEED_BILLING = {
-  balance: 12450.00,
-  nextPaymentAmount: 50.00,
-  nextPaymentDate: 'May 15, 2024',
+  balance: 0,
+  nextPaymentAmount: 0,
+  nextPaymentDate: '',
   savedCard: {
-    cardNumber: '9759 2484 5269 6576',
-    cardHolder: 'Bruce Wayne',
-    validThru: '12/24',
-    brand: 'Mastercard'
+    cardNumber: '',
+    cardHolder: '',
+    validThru: '',
+    brand: ''
   },
   billingAddress: {
-    name: 'Elsie Saunders',
-    addressLine1: '48 Mill Pond Dr.',
-    addressLine2: 'New Rochelle, NY 10801'
+    name: '',
+    addressLine1: '',
+    addressLine2: ''
   },
-  paymentHistory: [
-    {
-      id: 'inv-1',
-      invoiceNumber: 'EK025JFN',
-      amount: 250.00,
-      status: 'Completed',
-      recipientName: 'Claudia Welch',
-      recipientAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCZtayuSSxTFfVXgd9EtBfC30sR6FEcRcaXtV7PRw8T8aDVF9_yemlu2gmywizm_2azx9L4b9RxfEmXKX35IA3LvKpdkI07eT_IITa8YwoxJNZJM9I_Qty7EdwKbvBrlKhQqrnYFNGPkqZnhFlCNki6WaMkV8iR_gPJXdQmlM9NiMTuduU2-8owy1iJ2Br5jmGywanFCsm2MNR_inZTo0wdKBfWg7NGDpGPl48VZWpEO7GSgWTMOosXYJ11g7klgsEg0fpz6e7vvD8',
-      recipientEmail: 'claudia@welchstudios.com',
-      date: 'Apr 10, 2024',
-      dueDate: 'Apr 10, 2024',
-      method: 'Visa 5432',
-      lineItems: [
-        { id: 'li-1', description: '5 team members included ($8 / month each)', quantity: 5, rate: 8 },
-        { id: 'li-2', description: '100 GB extra storage ($20.00)', quantity: 1, rate: 20 },
-        { id: 'li-3', description: '8 extra hours ($2 per 1 hour)', quantity: 8, rate: 2 },
-        { id: 'li-4', description: 'Monthly Retainer Service', quantity: 1, rate: 174 }
-      ],
-      notes: 'Payment received on time. Thank you!'
-    },
-    {
-      id: 'inv-2',
-      invoiceNumber: 'INV-2024-089',
-      amount: 65.00,
-      status: 'Pending',
-      recipientName: 'Gabriel Banks',
-      recipientAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBpauPIgwp57U0aFrctKzRbJ-y25760bg6EoGjHcRsOsHtAV_LymRc1fdbg4DHx4Gftdgfh3FSbAj3kEk79uXE4nFLXwP4YaWsAvMQFYFpqKSsc7priG7AnIhKyUv2u66aa7zgsKyItdxbWZxmwZRVg65YnRP6v38abW4m7-SXp7P2CsangrmXbSfifF78gBFMNirG-Z5yF4EfBNMgaFCfXu9DCl1anjQPuMKdUQ7CVCNCGPtBU9PoCKP6RASbCt3fFZlJRh_o6nTI',
-      recipientEmail: 'gabriel@banks-enterprises.com',
-      date: 'May 10, 2024',
-      dueDate: 'May 25, 2024',
-      method: 'Visa 5432',
-      lineItems: [
-        { id: 'li-1', description: 'Logo concept revisions', subDescription: 'Additional vector assets and mockup presentation', quantity: 1, rate: 65 }
-      ]
-    },
-    {
-      id: 'inv-3',
-      invoiceNumber: 'INV-2024-075',
-      amount: 50.00,
-      status: 'Completed',
-      recipientName: 'Nina Sherman',
-      recipientAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDlJeR3QoQLOWhKL4wyEDqbCA68NI9VBkyg6v006XyMjxiCIo0XbOrK_P6ab2Bp4YR0sCUPJKclfXCGVAlXJ-ZPZgBWddLnQi4u43fEBUC9kuu6JAPzDjGBxx0CAOK0vUN0aLylhMXqxGmOnL_DHYGVfW1y-VYUFMQkWBbg1OEDmGWAlakXHy_TqKOoTDa7gXGtte74wwOpBYAtEf2zh81JTfabd35hS8Fri61T_7G-pEAAgPvTuWKuLLcQ6KR2tHZVNlTBEI0iFLU',
-      date: 'Mar 10, 2024',
-      dueDate: 'Mar 10, 2024',
-      method: 'Visa 5432',
-      lineItems: [
-        { id: 'li-1', description: 'Monthly Hosting & Maintenance', quantity: 1, rate: 50 }
-      ]
-    },
-    {
-      id: 'inv-4',
-      invoiceNumber: 'INV-2024-061',
-      amount: 50.00,
-      status: 'Completed',
-      recipientName: 'Elizabeth Robbins',
-      recipientAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAxkD9LGw6lySkUzxEE-OPAH03F9w7CuvYwj0SavnEJQyK8ukuuPz0EuY_T2t4ZuGNCWJhj07svS4YgE4LuA7T4jV9fxffv8v028xhNclFAGNMWNLPNkppdsnw8rjly-DFwMdXBXE9kSPjuykeUHmVgTHZY6VIZ4tiTpO-IZWxzy3tvVS3UQ0ugSeMYW9evjVejLATa8AdiGnwazLTb9MJZuqD5tpLltg_jP7j1aB3rexpCHX0HIQha9_cDTsaMAHOuLnm16xz1_nk',
-      date: 'Feb 10, 2024',
-      dueDate: 'Feb 10, 2024',
-      method: 'Visa 5432',
-      lineItems: [
-        { id: 'li-1', description: 'Domain Renewal & DNS setup', quantity: 1, rate: 50 }
-      ]
-    }
-  ]
+  paymentHistory: []
 };
 
 function getSeedSettings(dataPath: string) {
@@ -542,7 +590,7 @@ function bootstrap(): void {
   const dataPath = config.dataPath;
   saveConfig(config);
 
-  console.log(`[FlowStudio Server] Data directory: ${dataPath}`);
+  
 
   if (!fs.existsSync(dataPath)) {
     fs.mkdirSync(dataPath, { recursive: true });
@@ -567,18 +615,118 @@ function bootstrap(): void {
     clientDetails: SEED_CLIENT_DETAILS,
     notes: SEED_NOTES,
     leadDummies: SEED_LEAD_DUMMIES,
-    teamMessages: SEED_TEAM_MESSAGES
+    teamMessages: SEED_TEAM_MESSAGES,
+    scraper: {
+      scrapedLeads: [],
+      selectedIds: [],
+      apiKey: '',
+      activeTab: 'google-maps',
+      logs: [],
+      mustHaveFilters: { email: false, phone: false, instagram: false, facebook: false, website: false },
+      gmapsConfig: { searchTerms: 'Design Agency', location: 'New York, NY', category: 'Marketing', maxResults: 15 },
+      igConfig: { searchTarget: 'creativeagency', searchType: 'hashtag', minFollowers: 1000, maxProfiles: 15 },
+      liConfig: { jobTitle: 'Founder', industry: 'Design & Marketing', location: 'San Francisco, CA', maxProfiles: 15 },
+      gsConfig: { query: 'Top branding agencies', targetDomain: '', extractEmails: true, extractPhones: true, maxResults: 15 }
+    }
   };
 
   for (const [name, state] of Object.entries(stores)) {
     const filePath = path.join(dataPath, `${name}.json`);
+    let needsWrite = false;
+
     if (!fs.existsSync(filePath)) {
+      needsWrite = true;
+    } else {
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const parsed = JSON.parse(content);
+        const st = parsed.state || parsed;
+
+        if (name === 'clients' && (!Array.isArray(st.clients) || st.clients.length === 0)) needsWrite = true;
+        if (name === 'leads' && (!Array.isArray(st.leads) || st.leads.length === 0)) needsWrite = true;
+        if (name === 'projects' && (!Array.isArray(st.projects) || st.projects.length === 0)) needsWrite = true;
+        if (name === 'team' && (!Array.isArray(st.members) || st.members.length === 0)) needsWrite = true;
+      } catch {
+        needsWrite = true;
+      }
+    }
+
+    if (needsWrite) {
       const payload = JSON.stringify({ state, version: 0 }, null, 2);
       fs.writeFileSync(filePath, payload, 'utf-8');
-      console.log(`[FlowStudio Server] Seeded ${name}.json`);
+      console.log(`[FlowStudio Server] Seeded data for ${name}.json in ${dataPath}`);
+    }
+  }
+
+  setupDataWatcher(dataPath);
+}
+
+// Real-Time Event Sync via Server-Sent Events (SSE)
+const sseClients: express.Response[] = [];
+
+function broadcastStoreChange(storeName: string, source: 'api' | 'fs' = 'api') {
+  const payload = JSON.stringify({ type: 'store_updated', store: storeName, source, timestamp: Date.now() });
+  for (let i = sseClients.length - 1; i >= 0; i--) {
+    try {
+      sseClients[i].write(`data: ${payload}\n\n`);
+    } catch {
+      sseClients.splice(i, 1);
     }
   }
 }
+
+// Watch data folder for external file edits (e.g. from agent, scripts, tools)
+const fsWatchDebounceTimers = new Map<string, NodeJS.Timeout>();
+
+function setupDataWatcher(dirPath: string) {
+  try {
+    if (!fs.existsSync(dirPath)) return;
+    fs.watch(dirPath, { recursive: false }, (eventType, filename) => {
+      if (!filename || typeof filename !== 'string' || !filename.endsWith('.json') || filename.endsWith('.tmp')) return;
+      const storeName = path.basename(filename, '.json');
+      
+      if (fsWatchDebounceTimers.has(storeName)) {
+        clearTimeout(fsWatchDebounceTimers.get(storeName)!);
+      }
+
+      const timer = setTimeout(() => {
+        fsWatchDebounceTimers.delete(storeName);
+        broadcastStoreChange(storeName, 'fs');
+      }, 100);
+
+      fsWatchDebounceTimers.set(storeName, timer);
+    });
+    console.log(`[FlowStudio Server] Watching ${dirPath} for real-time live sync.`);
+  } catch (err) {
+    console.warn('[FlowStudio Server] fs.watch setup warning:', err);
+  }
+}
+
+// 0. GET /api/events (SSE Stream for Realtime Store Sync)
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.flushHeaders?.();
+
+  sseClients.push(res);
+  res.write(`data: ${JSON.stringify({ type: 'connected', clients: sseClients.length })}\n\n`);
+
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': keepalive\n\n');
+    } catch {
+      clearInterval(keepAlive);
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    const idx = sseClients.indexOf(res);
+    if (idx !== -1) sseClients.splice(idx, 1);
+  });
+});
 
 // 1. GET /api/config
 app.get('/api/config', (req, res) => {
@@ -616,24 +764,23 @@ app.put('/api/config', (req, res) => {
     }
 
     saveConfig({ dataPath: newPath });
+    setupDataWatcher(newPath);
     res.json({ dataPath: newPath });
   } catch (e: any) {
-    console.error('[FlowStudio Server] Error updating config:', e);
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
 // 3. GET /api/store/:name
 app.get('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const { dataPath } = getConfig();
-    const filePath = path.join(dataPath, `${name}.json`);
+    const filePath = getStoreFilePath(name);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Store file not found' });
@@ -642,60 +789,246 @@ app.get('/api/store/:name', (req, res) => {
     const content = fs.readFileSync(filePath, 'utf-8');
     res.header('Content-Type', 'application/json').send(content);
   } catch (e: any) {
-    console.error(`[FlowStudio Server] Error reading store ${req.params.name}:`, e);
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
 // 4. PUT /api/store/:name
 app.put('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const { dataPath } = getConfig();
-    if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true });
+    const filePath = getStoreFilePath(name);
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
-    const filePath = path.join(dataPath, `${name}.json`);
-    const tmpPath = path.join(dataPath, `${name}.json.tmp`);
-
+    const tmpPath = `${filePath}.tmp`;
     const content = typeof req.body === 'string' ? req.body : JSON.stringify(req.body, null, 2);
 
     fs.writeFileSync(tmpPath, content, 'utf-8');
     fs.renameSync(tmpPath, filePath);
 
+    broadcastStoreChange(name, 'api');
+
     res.json({ success: true });
   } catch (e: any) {
-    console.error(`[FlowStudio Server] Error writing store ${req.params.name}:`, e);
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
 // 5. DELETE /api/store/:name
 app.delete('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const { dataPath } = getConfig();
-    const filePath = path.join(dataPath, `${name}.json`);
+    const filePath = getStoreFilePath(name);
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
+    broadcastStoreChange(name, 'api');
+
     res.json({ success: true });
   } catch (e: any) {
-    console.error(`[FlowStudio Server] Error deleting store ${req.params.name}:`, e);
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
+  }
+});
+
+// Helper to sanitize project names
+const sanitizeProjectName = (name: string) => name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').trim() || 'Unnamed Project';
+
+// POST /api/projects/get-folder
+app.post('/api/projects/get-folder', (req, res) => {
+  try {
+    const { projectId, projectName } = req.body as { projectId?: string; projectName?: string };
+    if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    const directories = fs.readdirSync(projectsRoot, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory());
+
+    // 1. Try to find by .flow-id
+    for (const dirent of directories) {
+      const folderPath = path.join(projectsRoot, dirent.name);
+      const idFilePath = path.join(folderPath, '.flow-id');
+      if (fs.existsSync(idFilePath)) {
+        const id = fs.readFileSync(idFilePath, 'utf-8').trim();
+        if (id === projectId) {
+          return res.json({ path: folderPath, folderName: dirent.name, dataPath });
+        }
+      }
+    }
+
+    // 2. Try to find by exact name (Legacy fallback)
+    if (projectName) {
+      const safeName = sanitizeProjectName(projectName);
+      const legacyPath = path.join(projectsRoot, safeName);
+      if (fs.existsSync(legacyPath)) {
+        // Claim it by writing .flow-id
+        fs.writeFileSync(path.join(legacyPath, '.flow-id'), projectId, 'utf-8');
+        return res.json({ path: legacyPath, folderName: safeName, dataPath });
+      }
+    }
+
+    res.json({ path: null, dataPath });
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+// POST /api/projects/open-explorer
+app.post('/api/projects/open-explorer', (req, res) => {
+  try {
+    const { projectId, projectName } = req.body as { projectId?: string; projectName?: string };
+    if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    let targetPath: string | null = null;
+    const directories = fs.readdirSync(projectsRoot, { withFileTypes: true }).filter(d => d.isDirectory());
+
+    for (const dirent of directories) {
+      const folderPath = path.join(projectsRoot, dirent.name);
+      const idFilePath = path.join(folderPath, '.flow-id');
+      if (fs.existsSync(idFilePath)) {
+        const id = fs.readFileSync(idFilePath, 'utf-8').trim();
+        if (id === projectId) {
+          targetPath = folderPath;
+          break;
+        }
+      }
+    }
+
+    if (!targetPath && projectName) {
+      const safeName = sanitizeProjectName(projectName);
+      targetPath = path.join(projectsRoot, safeName);
+      if (!fs.existsSync(targetPath)) {
+        fs.mkdirSync(targetPath, { recursive: true });
+        fs.writeFileSync(path.join(targetPath, '.flow-id'), projectId, 'utf-8');
+      }
+    }
+
+    if (targetPath && fs.existsSync(targetPath)) {
+      const winPath = targetPath.replace(/\//g, '\\');
+
+      // Respond immediately — explorer.exe always exits with code 1 even on success,
+      // so we must NOT wait for the exec callback before sending the response.
+      res.json({ success: true, path: targetPath });
+
+      if (process.platform === 'win32') {
+        // exec with shell:true properly launches File Explorer in a foreground window
+        exec(`start "" "${winPath}"`, { shell: 'cmd.exe' }, (err) => {
+          if (err) console.error('[open-explorer] exec error (ignored):', err.message);
+        });
+      } else if (process.platform === 'darwin') {
+        exec(`open "${targetPath}"`);
+      } else {
+        exec(`xdg-open "${targetPath}"`);
+      }
+    } else {
+      res.status(404).json({ error: 'Project folder not found' });
+    }
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+// POST /api/projects/create-folder
+app.post('/api/projects/create-folder', (req, res) => {
+  try {
+    const { projectId, projectName } = req.body as { projectId?: string; projectName?: string };
+    if (!projectId || !projectName) return res.status(400).json({ error: 'projectId and projectName are required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    const safeName = sanitizeProjectName(projectName);
+    let folderName = safeName;
+    let newFolder = path.join(projectsRoot, folderName);
+    let counter = 2;
+
+    while (fs.existsSync(newFolder)) {
+      folderName = `${safeName} ${counter}`;
+      newFolder = path.join(projectsRoot, folderName);
+      counter++;
+    }
+
+    fs.mkdirSync(newFolder, { recursive: true });
+    fs.writeFileSync(path.join(newFolder, '.flow-id'), projectId, 'utf-8');
+
+    res.json({ path: newFolder, folderName, dataPath });
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
+// POST /api/projects/rename-folder
+app.post('/api/projects/rename-folder', (req, res) => {
+  try {
+    const { projectId, newProjectName } = req.body as { projectId?: string; newProjectName?: string };
+    if (!projectId || !newProjectName) return res.status(400).json({ error: 'projectId and newProjectName are required' });
+
+    const { dataPath } = getConfig();
+    const projectsRoot = path.join(dataPath, 'Projects');
+    
+    if (!fs.existsSync(projectsRoot)) fs.mkdirSync(projectsRoot, { recursive: true });
+
+    const directories = fs.readdirSync(projectsRoot, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory());
+
+    let targetFolder = null;
+    for (const dirent of directories) {
+      const folderPath = path.join(projectsRoot, dirent.name);
+      const idFilePath = path.join(folderPath, '.flow-id');
+      if (fs.existsSync(idFilePath)) {
+        const id = fs.readFileSync(idFilePath, 'utf-8').trim();
+        if (id === projectId) {
+          targetFolder = dirent.name;
+          break;
+        }
+      }
+    }
+
+    if (targetFolder) {
+      const safeName = sanitizeProjectName(newProjectName);
+      
+      if (targetFolder !== safeName) {
+        let folderName = safeName;
+        let newPath = path.join(projectsRoot, folderName);
+        let counter = 2;
+
+        while (fs.existsSync(newPath)) {
+          folderName = `${safeName} ${counter}`;
+          newPath = path.join(projectsRoot, folderName);
+          counter++;
+        }
+
+        const oldPath = path.join(projectsRoot, targetFolder);
+        fs.renameSync(oldPath, newPath);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (e: any) {
+    sendError(res, e);
   }
 });
 
@@ -725,8 +1058,7 @@ app.post('/api/browse', (req, res) => {
       directories
     });
   } catch (e: any) {
-    console.error('[FlowStudio Server] Error browsing directories:', e);
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
@@ -738,18 +1070,66 @@ app.post('/api/reveal', (req, res) => {
       fs.mkdirSync(targetPath, { recursive: true });
     }
 
-    exec(`explorer "${targetPath}"`, (err) => {
-      if (err) {
-        console.error('[FlowStudio Server] Error opening Explorer:', err);
-      }
-    });
+    spawn('explorer', [targetPath], { detached: true, stdio: 'ignore' }).unref();
 
     res.json({ success: true });
   } catch (e: any) {
-    console.error('[FlowStudio Server] Error revealing path:', e);
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
+
+// 7.5. POST /api/select-folder (Native OS folder selection dialog)
+app.post('/api/select-folder', (req, res) => {
+  try {
+    const initialPath = req.body?.currentPath && fs.existsSync(req.body.currentPath)
+      ? path.resolve(req.body.currentPath)
+      : getConfig().dataPath;
+
+    if (process.platform === 'win32') {
+      const sanitizedPath = initialPath.replace(/'/g, "''");
+      const psCommand = `
+        Add-Type -AssemblyName System.Windows.Forms;
+        $f = New-Object System.Windows.Forms.FolderBrowserDialog;
+        $f.Description = 'Select Data Storage Directory';
+        $f.ShowNewFolderButton = $true;
+        if (Test-Path '${sanitizedPath}') { $f.SelectedPath = '${sanitizedPath}' }
+        [void]$f.ShowDialog();
+        if ($f.SelectedPath) { Write-Output $f.SelectedPath }
+      `.replace(/\n/g, ' ');
+
+      exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCommand}"`, { maxBuffer: 1024 * 1024 }, (err, stdout) => {
+        if (err) {
+          console.error('[select-folder] PowerShell error:', err);
+          return res.status(500).json({ error: 'Failed to open native folder dialog' });
+        }
+        const selectedPath = stdout.trim();
+        if (selectedPath) {
+          res.json({ path: selectedPath });
+        } else {
+          res.json({ canceled: true });
+        }
+      });
+    } else if (process.platform === 'darwin') {
+      const osaScript = `osascript -e 'POSIX path of (choose folder with prompt "Select Data Storage Directory")'`;
+      exec(osaScript, (err, stdout) => {
+        if (err) return res.json({ canceled: true });
+        const selectedPath = stdout.trim();
+        if (selectedPath) res.json({ path: selectedPath });
+        else res.json({ canceled: true });
+      });
+    } else {
+      exec(`zenity --file-selection --directory --title="Select Data Storage Directory"`, (err, stdout) => {
+        if (err) return res.json({ canceled: true });
+        const selectedPath = stdout.trim();
+        if (selectedPath) res.json({ path: selectedPath });
+        else res.json({ canceled: true });
+      });
+    }
+  } catch (e: any) {
+    sendError(res, e);
+  }
+});
+
 
 // 8. GET /api/storage-info
 app.get('/api/storage-info', (req, res) => {
@@ -772,12 +1152,12 @@ app.get('/api/storage-info', (req, res) => {
 
     res.json({ totalBytes, files });
   } catch (e: any) {
-    console.error('[FlowStudio Server] Error getting storage info:', e);
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
-const ports = [3009, 3010, 3011, 3012];
+const preferredPort = getConfig().backendPort || 3010;
+const ports = [preferredPort, 3010, 3009, 3011, 3012].filter((v, i, a) => a.indexOf(v) === i);
 
 // ==========================================
 // FILE SYSTEM ENDPOINTS (/api/fs/*)
@@ -790,19 +1170,26 @@ const getFsRoot = () => {
 
 const resolveFsPath = (reqPath: string, mode?: string) => {
   if (mode === 'global') {
-    // Treat as absolute Windows path
+    if (reqPath && /^[a-zA-Z]:$/.test(reqPath)) {
+      return reqPath + path.sep;
+    }
     return reqPath ? path.normalize(reqPath) : '';
   }
   const root = getFsRoot();
-  // Prevent directory traversal
-  const safePath = path.normalize(reqPath || '/').replace(/^(\.\.(\/|\\|$))+/, '');
-  return path.join(root, safePath);
+  // Resolve the full path and normalize it
+  const safePath = path.resolve(root, reqPath || '.');
+  
+  // CRITICAL: Ensure the resolved path starts with the root directory
+  if (!safePath.startsWith(root)) {
+    throw new Error('Path traversal detected');
+  }
+  return safePath;
 };
 
 // GET /api/fs/drives
 app.get('/api/fs/drives', (req, res) => {
   exec('wmic logicaldisk get name,freespace,size', (error, stdout) => {
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return sendError(res, error);
     
     // Output:
     // FreeSpace    Name  Size
@@ -860,7 +1247,7 @@ app.get('/api/fs/quick-access', (req, res) => {
       videos: path.join(home, 'Videos'),
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
@@ -876,7 +1263,12 @@ app.get('/api/fs/list', (req, res) => {
     }
 
     if (!fs.existsSync(targetPath)) {
-      return res.json({ files: [] });
+      // Auto-create the directory for project-scoped paths (not global)
+      if (mode !== 'global') {
+        fs.mkdirSync(targetPath, { recursive: true });
+      } else {
+        return res.json({ files: [] });
+      }
     }
     
     const entries = fs.readdirSync(targetPath, { withFileTypes: true });
@@ -902,7 +1294,7 @@ app.get('/api/fs/list', (req, res) => {
 
     res.json({ files });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
@@ -918,7 +1310,7 @@ app.post('/api/fs/mkdir', (req, res) => {
     }
     res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
@@ -933,7 +1325,7 @@ app.post('/api/fs/rename', (req, res) => {
     }
     res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
@@ -954,7 +1346,25 @@ app.post('/api/fs/copy', (req, res) => {
     }
     res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
+  }
+});
+
+// POST /api/fs/create-file
+app.post('/api/fs/create-file', (req, res) => {
+  try {
+    const { path: reqPath, name, mode } = req.body;
+    const targetDir = resolveFsPath(reqPath, mode);
+    const targetFile = path.join(targetDir, name);
+    
+    // Ensure parent dir exists
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+    
+    // Create empty file
+    fs.writeFileSync(targetFile, '');
+    res.json({ success: true, path: targetFile });
+  } catch (e: any) {
+    sendError(res, e);
   }
 });
 
@@ -973,7 +1383,7 @@ app.post('/api/fs/delete', (req, res) => {
     }
     res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
@@ -998,7 +1408,7 @@ app.put('/api/fs/upload', (req, res) => {
     }
     res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    sendError(res, e);
   }
 });
 
@@ -1022,6 +1432,8 @@ app.get('/api/fs/file', async (req, res) => {
       const ext = path.extname(targetPath).toLowerCase();
       if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
          try {
+            const sharpModule = await import('sharp');
+            const sharp = (sharpModule.default || sharpModule) as any;
             const data = await sharp(targetPath).resize(256, 256, { fit: 'cover' }).toBuffer();
             res.setHeader('Content-Type', `image/${ext.replace('.', '')}`);
             return res.send(data);
@@ -1032,11 +1444,60 @@ app.get('/api/fs/file', async (req, res) => {
       }
     }
 
-    // Send file directly
+    // Send file directly, forcing download if unsafe
+    const ext = path.extname(targetPath).toLowerCase();
+    const safeTypes = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+    
+    if (!safeTypes.includes(ext)) {
+      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(targetPath)}"`);
+    }
+
     res.sendFile(targetPath);
   } catch (e: any) {
-    res.status(500).send(e.message);
+    sendError(res, e);
   }
+});
+
+// Serve static frontend files in production if dist folder exists
+let serverDir = path.dirname(__server_filename);
+if (serverDir.includes('app.asar') && !serverDir.includes('app.asar.unpacked')) {
+  serverDir = serverDir.replace('app.asar', 'app.asar.unpacked');
+}
+
+let cwdDir = process.cwd();
+if (cwdDir.includes('app.asar') && !cwdDir.includes('app.asar.unpacked')) {
+  cwdDir = cwdDir.replace('app.asar', 'app.asar.unpacked');
+}
+
+const candidateDistPaths = [
+  path.resolve(serverDir, 'dist'),
+  path.resolve(serverDir, '../dist'),
+  path.resolve(cwdDir, 'dist'),
+  path.resolve(cwdDir, '../dist')
+];
+
+let distPath = candidateDistPaths.find(p => fs.existsSync(p)) || candidateDistPaths[0];
+console.log('[FlowStudio Server] Resolved distPath:', distPath, 'exists:', fs.existsSync(distPath));
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  // Serve React index.html for all non-API requests (client-side routing fallback)
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+app.get('/debug-dist', (req, res) => {
+  res.json({
+    __server_filename,
+    serverDir,
+    cwdDir,
+    candidateDistPaths,
+    distPath,
+    exists: fs.existsSync(distPath),
+    cwd: process.cwd(),
+    resourcesPath: process.env.RESOURCES_PATH || 'unknown'
+  });
 });
 
 function startServer(portIndex: number = 0) {

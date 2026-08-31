@@ -45,7 +45,7 @@ export const TrashProjectGrid: React.FC<TrashProjectGridProps> = ({ items, onRes
               <div className="w-[1px] h-4 bg-slate-700/50 mx-0.5" />
               <button 
                 onClick={(e) => { e.stopPropagation(); onRestore(item.id); }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-red text-xs font-bold text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <RotateCcw className="size-3.5" />
                 Restore

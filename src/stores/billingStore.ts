@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export interface InvoiceLineItem {
   id: string;
@@ -52,6 +52,7 @@ interface BillingState {
   deleteInvoice: (id: string) => void;
   updateSavedCard: (card: Partial<SavedCardInfo>) => void;
   updateBillingAddress: (address: Partial<BillingAddressInfo>) => void;
+  clearBillingData: () => void;
 }
 
 export const useBillingStore = create<BillingState>()(
@@ -99,7 +100,25 @@ export const useBillingStore = create<BillingState>()(
 
       updateBillingAddress: (address) => set((state) => ({
         billingAddress: { ...state.billingAddress, ...address }
-      }))
+      })),
+
+      clearBillingData: () => set({
+        balance: 0,
+        nextPaymentAmount: 0,
+        nextPaymentDate: '',
+        savedCard: {
+          cardNumber: '',
+          cardHolder: '',
+          validThru: '',
+          brand: ''
+        },
+        billingAddress: {
+          name: '',
+          addressLine1: '',
+          addressLine2: ''
+        },
+        paymentHistory: []
+      })
     }),
     {
       name: 'billing-storage-v1',
@@ -110,3 +129,8 @@ export const useBillingStore = create<BillingState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('billing', () => {
+  useBillingStore.persist.rehydrate();
+});

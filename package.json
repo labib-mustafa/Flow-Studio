@@ -3,21 +3,29 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "main.cjs",
   "scripts": {
-    "dev": "concurrently -n server,vite -c blue,green \"npm run dev:server\" \"vite --port=3000 --host=0.0.0.0\"",
+    "dev": "concurrently -n server,vite,electron -c blue,green,magenta \"npm run dev:server\" \"vite --port=3000 --host=0.0.0.0\" \"npm run electron:dev\"",
     "dev:server": "tsx watch server.ts",
     "dev:vite": "vite --port=3000 --host=0.0.0.0",
+    "electron:dev": "wait-on http://localhost:3000 && electron .",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "build:server": "node scripts/build-server.cjs",
+    "package": "npm run build && npm run build:server && electron-builder"
   },
   "dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@fontsource-variable/geist": "^5.3.0",
     "@google/genai": "^1.29.0",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-switch": "^1.2.6",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-virtual": "^3.14.5",
+    "@tldraw/tldraw": "^5.2.5",
     "@types/imap-simple": "^4.2.10",
     "@types/mailparser": "^3.4.6",
     "@types/nodemailer": "^8.0.1",
@@ -25,17 +33,20 @@
     "@types/sharp": "^0.31.1",
     "@types/tinycolor2": "^1.4.6",
     "@vitejs/plugin-react": "^5.0.4",
-    "better-sqlite3": "^12.4.1",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cors": "^2.8.6",
     "date-fns": "^4.4.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.6.0",
     "firebase": "^12.15.0",
     "framer-motion": "^12.38.0",
+    "helmet": "^8.3.0",
     "html2canvas-pro": "^2.2.1",
     "html2pdf.js": "^0.14.0",
     "imap-simple": "^5.1.0",
-    "lucide-react": "^0.546.0",
+    "lucide-react": "^1.24.0",
     "mailparser": "^3.9.12",
     "motion": "^12.23.24",
     "nodemailer": "^9.0.3",
@@ -46,24 +57,69 @@
     "react-moveable": "^0.56.0",
     "react-selecto": "^1.26.3",
     "recharts": "^3.9.2",
+    "shadcn": "^4.16.0",
     "sharp": "^0.35.2",
     "tailwind-merge": "^3.6.0",
     "tinycolor2": "^1.6.0",
+    "tw-animate-css": "^1.4.0",
     "vite": "^6.2.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@electron/rebuild": "^4.2.0",
     "@locator/babel-jsx": "^0.5.1",
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "code-inspector-plugin": "^1.6.2",
     "concurrently": "^9.1.0",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "com.flowstudio.app",
+    "productName": "Flow Studio",
+    "asar": true,
+    "asarUnpack": [
+      "dist/**/*",
+      "dist-server/**/*"
+    ],
+    "directories": {
+      "output": "../Flow-Studio-Release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-server/**/*",
+      "main.cjs",
+      "preload.cjs",
+      "splash.html",
+      "icon.ico",
+      "package.json",
+      "flowstudio.config.json"
+    ],
+    "win": {
+      "icon": "icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

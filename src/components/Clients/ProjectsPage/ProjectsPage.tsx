@@ -3,6 +3,7 @@ import { Search, Filter, Plus } from 'lucide-react';
 import { useProjectStore } from '../../../stores/projectStore';
 import { ProjectCard } from '../../Projects/ProjectOverview/ProjectCard';
 import { useTaskStore } from '../../../stores/taskStore';
+import { confirm } from '../../../stores/confirmStore';
 
 interface ProjectsPageProps {
   clientName?: string;
@@ -70,9 +71,13 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
                   onProjectClick?.(project);
                 }}
                 onEditClick={() => onEditProject?.(project)}
-                onDeleteClick={(e) => {
+                onDeleteClick={async (e) => {
                   e.stopPropagation();
-                  if (window.confirm(`Are you sure you want to delete "${project.title || project.name}"? It will be moved to the Trash.`)) {
+                  const ok = await confirm.danger(
+                    `Delete "${project.title || project.name}"?`,
+                    'This project will be moved to the Trash directory.'
+                  );
+                  if (ok) {
                     deleteProject(project.id);
                   }
                 }}

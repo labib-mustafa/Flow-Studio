@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 import { useTrashStore } from './trashStore';
 
 
@@ -66,6 +66,7 @@ export interface Client {
 }
 
 interface ClientState {
+  _hasHydrated: boolean;
   clients: Client[];
   notes: ClientNote[];
   selectedClientId: string;
@@ -94,6 +95,7 @@ const initialNotes: ClientNote[] = [];
 export const useClientStore = create<ClientState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       clients: initialClients,
       notes: initialNotes,
       selectedClientId: 'john-doe',
@@ -191,6 +193,7 @@ export const useClientStore = create<ClientState>()(
     {
       name: 'client-storage-v1',
       storage: createFileStorage('clients'),
+      onRehydrateStorage: () => () => { useClientStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
         const merged = { ...currentState, ...persistedState };
         if (merged.clients && Array.isArray(merged.clients)) {
@@ -217,3 +220,8 @@ export const useClientStore = create<ClientState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('clients', () => {
+  useClientStore.persist.rehydrate();
+});

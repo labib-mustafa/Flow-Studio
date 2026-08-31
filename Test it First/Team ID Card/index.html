@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flow Studio - Team ID Cards Sandbox</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Space Grotesk"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background-color: #0b0f19;
+      background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+      min-height: 100vh;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+    
+    /* 3D Flip Card Container */
+    .card-container {
+      perspective: 1200px;
+    }
+    
+    .card-inner {
+      transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-style: preserve-3d;
+    }
+    
+    .card-container.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    
+    .card-front, .card-back {
+      backface-visibility: hidden;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Holographic Glare Effect */
+    .glare-effect {
+      background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+      mix-blend-mode: overlay;
+    }
+    
+    /* Custom Barcode Styling */
+    .barcode-line {
+      display: inline-block;
+      height: 32px;
+      background-color: #0f172a;
+    }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header Banner -->
+    <header class="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-slate-800 pb-8">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs font-bold tracking-widest uppercase rounded-full border border-indigo-500/20">Sandbox Playground</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        </div>
+        <h1 class="text-4xl font-extrabold tracking-tight text-white">Employee ID Card System</h1>
+        <p class="text-slate-400 mt-1">Holographic badges and 3D card layout prototype for Flow Studio team members.</p>
+      </div>
+      
+      <div class="flex gap-3">
+        <button onclick="flipAll()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all border border-slate-700 flex items-center gap-2 cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i> Flip All Badges
+        </button>
+        <button onclick="toggleCardTheme()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2 cursor-pointer">
+          <i data-lucide="sparkles" class="w-4 h-4"></i> Switch Aesthetic
+        </button>
+      </div>
+    </header>
+
+    <!-- Cards Grid -->
+    <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      <!-- Cards will be populated dynamically -->
+    </div>
+  </div>
+
+  <script>
+    // Live Reload Event Listener
+    const evtSource = new EventSource("/events");
+    evtSource.onmessage = function(event) {
+      if (event.data === "reload") {
+        console.log("File changed! Reloading page...");
+        window.location.reload();
+      }
+    };
+
+    // Card Theme State
+    let activeTheme = 'hologram'; // hologram, dark-minimalist, classic-corporate
+
+    // Mock Team Data matching teamStore
+    const teamMembers = [
+      {
+        id: "m_1",
+        name: "Sarah Jenkins",
+        role: "Owner",
+        email: "sarah@flowstudio.design",
+        phone: "+1 (555) 234-5678",
+        department: "Leadership",
+        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=300&fit=crop",
+        bio: "Visionary creative director and founder of Flow Studio. Focused on design excellence.",
+        joinDate: "Jan 12, 2023",
+        badgeColor: "from-purple-500 to-indigo-600",
+        accentColor: "purple"
+      },
+      {
+        id: "m_2",
+        name: "Alex Chen",
+        role: "Admin",
+        email: "alex.c@flowstudio.design",
+        phone: "+1 (555) 876-5432",
+        department: "Operations",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop",
+        bio: "Managing cross-functional workflows, tooling integrations, and studio infrastructure.",
+        joinDate: "Mar 22, 2023",
+        badgeColor: "from-blue-500 to-cyan-600",
+        accentColor: "blue"
+      },
+      {
+        id: "m_3",
+        name: "Marcus Vance",
+        role: "Manager",
+        email: "marcus@flowstudio.design",
+        phone: "+1 (555) 901-2345",
+        department: "Client Strategy",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop",
+        bio: "Leading projects from initial concept to launch. Keeping timelines tight and clients happy.",
+        joinDate: "Jul 05, 2023",
+        badgeColor: "from-amber-500 to-orange-600",
+        accentColor: "amber"
+      },
+      {
+        id: "m_4",
+        name: "Elena Rostova",
+        role: "Designer",
+        email: "elena@flowstudio.design",
+        phone: "+1 (555) 345-6789",
+        department: "Creative Studio",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop",
+        bio: "Specializing in visual systems, high-fidelity UI designs, and kinetic branding details.",
+        joinDate: "Nov 15, 2023",
+        badgeColor: "from-pink-500 to-rose-600",
+        accentColor: "pink"
+      },
+      {
+        id: "m_5",
+        name: "David K.",
+        role: "Developer",
+        email: "david@flowstudio.design",
+        phone: "+1 (555) 456-7890",
+        department: "Engineering",
+        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop",
+        bio: "Building sleek, responsive user interfaces and robust developer tooling architectures.",
+        joinDate: "Feb 01, 2024",
+        badgeColor: "from-emerald-500 to-teal-600",
+        accentColor: "emerald"
+      }
+    ];
+
+    // Helper to render barcodes
+    function generateBarcodeHTML(id) {
+      const bars = [1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2, 1, 4];
+      return bars.map(width => `<span class="barcode-line rounded-sm" style="width: ${width}px; margin-right: 2px;"></span>`).join('');
+    }
+
+    // Build Card Element
+    function createCard(member) {
+      // Determine background details based on activeTheme
+      let cardBgStyle = '';
+      let borderStyle = '';
+      
+      if (activeTheme === 'hologram') {
+        cardBgStyle = `bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.03)]`;
+      } else if (activeTheme === 'dark-minimalist') {
+        cardBgStyle = `bg-[#121214] border border-slate-800 shadow-[0_4px_24px_rgba(0,0,0,0.5)]`;
+      } else { // classic-corporate
+        cardBgStyle = `bg-slate-100 border border-slate-200 text-slate-800 shadow-lg`;
+      }
+
+      return `
+        <div class="card-container w-full h-[480px] relative cursor-pointer select-none" id="container-${member.id}" onclick="flipCard('${member.id}')">
+          <div class="card-inner w-full h-full relative" id="inner-${member.id}">
+            
+            <!-- CARD FRONT -->
+            <div class="card-front rounded-[24px] ${cardBgStyle} overflow-hidden p-6 flex flex-col justify-between transition-all duration-300 relative group">
+              <!-- Holographic glint for hologram theme -->
+              ${activeTheme === 'hologram' ? `<div class="glare-effect absolute inset-0 opacity-40 group-hover:opacity-100 transition-opacity duration-500"></div>` : ''}
+              
+              <!-- Card Top (Header / Chip / Logo) -->
+              <div class="flex justify-between items-start z-10 relative">
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <div class="w-3.5 h-3.5 rounded-full bg-gradient-to-tr ${member.badgeColor}"></div>
+                    <span class="text-xs font-black tracking-widest uppercase ${activeTheme === 'classic-corporate' ? 'text-slate-800' : 'text-white'}">FLOW STUDIO</span>
+                  </div>
+                  <span class="text-[9px] font-bold uppercase tracking-widest ${activeTheme === 'classic-corporate' ? 'text-slate-500' : 'text-slate-500'} mt-1 block">Staff Directory</span>
+                </div>
+                
+                <!-- Chip graphic -->
+                <div class="w-8 h-6 rounded-md bg-gradient-to-br from-amber-400 to-amber-600/80 p-1 flex flex-col justify-between opacity-80 shadow-inner">
+                  <div class="border-b border-amber-900/20 h-px w-full"></div>
+                  <div class="border-b border-amber-900/20 h-px w-full"></div>
+                  <div class="border-b border-amber-900/20 h-px w-full"></div>
+                </div>
+              </div>
+
+              <!-- Card Body (Portrait & Role) -->
+              <div class="flex flex-col items-center my-6 z-10 relative">
+                <div class="relative w-28 h-28 mb-4">
+                  <!-- Outer glowing orbit or frame -->
+                  <div class="absolute inset-0 bg-gradient-to-tr ${member.badgeColor} rounded-full scale-105 opacity-25 blur-sm"></div>
+                  <div class="absolute inset-0 bg-gradient-to-tr ${member.badgeColor} rounded-full p-0.5 shadow-md">
+                    <img src="${member.avatar}" alt="${member.name}" class="w-full h-full rounded-full object-cover grayscale-[0.15]">
+                  </div>
+                </div>
+
+                <h3 class="text-xl font-bold tracking-tight ${activeTheme === 'classic-corporate' ? 'text-slate-900' : 'text-white'}">${member.name}</h3>
+                
+                <span class="mt-2.5 px-3 py-1 bg-gradient-to-r ${member.badgeColor} text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm">
+                  ${member.role}
+                </span>
+              </div>
+
+              <!-- Card Bottom (Employee Info & QR Code) -->
+              <div class="flex justify-between items-end border-t ${activeTheme === 'classic-corporate' ? 'border-slate-200' : 'border-slate-800'} pt-4 z-10 relative">
+                <div class="space-y-1.5">
+                  <div>
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">Department</span>
+                    <span class="text-xs font-semibold ${activeTheme === 'classic-corporate' ? 'text-slate-700' : 'text-slate-300'}">${member.department}</span>
+                  </div>
+                  <div>
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">Access Key</span>
+                    <span class="font-mono text-[10px] font-bold ${activeTheme === 'classic-corporate' ? 'text-slate-600' : 'text-slate-400'}">${member.id.toUpperCase()}-${member.joinDate.split(' ')[2]}</span>
+                  </div>
+                </div>
+
+                <!-- Custom mini QR-like graphic -->
+                <div class="w-10 h-10 ${activeTheme === 'classic-corporate' ? 'bg-white border border-slate-200' : 'bg-slate-800/80 border border-slate-700'} p-1 rounded-lg flex flex-wrap gap-[2px]">
+                  ${Array.from({length: 16}).map(() => `<span class="w-[7px] h-[7px] rounded-[1px] ${Math.random() > 0.4 ? (activeTheme === 'classic-corporate' ? 'bg-slate-800' : 'bg-slate-300') : 'bg-transparent'}"></span>`).join('')}
+                </div>
+              </div>
+
+            </div>
+
+            <!-- CARD BACK -->
+            <div class="card-back rounded-[24px] ${cardBgStyle} overflow-hidden p-6 flex flex-col justify-between transition-all duration-300 relative">
+              
+              <!-- Card Top -->
+              <div class="flex justify-between items-start">
+                <div>
+                  <span class="text-xs font-black tracking-widest ${activeTheme === 'classic-corporate' ? 'text-slate-800' : 'text-white'}">AUTHORIZATION & PRIVACY</span>
+                  <span class="text-[8px] font-semibold text-slate-500 block mt-1">This badge is property of Flow Studio.</span>
+                </div>
+              </div>
+
+              <!-- Card Body (Bio & Details) -->
+              <div class="my-auto space-y-4">
+                <div>
+                  <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">Personal Profile</span>
+                  <p class="text-xs leading-relaxed ${activeTheme === 'classic-corporate' ? 'text-slate-700' : 'text-slate-300'} mt-1 italic">
+                    "${member.bio}"
+                  </p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 pt-2 border-t ${activeTheme === 'classic-corporate' ? 'border-slate-200' : 'border-slate-800'}">
+                  <div>
+                    <span class="text-[8px] font-bold uppercase tracking-wider text-slate-500">Contact</span>
+                    <span class="text-[10px] font-semibold block ${activeTheme === 'classic-corporate' ? 'text-slate-700' : 'text-slate-300'} truncate">${member.email}</span>
+                  </div>
+                  <div>
+                    <span class="text-[8px] font-bold uppercase tracking-wider text-slate-500">Date Hired</span>
+                    <span class="text-[10px] font-semibold block ${activeTheme === 'classic-corporate' ? 'text-slate-700' : 'text-slate-300'}">${member.joinDate}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card Bottom (Magnetic Stripe & Barcode) -->
+              <div class="space-y-4">
+                <!-- Magnetic Stripe -->
+                <div class="h-6 -mx-6 bg-slate-950 opacity-90"></div>
+                
+                <!-- Barcode -->
+                <div class="flex flex-col items-center gap-1.5 pt-2">
+                  <div class="flex items-center justify-center">
+                    ${generateBarcodeHTML(member.id)}
+                  </div>
+                  <span class="font-mono text-[9px] text-slate-500 tracking-widest">${member.id.toUpperCase()}</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    // Flip Card Action
+    function flipCard(id) {
+      const container = document.getElementById(`container-${id}`);
+      container.classList.toggle('flipped');
+    }
+
+    // Flip All Badges
+    function flipAll() {
+      teamMembers.forEach(member => {
+        const container = document.getElementById(`container-${member.id}`);
+        container.classList.toggle('flipped');
+      });
+    }
+
+    // Toggle Themes
+    function toggleCardTheme() {
+      const themes = ['hologram', 'dark-minimalist', 'classic-corporate'];
+      const currentIndex = themes.indexOf(activeTheme);
+      activeTheme = themes[(currentIndex + 1) % themes.length];
+      renderAllCards();
+    }
+
+    // Render Cards in DOM
+    function renderAllCards() {
+      const grid = document.getElementById('cards-grid');
+      grid.innerHTML = teamMembers.map(createCard).join('');
+      
+      // Initialize icons
+      lucide.createIcons();
+    }
+
+    // Initial load
+    renderAllCards();
+  </script>
+</body>
+</html>

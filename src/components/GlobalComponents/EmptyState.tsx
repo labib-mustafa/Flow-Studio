@@ -86,15 +86,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       {/* Action Buttons */}
       <div className="flex items-center gap-3">
-        {primaryAction && (
-          <button
-            onClick={primaryAction.onClick}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
-          >
-            {primaryAction.icon}
-            {primaryAction.label}
-          </button>
-        )}
         {secondaryAction && (
           <button
             onClick={secondaryAction.onClick}

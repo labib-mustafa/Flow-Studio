@@ -16,6 +16,7 @@ interface CalendarGridProps {
   currentMonth: Date;
   selectedDate: Date | null;
   onSelectDate: (date: Date) => void;
+  searchQuery?: string;
 }
 
 const EVENT_TYPE_COLORS: Record<CalendarEvent['type'], { bg: string; text: string }> = {
@@ -31,6 +32,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   currentMonth,
   selectedDate,
   onSelectDate,
+  searchQuery = '',
 }) => {
   const events = useEventStore((s) => s.events);
 
@@ -44,12 +46,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
-    events.forEach((evt) => {
+    const filteredEvents = searchQuery
+      ? events.filter(e => e.title.toLowerCase().includes(searchQuery.toLowerCase()) || (e.client && e.client.toLowerCase().includes(searchQuery.toLowerCase())))
+      : events;
+
+    filteredEvents.forEach((evt) => {
       if (!map[evt.date]) map[evt.date] = [];
       map[evt.date].push(evt);
     });
     return map;
-  }, [events]);
+  }, [events, searchQuery]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

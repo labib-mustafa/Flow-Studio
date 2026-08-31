@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export interface Expert {
   id: string;
@@ -86,3 +86,8 @@ export const useClientDetailsStore = create<ClientDetailsState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('clientDetails', () => {
+  useClientDetailsStore.persist.rehydrate();
+});

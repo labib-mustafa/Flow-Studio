@@ -8,6 +8,8 @@ interface TemplateCardProps {
   isStartFromScratch?: boolean;
   colorClass?: string;
   iconColorClass?: string;
+  isSelected?: boolean;
+  onClick?: () => void;
 }
 
 const TemplateCard: React.FC<TemplateCardProps> = ({ 
@@ -17,13 +19,19 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
   isBuiltIn, 
   isStartFromScratch,
   colorClass = "bg-slate-50",
-  iconColorClass = "text-slate-600"
+  iconColorClass = "text-slate-600",
+  isSelected,
+  onClick
 }) => {
   return (
-    <div className={`relative p-4 rounded-2xl border transition-all cursor-pointer group h-full flex flex-col overflow-hidden ${
-      isStartFromScratch 
-        ? 'border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary' 
-        : 'border-border-light bg-white hover:border-primary/30 hover:shadow-soft-hover'
+    <div 
+      onClick={onClick}
+      className={`relative p-4 rounded-2xl border transition-all cursor-pointer group h-full flex flex-col overflow-hidden ${
+      isSelected 
+        ? 'border-blue-500 shadow-md ring-2 ring-blue-500/20' 
+        : isStartFromScratch 
+          ? 'border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary' 
+          : 'border-border-light bg-white hover:border-primary/30 hover:shadow-soft-hover'
     }`}>
       {isBuiltIn && (
         <span className="absolute top-3 right-3 z-10 text-[9px] font-bold bg-white/90 backdrop-blur-sm text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide shadow-sm border border-slate-100">
@@ -59,7 +67,10 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
   );
 };
 
-export const TemplateSelector: React.FC = () => {
+export const TemplateSelector: React.FC<{
+  selectedTemplate?: string;
+  onSelect?: (title: string) => void;
+}> = ({ selectedTemplate = "Start from scratch", onSelect }) => {
   const templates = [
     {
       title: "Start from scratch",
@@ -117,7 +128,12 @@ export const TemplateSelector: React.FC = () => {
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {templates.map((template, index) => (
-          <TemplateCard key={index} {...template} />
+          <TemplateCard 
+            key={index} 
+            {...template} 
+            isSelected={selectedTemplate === template.title}
+            onClick={() => onSelect?.(template.title)}
+          />
         ))}
       </div>
     </div>

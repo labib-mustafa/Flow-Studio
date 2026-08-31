@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { DropdownMenu, DropdownOption } from './DropdownMenu';
 
 interface CustomSelectProps {
-  options: { value: string; label: string; icon?: string }[];
+  options: { value: string; label: string; icon?: string | React.ReactNode }[];
   value: string;
   onChange: (value: string) => void;
   className?: string;
@@ -46,9 +46,15 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       >
         <div className="flex items-center gap-2">
           {selectedOption.icon && (
-            <span className="material-symbols-outlined text-[18px] text-slate-400">
-              {selectedOption.icon}
-            </span>
+            typeof selectedOption.icon === 'string' ? (
+              <span className="material-symbols-outlined text-[18px] text-slate-400">
+                {selectedOption.icon}
+              </span>
+            ) : (
+              <div className="text-slate-400 flex items-center justify-center shrink-0 w-[18px] h-[18px]">
+                {selectedOption.icon}
+              </div>
+            )
           )}
           <span>{selectedOption.label}</span>
         </div>

@@ -4,6 +4,7 @@ import { useLeadStore } from '../../stores/leadStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useTeamStore } from '../../stores/teamStore';
 import { useSettings } from '../../hooks/useSettings';
+import { ChevronRight, Plus, X } from 'lucide-react';
 
 interface EmailComposerModalProps {
   onClose: () => void;
@@ -13,11 +14,16 @@ interface EmailComposerModalProps {
 
 export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({ onClose, onSuccess, leadIds }) => {
   const { templates } = useMailTemplateStore();
-  const { sendBulkMail } = useMailStore();
+  const { sendBulkMail, createBatch } = useMailStore();
   const { leads, updateLead } = useLeadStore();
   const { members } = useTeamStore();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [showCampaignSettings, setShowCampaignSettings] = useState(false);
+  const [batchName, setBatchName] = useState('');
+  const [steps, setSteps] = useState<any[]>([
+    { delayDays: 3, subjectTemplate: 'Re: {{subject}}', bodyTemplate: 'Hi {{name}},\n\nJust following up on my previous note. Let me know if you had some time to review it.\n\nBest regards,' }
+  ]);
   const [cc, setCc] = useState('');
   const [subject, setSubject] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -105,15 +111,39 @@ export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({ onClose,
     setIsSending(true);
     setSendError(null);
 
-    const result = await sendBulkMail(
-      selectedLeads.map(l => l.id),
-      subject,
-      bodyRef.current,
-      selectedTemplateId || undefined,
-      senderType,
-      cc,
-      attachments.length > 0 ? attachments : undefined
-    );
+    const stepsWithIndex = steps.map((s, idx) => ({
+      stepIndex: idx + 1,
+      delayDays: s.delayDays,
+      subjectTemplate: s.subjectTemplate.replace('{{subject}}', subject),
+      bodyTemplate: s.bodyTemplate
+    }));
+
+    const leadIdsToSend = selectedLeads.map(l => l.id);
+    
+    let result;
+    if (leadIdsToSend.length > 1 || batchName || steps.length > 0) {
+      const finalBatchName = batchName || `Batch Outreach - ${new Date().toLocaleDateString()}`;
+      result = await createBatch(
+        finalBatchName,
+        leadIdsToSend,
+        subject,
+        bodyRef.current,
+        stepsWithIndex,
+        senderType,
+        cc,
+        selectedTemplateId || undefined
+      );
+    } else {
+      result = await sendBulkMail(
+        leadIdsToSend,
+        subject,
+        bodyRef.current,
+        selectedTemplateId || undefined,
+        senderType,
+        cc,
+        attachments.length > 0 ? attachments : undefined
+      );
+    }
 
     if (result && !result.success) {
       setSendError(result.errors?.join('\n') || 'An unknown error occurred while sending.');
@@ -249,7 +279,100 @@ export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({ onClose,
           )}
         </div>
 
+        {/* Campaign Settings Section */}
+        <div className="border-b border-slate-100 px-6 py-2.5 bg-slate-50/50">
+          <button
+            onClick={() => setShowCampaignSettings(!showCampaignSettings)}
+            className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-slate-900 transition-colors w-full text-left"
+          >
+            <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${showCampaignSettings ? 'rotate-90' : ''}`} />
+            CAMPAIGN & FOLLOW-UP SEQUENCE {selectedLeads.length > 1 && <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[9px] font-bold">BATCH ACTIVE</span>}
+          </button>
+          
+          {showCampaignSettings && (
+            <div className="mt-3 space-y-4 pb-3">
+              {/* Batch Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Batch/Campaign Name</label>
+                <input
+                  type="text"
+                  value={batchName}
+                  onChange={e => setBatchName(e.target.value)}
+                  placeholder="e.g. Cold Outreach - Q3 Enterprise Leads"
+                  className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-primary/20 bg-white"
+                />
+              </div>
 
+              {/* Follow-up Steps List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Automated Follow-up Sequence</label>
+                  <button
+                    onClick={() => {
+                      setSteps([...steps, { delayDays: 3, subjectTemplate: 'Re: {{subject}}', bodyTemplate: 'Hi {{name}},\n\nJust checking in on this. Hope you are having a great week!\n\nBest,\nFlow Team' }]);
+                    }}
+                    className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+                  >
+                    + Add Step
+                  </button>
+                </div>
+
+                {steps.map((step, idx) => (
+                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-3 space-y-2 relative">
+                    <button
+                      onClick={() => setSteps(steps.filter((_, i) => i !== idx))}
+                      className="absolute right-2 top-2 text-slate-400 hover:text-red-500 transition-colors"
+                      title="Remove Step"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                      <span>Step {idx + 1}</span>
+                      <span className="text-slate-400 font-normal">Send after</span>
+                      <input
+                        type="number"
+                        value={step.delayDays}
+                        onChange={e => {
+                          const newSteps = [...steps];
+                          newSteps[idx].delayDays = parseInt(e.target.value) || 1;
+                          setSteps(newSteps);
+                        }}
+                        className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center"
+                        min="1"
+                      />
+                      <span className="text-slate-400 font-normal">days of inactivity</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        value={step.subjectTemplate}
+                        onChange={e => {
+                          const newSteps = [...steps];
+                          newSteps[idx].subjectTemplate = e.target.value;
+                          setSteps(newSteps);
+                        }}
+                        placeholder="Subject Template (e.g. Re: {{subject}})"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg outline-none"
+                      />
+                      <textarea
+                        value={step.bodyTemplate}
+                        onChange={e => {
+                          const newSteps = [...steps];
+                          newSteps[idx].bodyTemplate = e.target.value;
+                          setSteps(newSteps);
+                        }}
+                        rows={2}
+                        placeholder="Body Template (supports {{name}} and {{company}})"
+                        className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg outline-none font-sans"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Error State */}
         {sendError && (

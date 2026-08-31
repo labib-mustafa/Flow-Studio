@@ -15,30 +15,39 @@ export const StatCards: React.FC<StatCardsProps> = ({ onNavigate }) => {
   const { balance, paymentHistory } = useBillingStore();
   const { leads } = useLeadStore();
 
-  // Calculations
-  const activeProjects = projects.filter(p => p.status !== 'Completed' && p.status !== 'Archived');
-  const avgCompletion = activeProjects.length > 0 
-    ? Math.round(activeProjects.reduce((acc, p) => acc + (p.completion || p.progress || 0), 0) / activeProjects.length)
-    : 0;
+  // Calculations memoized to avoid expensive filtering on every render
+  const { activeProjects, avgCompletion, activeClients, prospectClients, collected, formattedCollected, formattedBalance, activeLeads, newLeadsCount } = React.useMemo(() => {
+    const activeProjs = projects.filter(p => p.status !== 'Completed' && p.status !== 'Archived');
+    const avgComp = activeProjs.length > 0
+      ? Math.round(activeProjs.reduce((acc, p) => acc + (p.completion || p.progress || 0), 0) / activeProjs.length)
+      : 0;
 
-  const activeClients = clients.filter(c => c.status === 'Active');
-  const prospectClients = clients.filter(c => c.status === 'Prospect');
+    const activeCls = clients.filter(c => c.status === 'Active');
+    const prospectCls = clients.filter(c => c.status === 'Prospect');
 
-  const collected = paymentHistory
-    .filter(p => p.status === 'Completed')
-    .reduce((acc, p) => acc + p.amount, 0);
-  const formattedCollected = collected >= 1000 ? `${(collected / 1000).toFixed(1)}k` : `${collected}`;
-  const formattedBalance = balance >= 1000 ? `${(balance / 1000).toFixed(1)}k` : `${balance}`;
+    const col = paymentHistory
+      .filter(p => p.status === 'Completed')
+      .reduce((acc, p) => acc + p.amount, 0);
 
-  const activeLeads = leads.filter(l => l.status !== 'Archived');
-  const newLeadsCount = leads.filter(l => l.status === 'New').length;
+    return {
+      activeProjects: activeProjs,
+      avgCompletion: avgComp,
+      activeClients: activeCls,
+      prospectClients: prospectCls,
+      collected: col,
+      formattedCollected: col >= 1000 ? `${(col / 1000).toFixed(1)}k` : `${col}`,
+      formattedBalance: balance >= 1000 ? `${(balance / 1000).toFixed(1)}k` : `${balance}`,
+      activeLeads: leads.filter(l => l.status !== 'Archived'),
+      newLeadsCount: leads.filter(l => l.status === 'New').length
+    };
+  }, [projects, clients, paymentHistory, balance, leads]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
       {/* Active Projects Card */}
-      <div 
+      <div
         onClick={() => onNavigate?.('projects')}
-        className="bg-dash-card-black text-white rounded-[24px] p-6 relative overflow-hidden shadow-float min-h-[180px] flex flex-col justify-between group cursor-pointer hover:shadow-xl transition-all duration-200 ease-out hover:-translate-y-1"
+        className="bg-dash-card-black text-white rounded-[24px] p-6 relative overflow-hidden min-h-[180px] flex flex-col justify-between group cursor-pointer hover:shadow-xl transition-all duration-200 ease-out hover:-translate-y-1"
       >
         <div className="flex justify-between items-start z-10">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
@@ -63,9 +72,9 @@ export const StatCards: React.FC<StatCardsProps> = ({ onNavigate }) => {
       </div>
 
       {/* Active Clients Card */}
-      <div 
+      <div
         onClick={() => onNavigate?.('clients')}
-        className="bg-dash-card-yellow text-slate-900 rounded-[24px] p-6 relative overflow-hidden shadow-float min-h-[180px] flex flex-col justify-between cursor-pointer hover:shadow-xl transition-all duration-200 ease-out hover:-translate-y-1 group"
+        className="bg-dash-card-yellow text-slate-900 rounded-[24px] p-6 relative overflow-hidden min-h-[180px] flex flex-col justify-between cursor-pointer hover:shadow-xl transition-all duration-200 ease-out hover:-translate-y-1 group"
       >
         <div className="flex justify-between items-start">
           <div>
@@ -97,9 +106,9 @@ export const StatCards: React.FC<StatCardsProps> = ({ onNavigate }) => {
       </div>
 
       {/* Revenue Summary Card */}
-      <div 
+      <div
         onClick={() => onNavigate?.('billing')}
-        className="bg-blue-100 border border-blue-300/70 text-blue-950 rounded-[24px] p-6 relative overflow-hidden shadow-float min-h-[180px] flex flex-col justify-between cursor-pointer hover:shadow-xl hover:border-blue-400 transition-all duration-200 ease-out hover:-translate-y-1 group"
+        className="bg-blue-100 border border-blue-300/70 text-blue-950 rounded-[24px] p-6 relative overflow-hidden min-h-[180px] flex flex-col justify-between cursor-pointer hover:shadow-xl hover:border-blue-400 transition-all duration-200 ease-out hover:-translate-y-1 group"
       >
         <div>
           <div className="flex justify-between items-center mb-3">
@@ -117,31 +126,15 @@ export const StatCards: React.FC<StatCardsProps> = ({ onNavigate }) => {
             </div>
           </div>
         </div>
-        <div className="relative h-14 w-full mt-3">
-          <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 40">
-            {/* Grid lines */}
-            <line x1="0" y1="10" x2="100" y2="10" stroke="#dbeafe" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.3" />
-            <line x1="0" y1="25" x2="100" y2="25" stroke="#dbeafe" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.3" />
-            
-            {/* Vertical rectangle bars */}
-            <rect x="2" y="30" width="6" height="10" rx="1.5" fill="#3b82f6" opacity="0.2" className="transition-all duration-200 hover:opacity-40" />
-            <rect x="12" y="22" width="6" height="18" rx="1.5" fill="#3b82f6" opacity="0.25" className="transition-all duration-200 hover:opacity-45" />
-            <rect x="22" y="26" width="6" height="14" rx="1.5" fill="#3b82f6" opacity="0.3" className="transition-all duration-200 hover:opacity-50" />
-            <rect x="32" y="16" width="6" height="24" rx="1.5" fill="#3b82f6" opacity="0.4" className="transition-all duration-200 hover:opacity-60" />
-            <rect x="42" y="20" width="6" height="20" rx="1.5" fill="#3b82f6" opacity="0.45" className="transition-all duration-200 hover:opacity-65" />
-            <rect x="52" y="12" width="6" height="28" rx="1.5" fill="#3b82f6" opacity="0.6" className="transition-all duration-200 hover:opacity-80" />
-            <rect x="62" y="15" width="6" height="25" rx="1.5" fill="#3b82f6" opacity="0.65" className="transition-all duration-200 hover:opacity-85" />
-            <rect x="72" y="8" width="6" height="32" rx="1.5" fill="#3b82f6" opacity="0.8" className="transition-all duration-200 hover:opacity-95" />
-            <rect x="82" y="10" width="6" height="30" rx="1.5" fill="#3b82f6" opacity="0.85" className="transition-all duration-200 hover:opacity-95" />
-            <rect x="92" y="4" width="6" height="36" rx="1.5" fill="#2563eb" className="transition-all duration-200 hover:fill-blue-700 shadow-lg" />
-          </svg>
+        <div className="relative h-14 w-full mt-3 flex items-end">
+          {/* Historical bar chart would go here once data is available */}
         </div>
       </div>
 
       {/* Pipeline Card */}
-      <div 
+      <div
         onClick={() => onNavigate?.('leads')}
-        className="bg-emerald-100 border border-emerald-300/70 text-emerald-950 rounded-[24px] p-6 relative overflow-hidden shadow-float min-h-[180px] flex flex-col justify-between cursor-pointer hover:shadow-xl hover:border-emerald-400 transition-all duration-200 ease-out hover:-translate-y-1 group"
+        className="bg-emerald-100 border border-emerald-300/70 text-emerald-950 rounded-[24px] p-6 relative overflow-hidden min-h-[180px] flex flex-col justify-between cursor-pointer hover:shadow-xl hover:border-emerald-400 transition-all duration-200 ease-out hover:-translate-y-1 group"
       >
         <div className="flex justify-between items-start">
           <div>

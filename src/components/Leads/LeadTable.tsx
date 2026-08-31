@@ -1,22 +1,80 @@
 import React, { useState, useRef, useEffect, useMemo, useDeferredValue } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useLeadStore, Lead, ColumnLabels } from '../../stores/leadStore';
+import { confirm } from '../../stores/confirmStore';
 import { EditableHeaderCell } from './EditableHeaderCell';
 import { InlineEditCell } from './InlineEditCell';
+import { LeadInfoModal } from './LeadInfoModal';
 import {
-  Facebook,
-  Linkedin,
-  Github,
-  Youtube,
-  Dribbble,
-  Slack,
-  Twitch,
-  Gitlab,
-  Figma,
-  Instagram,
   Bell,
   RefreshCw
 } from 'lucide-react';
+
+// Custom SVGs for brand icons since they are removed in newer Lucide versions
+const Linkedin = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect width="4" height="12" x="2" y="9" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+);
+
+const Github = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+    <path d="M9 18c-4.51 2-5-2-7-2" />
+  </svg>
+);
+
+const Gitlab = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m22 13.29-1.96-6.1a1 1 0 0 0-.58-.6a1 1 0 0 0-.82.08l-2.64 1.89H7.4l-2.64-1.89a1 1 0 0 0-.82-.08 1 1 0 0 0-.58.6L1.4 13.29a1 1 0 0 0 .34 1.05l8.72 6.32a1.8 1.8 0 0 0 2.08 0l8.72-6.32a1 1 0 0 0 .34-1.05z" />
+  </svg>
+);
+
+const Figma = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" />
+    <path d="M12 2h3.5a3.5 3.5 0 1 1-3.5 3.5V2z" />
+    <path d="M12 12.5a3.5 3.5 0 1 1 3.5-3.5H12v3.5z" />
+    <path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v3.5A3.5 3.5 0 1 1 8.5 16H8.5A3.5 3.5 0 0 1 5 12.5z" />
+    <path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" />
+  </svg>
+);
+
+const Slack = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="13" y="2" width="3" height="8" rx="1.5" />
+    <path d="M19 10a2.5 2.5 0 0 0 2.5-2.5V7a2.5 2.5 0 0 0-2.5-2.5h-1.5V10H19z" />
+    <rect x="8" y="14" width="3" height="8" rx="1.5" />
+    <path d="M5 14a2.5 2.5 0 0 0-2.5 2.5V17A2.5 2.5 0 0 0 5 19.5h1.5V14H5z" />
+    <rect x="14" y="13" width="8" height="3" rx="1.5" />
+    <path d="M14 19a2.5 2.5 0 0 0 2.5 2.5H17a2.5 2.5 0 0 0 2.5-2.5v-1.5H14V19z" />
+    <rect x="2" y="8" width="8" height="3" rx="1.5" />
+    <path d="M10 5a2.5 2.5 0 0 0-2.5-2.5H7A2.5 2.5 0 0 0 4.5 5v1.5H10V5z" />
+  </svg>
+);
+
+const Twitch = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 2H3v16h5v4l4-4h5l4-4V2zm-10 9H9V6h2v5zm4 0h-2V6h2v5z" />
+  </svg>
+);
+
+const Youtube = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" />
+  </svg>
+);
+
+const Dribbble = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M19.13 5.09A9 9 0 0 1 21.8 12c-.52-.13-4.22-.91-7.14-.15.42.92.8 1.9 1.11 2.87 2.87-.29 5.37.85 5.54.94A9 9 0 0 1 12 21c-.24-.54-.93-2.02-1.95-3.85-2.9.89-5.18 2.73-5.38 2.9A9 9 0 0 1 2.3 12c.16-.02 3.65-.63 6.94-.06-.55-1.27-1.15-2.52-1.84-3.7-3.13 1.27-5.83 1.11-6 .1A9 9 0 0 1 12 3c.31.78.93 2.39 1.7 4.2 2.8-1.14 3.9-3.21 4-3.42z" />
+  </svg>
+);
+
 import { EmptyState } from '../GlobalComponents/EmptyState';
 
 const SocialIcon = React.memo(({ url }: { url: string }) => {
@@ -45,13 +103,8 @@ const SocialIcon = React.memo(({ url }: { url: string }) => {
     );
   }
 
-  if (lowercaseUrl.includes('google.com/maps') || lowercaseUrl.includes('maps.google') || lowercaseUrl.includes('googlemaps') || lowercaseUrl.includes('google-maps') || lowercaseUrl.includes('/maps/') || lowercaseUrl.includes('google maps')) {
-    return (
-      <svg className="w-3.5 h-3.5 shrink-0 animate-fade-in" viewBox="0 0 24 24" fill="none">
-        <path d="M19.5 9.5c0 4.88-6 11.5-7.5 13-1.5-1.5-7.5-8.12-7.5-13a7.5 7.5 0 1115 0z" fill="#EA4335" />
-        <path d="M12 13a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" fill="#4285F4" />
-      </svg>
-    );
+  if (lowercaseUrl.includes('google.com/maps') || lowercaseUrl.includes('maps.google') || lowercaseUrl.includes('googlemaps') || lowercaseUrl.includes('google-maps') || lowercaseUrl.includes('/maps/') || lowercaseUrl.includes('google maps') || lowercaseUrl.includes('gmaps')) {
+    return <img src="/assets/google-logos/google-maps.png" className="w-3.5 h-3.5 object-contain shrink-0 animate-fade-in" alt="Google Maps" />;
   }
 
   if (lowercaseUrl.includes('linkedin.com') || lowercaseUrl.includes('linkedin')) {
@@ -95,7 +148,11 @@ const SocialIcon = React.memo(({ url }: { url: string }) => {
   }
 
   if (lowercaseUrl.includes('youtube.com') || lowercaseUrl.includes('youtube') || lowercaseUrl.includes('youtu.be')) {
-    return <Youtube className="w-3.5 h-3.5 text-[#FF0000] shrink-0 animate-fade-in" />;
+    return <img src="/assets/google-logos/youtube.png" className="w-3.5 h-3.5 object-contain shrink-0 animate-fade-in" alt="YouTube" />;
+  }
+
+  if (lowercaseUrl.includes('google.com') || lowercaseUrl.includes('google')) {
+    return <img src="/assets/google-logos/google.png" className="w-3.5 h-3.5 object-contain shrink-0 animate-fade-in" alt="Google" />;
   }
 
   if (lowercaseUrl.includes('dribbble.com') || lowercaseUrl.includes('dribbble')) {
@@ -518,14 +575,20 @@ const MemoizedLeadRow = React.memo(({
         setDraggedId(null);
         setDragOverId(null);
       }}
-      className={`group relative h-12 hover:bg-slate-50/50 transition-all ${stagnant ? 'bg-amber-50/30' : ''} ${isSelected ? 'bg-indigo-50/40 hover:bg-indigo-50/60' : ''
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest('input, button, a, [contenteditable="true"], .inline-edit-input, select, textarea, .material-symbols-outlined')) {
+          handleRowSelect(e, lead.id);
+        }
+      }}
+      className={`group relative h-12 hover:bg-slate-50/50 transition-all ${stagnant ? 'bg-white' : ''} ${isSelected ? 'bg-indigo-50/40 hover:bg-indigo-50/60' : ''
         } ${dragOverId === lead.id ? 'border-t-2 border-slate-900 bg-slate-100/80 shadow-md' : ''} ${draggedId === lead.id ? 'opacity-40 bg-slate-100' : ''
         }`}
     >
       <td className="w-8 px-2 text-center align-middle cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-600 transition-colors">
         <span className="material-symbols-outlined text-[16px]">drag_indicator</span>
       </td>
-      <td className="w-10 px-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+      <td className="w-10 px-3 text-center align-middle" onClick={(e) => handleRowSelect(e, lead.id)}>
         <input
           type="checkbox"
           checked={isSelected}
@@ -594,6 +657,7 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
   }, [columns]);
 
   const [quickAddName, setQuickAddName] = useState('');
+  const quickAddInputRef = useRef<HTMLInputElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -614,6 +678,7 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const [selectedInfoLead, setSelectedInfoLead] = useState<Lead | null>(null);
   const [sortConfig, setSortConfig] = useState<{ column: string; direction: 'asc' | 'desc' } | null>(() => {
     try {
       const saved = localStorage.getItem('flowstudio-leads-sort');
@@ -682,40 +747,36 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
   const timersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
-    if (isAddingLead) {
-      const prevIds = new Set(prevLeadsRef.current.map(l => l.id));
-      const newLeads = (leads || []).filter(l => !prevIds.has(l.id));
+    const prevIds = new Set(prevLeadsRef.current.map(l => l.id));
+    const newLeads = (leads || []).filter(l => !prevIds.has(l.id));
 
-      if (newLeads.length > 0 && prevLeadsRef.current.length > 0) {
-        const now = Date.now();
-        setTempTopLeadIds(prev => {
-          const next = { ...prev };
-          newLeads.forEach(l => {
-            next[l.id] = now;
-          });
-          return next;
-        });
-
+    if (newLeads.length > 0 && prevLeadsRef.current.length > 0) {
+      const now = Date.now();
+      setTempTopLeadIds(prev => {
+        const next = { ...prev };
         newLeads.forEach(l => {
-          if (timersRef.current[l.id]) {
-            clearTimeout(timersRef.current[l.id]);
-          }
-          timersRef.current[l.id] = setTimeout(() => {
-            setTempTopLeadIds(prev => {
-              const next = { ...prev };
-              delete next[l.id];
-              return next;
-            });
-            delete timersRef.current[l.id];
-          }, 30000);
+          next[l.id] = now;
         });
+        return next;
+      });
 
-        setIsAddingLead(false);
-      }
+      newLeads.forEach(l => {
+        if (timersRef.current[l.id]) {
+          clearTimeout(timersRef.current[l.id]);
+        }
+        timersRef.current[l.id] = setTimeout(() => {
+          setTempTopLeadIds(prev => {
+            const next = { ...prev };
+            delete next[l.id];
+            return next;
+          });
+          delete timersRef.current[l.id];
+        }, 30000);
+      });
     }
 
     prevLeadsRef.current = leads || [];
-  }, [leads, isAddingLead]);
+  }, [leads]);
 
   useEffect(() => {
     return () => {
@@ -911,10 +972,10 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
         } else if (sortConfig.column === 'email') {
           const emailA = a.email || '';
           const emailB = b.email || '';
-          
+
           if (emailA === '' && emailB !== '') return sortConfig.direction === 'asc' ? 1 : -1;
           if (emailB === '' && emailA !== '') return sortConfig.direction === 'asc' ? -1 : 1;
-          
+
           valA = emailA.toLowerCase();
           valB = emailB.toLowerCase();
         }
@@ -945,8 +1006,12 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
 
   const handleRowSelect = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (e.shiftKey && lastSelectedRef.current) {
-      const lastIdx = sortedLeads.findIndex(l => l.id === lastSelectedRef.current);
+    if (e.shiftKey) {
+      let anchorId = lastSelectedRef.current;
+      if (!anchorId || !sortedLeads.some(l => l.id === anchorId)) {
+        anchorId = sortedLeads[0]?.id || id;
+      }
+      const lastIdx = sortedLeads.findIndex(l => l.id === anchorId);
       const currIdx = sortedLeads.findIndex(l => l.id === id);
       if (lastIdx !== -1 && currIdx !== -1) {
         const start = Math.min(lastIdx, currIdx);
@@ -986,14 +1051,12 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
   // Quick Inline Add Lead Row
   const handleQuickAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = quickAddName.trim();
-    if (!name) return;
+    const name = quickAddName.trim() || 'New Lead';
 
-    setIsAddingLead(true);
     addLead({
       name,
       company: 'Draft Entity',
-      email: '',
+      email: null,
       status: 'New',
       estimated_value: 10000,
       source: 'Manual Add',
@@ -1001,7 +1064,15 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
       tags: ['DRAFT']
     });
 
+    useLeadStore.getState().setSearchQuery('');
+    if (useLeadStore.getState().statusFilter !== 'All' && useLeadStore.getState().statusFilter !== 'New') {
+      useLeadStore.getState().setStatusFilter('All');
+    }
+
     setQuickAddName('');
+    setTimeout(() => {
+      quickAddInputRef.current?.focus();
+    }, 50);
   };
 
   // Smart Clip actions copying high fidelity template to clipboard
@@ -1018,9 +1089,13 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
     promoteLeadToClient(id);
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this lead from the filesystem database?")) {
+    const ok = await confirm.danger(
+      'Delete Lead?',
+      'Are you sure you want to delete this lead record?'
+    );
+    if (ok) {
       deleteLead(id);
     }
   };
@@ -1426,25 +1501,35 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
           {/* Table Body */}
           <tbody className="divide-y divide-slate-100 hover:divide-y">
             {/* Quick Add Row Input */}
-            <tr className="h-12 border-t border-slate-100 bg-[#fbfcfc]/30">
-              <td colSpan={columns.length + 2} className="px-4 py-0">
-                <form onSubmit={handleQuickAddSubmit} className="flex items-center gap-2 w-full">
-                  <span className="material-symbols-outlined text-slate-400 text-[16px] shrink-0">add</span>
+            <tr
+              onClick={() => quickAddInputRef.current?.focus()}
+              className="h-12 border-t border-b border-slate-200/80 bg-white hover:bg-slate-50 cursor-text transition-colors"
+            >
+              <td colSpan={(columns || []).length + 2} className="px-4 py-0">
+                <form onSubmit={handleQuickAddSubmit} className="flex items-center gap-2.5 w-full h-full">
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors p-0.5 outline-none cursor-pointer shrink-0"
+                    title="Add Lead"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">add</span>
+                  </button>
                   <input
+                    ref={quickAddInputRef}
                     type="text"
                     placeholder="Quick Add Lead... (Type name & hit Enter)"
                     value={quickAddName}
                     onChange={(e) => setQuickAddName(e.target.value)}
-                    className="flex-1 bg-transparent border-none text-xs text-slate-700 placeholder-slate-400 outline-none py-3 font-medium"
+                    className="flex-1 bg-transparent border-none text-xs text-slate-800 placeholder-slate-400 outline-none py-3 font-medium"
                   />
-                  {quickAddName && (
+                  {quickAddName.trim() ? (
                     <button
                       type="submit"
-                      className="bg-slate-950 text-white rounded px-2.5 py-1 text-[10px] font-bold mr-2 uppercase tracking-wider shadow-sm"
+                      className="bg-slate-900 hover:bg-slate-800 text-white rounded-lg px-3 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all cursor-pointer shrink-0"
                     >
                       Instant Add
                     </button>
-                  )}
+                  ) : null}
                 </form>
               </td>
             </tr>
@@ -1498,163 +1583,190 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
         {/* Floating Context Menu */}
         {contextMenu && (
           <div
-            className="absolute z-[30] bg-white border border-slate-200/90 rounded-xl shadow-soft flex flex-col py-1.5 min-w-[160px] animate-in fade-in duration-100 font-sans"
+            className="absolute z-[30] bg-white border border-slate-200/90 rounded-xl shadow-soft flex flex-col py-1.5 min-w-[165px] animate-in fade-in duration-100 font-sans"
             style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
           >
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(String(contextMenu.value || ''));
-              setContextMenu(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-          >
-            <span className="material-symbols-outlined text-[16px]">content_copy</span>
-            Copy Cell
-          </button>
-
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(String(contextMenu.value || ''));
-              updateLead(contextMenu.leadId, { [contextMenu.columnId]: '' });
-              setContextMenu(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-          >
-            <span className="material-symbols-outlined text-[16px]">content_cut</span>
-            Cut Cell
-          </button>
-
-          <button
-            onClick={async () => {
-              try {
-                const text = await navigator.clipboard.readText();
-                updateLead(contextMenu.leadId, { [contextMenu.columnId]: text });
-              } catch (err) {
-                console.error('Failed to read clipboard', err);
-              }
-              setContextMenu(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-          >
-            <span className="material-symbols-outlined text-[16px]">content_paste</span>
-            Paste
-          </button>
-
-          <button
-            onClick={() => {
-              updateLead(contextMenu.leadId, { [contextMenu.columnId]: '' });
-              setContextMenu(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-          >
-            <span className="material-symbols-outlined text-[16px]">backspace</span>
-            Clear Cell
-          </button>
-
-          <div className="border-t border-slate-100 my-1"></div>
-
-          <button
-            onClick={() => {
-              const lead = leads.find(l => l.id === contextMenu.leadId);
-              if (lead) {
-                navigator.clipboard.writeText(JSON.stringify(lead, null, 2));
-              }
-              setContextMenu(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-          >
-            <span className="material-symbols-outlined text-[16px]">code</span>
-            Copy Row JSON
-          </button>
-
-          <button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete this lead?')) {
-                deleteLead(contextMenu.leadId);
-              }
-              setContextMenu(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-          >
-            <span className="material-symbols-outlined text-[16px]">delete</span>
-            Delete Row
-          </button>
-
-          <div className="border-t border-slate-100 my-1"></div>
-
-          {/* Unhide Column Sub-menu */}
-          <div className="relative group">
             <button
-              className="flex items-center justify-between gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+              onClick={() => {
+                const lead = leads.find((l) => l.id === contextMenu.leadId);
+                if (lead) {
+                  setSelectedInfoLead(lead);
+                }
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-900 hover:bg-slate-100 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
             >
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">visibility</span>
-                Unhide Column
-              </div>
-              <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
+              <span className="material-symbols-outlined text-[16px] text-blue-600">info</span>
+              Lead Information
             </button>
 
-            <div className="absolute left-full top-0 ml-0.5 bg-white border border-slate-200/90 rounded-xl shadow-soft hidden group-hover:block flex-col py-1.5 min-w-[150px] z-[1000] animate-in fade-in duration-100">
-              {hiddenColumns.length === 0 ? (
-                <span className="px-3.5 py-2 text-[10px] italic text-slate-400 block text-center">No hidden columns</span>
-              ) : (
-                hiddenColumns.map(col => (
-                  <button
-                    key={col.id}
-                    onClick={() => {
-                      addColumn(col.id, col.title);
-                      setContextMenu(null);
-                    }}
-                    className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-                  >
-                    {col.title}
-                  </button>
-                ))
-              )}
+            <div className="border-t border-slate-100 my-1"></div>
+
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(String(contextMenu.value || ''));
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[16px]">content_copy</span>
+              Copy Cell
+            </button>
+
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(String(contextMenu.value || ''));
+                updateLead(contextMenu.leadId, { [contextMenu.columnId]: '' });
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[16px]">content_cut</span>
+              Cut Cell
+            </button>
+
+            <button
+              onClick={async () => {
+                try {
+                  const text = await navigator.clipboard.readText();
+                  updateLead(contextMenu.leadId, { [contextMenu.columnId]: text });
+                } catch (err) {
+                  console.error('Failed to read clipboard', err);
+                }
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[16px]">content_paste</span>
+              Paste
+            </button>
+
+            <button
+              onClick={() => {
+                updateLead(contextMenu.leadId, { [contextMenu.columnId]: '' });
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[16px]">backspace</span>
+              Clear Cell
+            </button>
+
+            <div className="border-t border-slate-100 my-1"></div>
+
+            <button
+              onClick={() => {
+                const lead = leads.find(l => l.id === contextMenu.leadId);
+                if (lead) {
+                  navigator.clipboard.writeText(JSON.stringify(lead, null, 2));
+                }
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[16px]">code</span>
+              Copy Row JSON
+            </button>
+
+            <button
+              onClick={async () => {
+                const leadId = contextMenu.leadId;
+                setContextMenu(null);
+                const ok = await confirm.danger(
+                  'Delete Lead?',
+                  'Are you sure you want to delete this lead record?'
+                );
+                if (ok) {
+                  deleteLead(leadId);
+                }
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[16px]">delete</span>
+              Delete Row
+            </button>
+
+            <div className="border-t border-slate-100 my-1"></div>
+
+            {/* Unhide Column Sub-menu */}
+            <div className="relative group">
+              <button
+                className="flex items-center justify-between gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">visibility</span>
+                  Unhide Column
+                </div>
+                <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
+              </button>
+
+              <div className="absolute left-full top-0 ml-0.5 bg-white border border-slate-200/90 rounded-xl shadow-soft hidden group-hover:block flex-col py-1.5 min-w-[150px] z-[1000] animate-in fade-in duration-100">
+                {hiddenColumns.length === 0 ? (
+                  <span className="px-3.5 py-2 text-[10px] italic text-slate-400 block text-center">No hidden columns</span>
+                ) : (
+                  hiddenColumns.map(col => (
+                    <button
+                      key={col.id}
+                      onClick={() => {
+                        addColumn(col.id, col.title);
+                        setContextMenu(null);
+                      }}
+                      className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+                    >
+                      {col.title}
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
 
-          <button
-            onClick={() => {
-              const uniqueId = `custom_${Date.now()}`;
-              addColumn(uniqueId, 'Untitled');
-              setEditingColumnId(uniqueId);
-              setContextMenu(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-          >
-            <span className="material-symbols-outlined text-[16px]">add_circle</span>
-            Add Column
-          </button>
+            <button
+              onClick={() => {
+                const uniqueId = `custom_${Date.now()}`;
+                addColumn(uniqueId, 'Untitled');
+                setEditingColumnId(uniqueId);
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[16px]">add_circle</span>
+              Add Column
+            </button>
 
-          {contextMenu.columnId !== 'actions' && contextMenu.columnId !== 'name' && (
-            <>
-              <div className="border-t border-slate-100 my-1"></div>
-              <button
-                onClick={() => {
-                  deleteColumn(contextMenu.columnId);
-                  setContextMenu(null);
-                }}
-                className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-              >
-                <span className="material-symbols-outlined text-[16px]">visibility_off</span>
-                Hide Column
-              </button>
-              <button
-                onClick={() => {
-                  if (window.confirm(`Are you sure you want to delete column "${columns.find(c => c.id === contextMenu.columnId)?.title || contextMenu.columnId}"?`)) {
+            {contextMenu.columnId !== 'actions' && contextMenu.columnId !== 'name' && (
+              <>
+                <div className="border-t border-slate-100 my-1"></div>
+                <button
+                  onClick={() => {
                     deleteColumn(contextMenu.columnId);
-                  }
-                  setContextMenu(null);
-                }}
-                className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
-              >
-                <span className="material-symbols-outlined text-[16px]">delete</span>
-                Delete Column
-              </button>
-            </>
-          )}
+                    setContextMenu(null);
+                  }}
+                  className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+                >
+                  <span className="material-symbols-outlined text-[16px]">visibility_off</span>
+                  Hide Column
+                </button>
+                <button
+                  onClick={async () => {
+                    const colId = contextMenu.columnId;
+                    const colTitle = columns.find(c => c.id === colId)?.title || colId;
+                    setContextMenu(null);
+                    const ok = await confirm.danger(
+                      `Delete Column "${colTitle}"?`,
+                      'This column will be hidden from the lead table.'
+                    );
+                    if (ok) {
+                      deleteColumn(colId);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
+                >
+                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                  Delete Column
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1689,11 +1801,17 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
           </button>
 
           <button
-            onClick={() => {
-              if (window.confirm(`Are you sure you want to delete column "${headerMenu.label}"? This will hide it from the table.`)) {
-                deleteColumn(headerMenu.columnId);
-              }
+            onClick={async () => {
+              const colId = headerMenu.columnId;
+              const label = headerMenu.label;
               setHeaderMenu(null);
+              const ok = await confirm.danger(
+                `Delete Column "${label}"?`,
+                'This column will be hidden from the lead table.'
+              );
+              if (ok) {
+                deleteColumn(colId);
+              }
             }}
             className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
           >
@@ -1747,43 +1865,44 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
             <span className="material-symbols-outlined text-[16px]">add_circle</span>
             Add Column
           </button>
-          </div>
-        )}
+        </div>
+      )}
 
       {sortedLeads.length === 0 && (
-        <div 
+        <div
           className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none z-30"
-          style={{ top: `${92 * zoom}px` }}
+          style={{ top: `${140 * zoom}px` }}
         >
-          <div className="pointer-events-auto bg-white/50 backdrop-blur-[2px] w-full h-full flex items-center justify-center pb-20">
-            <EmptyState
-              title={searchQuery ? "No leads found" : "Syncing customers"}
-              description={
-                searchQuery
-                  ? "We couldn't find any leads matching your search criteria."
-                  : "Hang tight! We're still hooking up your userbase.\nPlease check back in a few minutes."
-              }
-              primaryAction={
-                searchQuery
-                  ? undefined
-                  : { label: "Notify me", icon: <Bell className="size-4" />, onClick: () => {} }
-              }
-              secondaryAction={
-                searchQuery
-                  ? undefined
-                  : { label: "Refresh page", icon: <RefreshCw className="size-4" />, onClick: () => window.location.reload() }
-              }
-            />
+          <div className="pointer-events-none bg-white/50 backdrop-blur-[2px] w-full h-full flex items-center justify-center pb-20">
+            <div className="pointer-events-auto">
+              <EmptyState
+                title={searchQuery ? "No leads found" : "Syncing customers"}
+                description={
+                  searchQuery
+                    ? "We couldn't find any leads matching your search criteria."
+                    : "Hang tight! We're still hooking up your userbase.\nPlease check back in a few minutes."
+                }
+                primaryAction={
+                  searchQuery
+                    ? undefined
+                    : { label: "Notify me", icon: <Bell className="size-4" />, onClick: () => { } }
+                }
+                secondaryAction={
+                  searchQuery
+                    ? undefined
+                    : { label: "Refresh page", icon: <RefreshCw className="size-4" />, onClick: () => window.location.reload() }
+                }
+              />
+            </div>
           </div>
         </div>
       )}
       {/* Zoom Level Indicator */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] transition-all duration-300 pointer-events-none ${
-          showZoomIndicator
-            ? 'opacity-100 translate-y-0'
-            : 'opacity-0 translate-y-2'
-        }`}
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] transition-all duration-300 pointer-events-none ${showZoomIndicator
+          ? 'opacity-100 translate-y-0'
+          : 'opacity-0 translate-y-2'
+          }`}
       >
         <div className="flex items-center gap-2 bg-zinc-900 text-white pl-3 pr-3.5 py-2 rounded-full shadow-2xl border border-zinc-700/50">
           <span className="material-symbols-outlined text-[16px] text-zinc-400">search</span>
@@ -1792,6 +1911,13 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
           </span>
         </div>
       </div>
+
+      {/* Lead Info Modal */}
+      <LeadInfoModal
+        lead={selectedInfoLead}
+        onClose={() => setSelectedInfoLead(null)}
+        onMailClick={onMailClick}
+      />
     </div>
   );
 };

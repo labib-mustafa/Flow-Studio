@@ -8,22 +8,14 @@ interface PriorityDropdownProps {
   onSelectPriority?: (priority: string) => void;
 }
 
-export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({ task, children, onSelectPriority }) => {
-  const { updateTask } = useTaskStore();
+export const PriorityDropdown: React.FC<PriorityDropdownProps> = React.memo(({ task, children, onSelectPriority }) => {
   const [open, setOpen] = React.useState(false);
-
-  const priorities = [
-    { value: 'urgent', label: 'Urgent', color: 'text-[#f04f5e]' },
-    { value: 'high', label: 'High', color: 'text-[#f5a133]' },
-    { value: 'medium', label: 'Normal', color: 'text-[#3ba2f7]' },
-    { value: 'low', label: 'Low', color: 'text-slate-400' },
-  ];
 
   const handleSelect = (value: string) => {
     if (onSelectPriority) {
       onSelectPriority(value);
     } else if (task) {
-      updateTask(task.id, { priority: value as any });
+      useTaskStore.getState().updateTask(task.id, { priority: value as any });
     }
     setOpen(false);
   };
@@ -32,18 +24,23 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({ task, childr
     if (onSelectPriority) {
       onSelectPriority('');
     } else if (task) {
-      updateTask(task.id, { priority: '' });
+      useTaskStore.getState().updateTask(task.id, { priority: '' });
     }
     setOpen(false);
   };
 
-  const content = (
+  const content = open ? (
     <div className="flex flex-col w-[240px] font-sans">
       <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
         Priority
       </div>
       
-      {priorities.map((p) => (
+      {[
+        { value: 'urgent', label: 'Urgent', color: 'text-[#f04f5e]' },
+        { value: 'high', label: 'High', color: 'text-[#f5a133]' },
+        { value: 'medium', label: 'Normal', color: 'text-[#3ba2f7]' },
+        { value: 'low', label: 'Low', color: 'text-slate-400' },
+      ].map((p) => (
         <button
           key={p.value}
           onClick={() => handleSelect(p.value)}
@@ -67,7 +64,7 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({ task, childr
       </button>
 
     </div>
-  );
+  ) : null;
 
   return (
     <CellPopover
@@ -81,4 +78,4 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({ task, childr
       {children}
     </CellPopover>
   );
-};
+});

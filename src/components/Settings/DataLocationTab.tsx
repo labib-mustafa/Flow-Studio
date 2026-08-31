@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSettings } from '../../hooks/useSettings';
+import { confirm } from '../../stores/confirmStore';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface StorageInfo {
@@ -35,6 +36,12 @@ export const DataLocationTab: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isChangingDir, setIsChangingDir] = useState(false);
+
+  // Inline path editing states & native folder picker state
+  const [isEditingInlinePath, setIsEditingInlinePath] = useState(false);
+  const [editedInlinePath, setEditedInlinePath] = useState('');
+  const [isSavingInlinePath, setIsSavingInlinePath] = useState(false);
+  const [isSelectingNativeFolder, setIsSelectingNativeFolder] = useState(false);
 
   // Fetch config on mount
   useEffect(() => {
@@ -95,6 +102,107 @@ export const DataLocationTab: React.FC = () => {
       }
     } catch (err) {
       setShowToast('Failed to open Explorer.');
+    }
+  };
+
+  // Save inline edited path
+  const handleSaveInlinePath = async () => {
+    const trimmed = editedInlinePath.trim();
+    if (!trimmed) {
+      setShowToast('Path cannot be empty.');
+      return;
+    }
+    if (trimmed === dataPath) {
+      setIsEditingInlinePath(false);
+      return;
+    }
+    setIsSavingInlinePath(true);
+    try {
+      const res = await fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataPath: trimmed }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const updatedPath = data.dataPath || trimmed;
+        setDataPath(updatedPath);
+        updateSettings({
+          dataLocation: {
+            ...settings.dataLocation,
+            currentPath: updatedPath,
+          },
+        });
+        setShowToast('Storage location updated.');
+        setIsEditingInlinePath(false);
+        fetchStorageInfo();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setShowToast(errData.error || 'Failed to update storage location.');
+      }
+    } catch (err) {
+      setShowToast('Failed to connect to server.');
+    } finally {
+      setIsSavingInlinePath(false);
+    }
+  };
+
+  // Open native system file manager folder picker
+  const handleNativeSelectFolder = async () => {
+    setIsSelectingNativeFolder(true);
+    try {
+      let selectedPath: string | null = null;
+
+      if ((window as any).electronAPI?.fs?.selectFolder) {
+        const res = await (window as any).electronAPI.fs.selectFolder(dataPath);
+        if (res && !res.canceled && res.path) {
+          selectedPath = res.path;
+        }
+      } else {
+        const res = await fetch('/api/select-folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPath: dataPath }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.canceled && data.path) {
+            selectedPath = data.path;
+          }
+        }
+      }
+
+      if (selectedPath) {
+        setIsChangingDir(true);
+        const updateRes = await fetch('/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataPath: selectedPath }),
+        });
+
+        if (updateRes.ok) {
+          const data = await updateRes.json();
+          const updatedPath = data.dataPath || selectedPath;
+          setDataPath(updatedPath);
+          updateSettings({
+            dataLocation: {
+              ...settings.dataLocation,
+              currentPath: updatedPath,
+            },
+          });
+          setShowToast(`Data directory changed to ${updatedPath}`);
+          fetchStorageInfo();
+        } else {
+          const errData = await updateRes.json().catch(() => ({}));
+          setShowToast(errData.error || 'Failed to change directory.');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to open native file explorer:', err);
+      setShowToast('Failed to open File Explorer dialog.');
+    } finally {
+      setIsSelectingNativeFolder(false);
+      setIsChangingDir(false);
     }
   };
 
@@ -206,9 +314,12 @@ export const DataLocationTab: React.FC = () => {
     });
   };
 
-  // Reset (kept as-is)
-  const handleReset = () => {
-    if (confirm('Are you sure you want to reset all settings to defaults? This will not delete your files.')) {
+  const handleReset = async () => {
+    const ok = await confirm.warning(
+      'Reset All Settings?',
+      'Are you sure you want to reset all settings to defaults? This will not delete your files.'
+    );
+    if (ok) {
       resetSettings();
       setShowToast('Settings reset to defaults.');
     }
@@ -473,11 +584,67 @@ export const DataLocationTab: React.FC = () => {
                 REVEAL IN EXPLORER
               </button>
             </div>
-            <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
-              <span className="material-symbols-outlined text-slate-400 text-lg">hard_drive</span>
-              <code className="text-xs font-mono text-[#111111] break-all text-left flex-1">
-                {dataPath}
-              </code>
+            <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg p-3 shadow-xs min-h-[48px]">
+              <span className="material-symbols-outlined text-slate-400 text-lg shrink-0">hard_drive</span>
+              {isEditingInlinePath ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={editedInlinePath}
+                    onChange={(e) => setEditedInlinePath(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveInlinePath();
+                      } else if (e.key === 'Escape') {
+                        setIsEditingInlinePath(false);
+                      }
+                    }}
+                    disabled={isSavingInlinePath}
+                    className="text-xs font-mono text-[#111111] bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-900 w-full"
+                    placeholder="Enter folder path..."
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveInlinePath}
+                    disabled={isSavingInlinePath}
+                    className="flex items-center justify-center p-1.5 bg-[#111111] hover:bg-[#242424] text-white rounded transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                    title="Save location (Enter)"
+                  >
+                    <span className="material-symbols-outlined text-base">check</span>
+                  </button>
+                  <button
+                    onClick={() => setIsEditingInlinePath(false)}
+                    disabled={isSavingInlinePath}
+                    className="flex items-center justify-center p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                    title="Cancel (Esc)"
+                  >
+                    <span className="material-symbols-outlined text-base">close</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between flex-1 group gap-2 overflow-hidden">
+                  <code
+                    onClick={() => {
+                      setEditedInlinePath(dataPath);
+                      setIsEditingInlinePath(true);
+                    }}
+                    className="text-xs font-mono text-[#111111] break-all text-left flex-1 cursor-pointer hover:text-blue-600 transition-colors"
+                    title="Click to edit path inline"
+                  >
+                    {dataPath}
+                  </code>
+                  <button
+                    onClick={() => {
+                      setEditedInlinePath(dataPath);
+                      setIsEditingInlinePath(true);
+                    }}
+                    className="text-slate-400 hover:text-[#111111] hover:bg-slate-100 p-1.5 rounded transition-colors cursor-pointer shrink-0 flex items-center gap-1 text-xs font-medium"
+                    title="Edit location path inline"
+                  >
+                    <span className="material-symbols-outlined text-base">edit</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -521,15 +688,18 @@ export const DataLocationTab: React.FC = () => {
             )}
           </div>
 
-          {/* Change Directory Button (no Migrate Data anymore) */}
+          {/* Change Directory Button */}
           <div className="flex flex-wrap justify-center gap-4">
             <button
-              onClick={handleOpenBrowser}
-              className="flex items-center gap-1.5 px-6 py-2.5 bg-[#111111] hover:bg-[#242424] text-white rounded-lg text-xs font-semibold shadow-sm transition-all transform active:scale-95 cursor-pointer"
+              onClick={handleNativeSelectFolder}
+              disabled={isSelectingNativeFolder}
+              className="flex items-center gap-1.5 px-6 py-2.5 bg-[#111111] hover:bg-[#242424] text-white rounded-lg text-xs font-semibold shadow-sm transition-all transform active:scale-95 cursor-pointer disabled:opacity-50"
               id="change-directory-btn"
             >
-              <span className="material-symbols-outlined text-[18px]">folder_open</span>
-              Change Directory
+              <span className="material-symbols-outlined text-[18px]">
+                {isSelectingNativeFolder ? 'progress_activity' : 'folder_open'}
+              </span>
+              {isSelectingNativeFolder ? 'Opening File Explorer...' : 'Change Directory'}
             </button>
           </div>
         </div>

@@ -10,6 +10,7 @@ interface NewProjectProps {
 
 export const NewProject: React.FC<NewProjectProps> = ({ onBack, onSave, project }) => {
   const isEditing = !!project;
+  const [selectedTemplate, setSelectedTemplate] = React.useState('Start from scratch');
 
   return (
     <div className="flex flex-col h-full bg-background-light overflow-hidden">
@@ -57,13 +58,20 @@ export const NewProject: React.FC<NewProjectProps> = ({ onBack, onSave, project 
           {/* Left Column - Templates */}
           {!isEditing && (
             <div className="lg:col-span-5 xl:col-span-5">
-                <TemplateSelector />
+                <TemplateSelector 
+                  selectedTemplate={selectedTemplate}
+                  onSelect={setSelectedTemplate}
+                />
             </div>
           )}
 
           {/* Right Column - Form */}
-          <div className={`${isEditing ? 'lg:col-span-12' : 'lg:col-span-7 xl:col-span-7'} h-full`}>
-            <ProjectForm onCancel={onBack} onSubmit={onSave} project={project} />
+          <div className={isEditing ? "col-span-full max-w-3xl mx-auto w-full h-full" : "lg:col-span-7 xl:col-span-7 h-full"}>
+            <ProjectForm 
+              onCancel={onBack} 
+              onSubmit={(data) => onSave({ ...data, template: selectedTemplate })} 
+              project={project} 
+            />
           </div>
         </div>
       </div>

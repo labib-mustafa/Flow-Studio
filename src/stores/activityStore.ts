@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export type ActivityCategory =
   | 'email_sent'
@@ -70,3 +70,8 @@ export const useActivityStore = create<ActivityState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('activities', () => {
+  useActivityStore.persist.rehydrate();
+});

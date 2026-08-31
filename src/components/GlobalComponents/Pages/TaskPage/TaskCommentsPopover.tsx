@@ -36,17 +36,11 @@ const BoxIcon = () => (
 );
 
 const GoogleDriveIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
-    <path d="M8.2 2H15.8L22 13H14.4L8.2 2Z" fill="#FFC107"/>
-    <path d="M14.4 13H6.8L3 19.5L10.6 19.5L14.4 13Z" fill="#1E88E5"/>
-    <path d="M8.2 2L2 13L5.8 19.5L12 8.5L8.2 2Z" fill="#4CAF50"/>
-  </svg>
+  <img src="/assets/google-logos/google-drive.png" className="w-4 h-4 object-contain shrink-0" alt="Google Drive" />
 );
 
 const GoogleDocIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="text-[#2196F3] flex-shrink-0">
-    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-  </svg>
+  <img src="/assets/google-logos/google-sheets.png" className="w-4 h-4 object-contain shrink-0" alt="Google Sheets" />
 );
 
 const FILE_OPTIONS = [
@@ -55,8 +49,7 @@ const FILE_OPTIONS = [
   { id: 'googledoc', label: 'New Google Doc', customIcon: <GoogleDocIcon /> },
 ];
 
-export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, children }) => {
-  const { addTaskComment, tasks } = useTaskStore();
+export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = React.memo(({ task, children }) => {
   const [commentText, setCommentText] = useState('');
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +88,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, 
 
   const handleSend = () => {
     if (commentText.trim()) {
-      addTaskComment(task.id, commentText);
+      useTaskStore.getState().addTaskComment(task.id, commentText);
       setCommentText('');
     }
   };
@@ -113,7 +106,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      addTaskComment(task.id, `📎 Uploaded: ${file.name}`);
+      useTaskStore.getState().addTaskComment(task.id, `📎 Uploaded: ${file.name}`);
       setIsAddFileOpen(false);
     }
   };
@@ -131,7 +124,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, 
       };
       const list = filenames[option.id] || ['Document.pdf'];
       const randomName = list[Math.floor(Math.random() * list.length)];
-      addTaskComment(task.id, `📎 Uploaded: ${randomName}`);
+      useTaskStore.getState().addTaskComment(task.id, `📎 Uploaded: ${randomName}`);
       setIsAddFileOpen(false);
     }
   };
@@ -153,7 +146,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, 
     }
     
     if (mentionActiveTab === 'tasks') {
-      const rawTasks = tasks.map(t => ({
+      const rawTasks = useTaskStore.getState().tasks.map(t => ({
         id: t.id,
         name: t.title,
         status: t.status,
@@ -470,7 +463,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, 
     return flatItems.map((item, idx) => renderItemRow(item, idx, mentionSelectedIndex, handleSelectMentionItem));
   };
 
-  const content = (
+  const content = popoverOpen ? (
     <div className="w-[420px] overflow-visible relative">
       {/* Top Header Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
@@ -671,7 +664,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, 
         </div>
       </div>
     </div>
-  );
+  ) : null;
 
   return (
     <CellPopover
@@ -707,4 +700,4 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = ({ task, 
       )}
     </CellPopover>
   );
-};
+});

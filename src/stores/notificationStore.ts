@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export interface NotificationItem {
   id: number | string;
@@ -48,3 +48,8 @@ export const useNotificationStore = create<NotificationState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('notifications', () => {
+  useNotificationStore.persist.rehydrate();
+});

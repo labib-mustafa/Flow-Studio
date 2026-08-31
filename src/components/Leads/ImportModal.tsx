@@ -230,6 +230,34 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
           {step === 1 && (
             <div className="space-y-6">
               
+              {/* Manual Entry Option */}
+              <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                    <Plus className="size-5" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-slate-800">Add Lead Manually</h5>
+                    <p className="text-[11px] text-slate-400">Prefer entering a single prospect's details directly?</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onAddManual();
+                  }}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                >
+                  Create Single Lead
+                </button>
+              </div>
+
+              <div className="relative flex items-center my-2">
+                <div className="flex-grow border-t border-slate-100"></div>
+                <span className="shrink-0 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Or bulk import spreadsheet</span>
+                <div className="flex-grow border-t border-slate-100"></div>
+              </div>
 
               {/* Drag and Drop Zone */}
               <div

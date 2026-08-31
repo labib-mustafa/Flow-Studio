@@ -1,11 +1,68 @@
 import React, { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { Copy, X, Lock } from 'lucide-react';
 import { getReadableTextColor } from '../../../../utils/colorUtils';
 import { getSmoothPath, getArrowHeadPath, getArrowTailPath, getShortenedLineEnd, getShortenedLineStart } from '../../../../utils/drawingUtils';
+import { useMoodboardStore } from '../../../../stores/moodboardStore';
+
+export type MoodboardItemType = 
+  | 'note' 
+  | 'text' 
+  | 'image' 
+  | 'color' 
+  | 'shape' 
+  | 'arrow' 
+  | 'pencil'
+  | 'bookmark'
+  | 'frame';
+
+export interface UrlMeta {
+  url: string;
+  domain: string;
+  title?: string;
+  description?: string;
+  favicon?: string;
+  thumbnail?: string;
+}
+
+export interface CropMaskConfig {
+  mode: 'crop' | 'mask';
+  maskShape: 'none' | 'circle' | 'rounded' | 'hexagon' | 'star';
+  zoom: number;
+  panX: number;
+  panY: number;
+}
+
+export interface CommentReply {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface CommentPin {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  author: string;
+  createdAt: string;
+  resolved: boolean;
+  replies?: CommentReply[];
+}
+
+export type GridType = 'dot' | 'square' | 'isometric' | 'blank';
+
+export interface GridConfig {
+  type: GridType;
+  size: number;
+  opacity: number;
+  snapToGrid: boolean;
+}
 
 export interface MoodboardItemData {
   id: string;
-  type: 'note' | 'text' | 'image' | 'color' | 'shape' | 'arrow' | 'pencil';
+  type: MoodboardItemType;
   x: number;
   y: number;
   content?: string;
@@ -20,19 +77,31 @@ export interface MoodboardItemData {
   fontFamily?: string;
   fontWeight?: string;
   isItalic?: boolean;
-  points?: { x: number, y: number }[]; // For pencil paths
+  points?: { x: number; y: number }[]; // For pencil paths
   smoothing?: number; // For pencil paths
-  start?: { x: number, y: number }; // For arrows
-  end?: { x: number, y: number }; // For arrows
-  controlPoint?: { x: number, y: number }; // For curved arrows
+  start?: { x: number; y: number }; // For arrows
+  end?: { x: number; y: number }; // For arrows
+  controlPoint?: { x: number; y: number }; // For curved arrows
   arrowHeadStyle?: 'triangle' | 'line' | 'filled' | 'none';
   arrowTailStyle?: 'none' | 'dot' | 'flat' | 'arrow';
+
+  // Milestone 2 Extended Fields
+  isLocked?: boolean;
+  paletteColors?: string[];
+  urlMeta?: UrlMeta;
+  frameId?: string;
+  isFrame?: boolean;
+  frameColor?: string;
+  cropMask?: CropMaskConfig;
+  categories?: string[];
+  comments?: CommentPin[];
 }
+
 
 interface MoodboardItemProps {
   item: MoodboardItemData;
   isSelected: boolean;
-  activeTool: 'select' | 'hand' | 'arrow' | 'pencil';
+  activeTool: 'select' | 'hand' | 'arrow' | 'pencil' | 'comment';
   onSelect: (id: string) => void;
   onUpdate: (id: string, updates: Partial<MoodboardItemData>) => void;
   onUpdateTransient?: (id: string, updates: Partial<MoodboardItemData>) => void;
@@ -42,9 +111,10 @@ interface MoodboardItemProps {
   onCopy?: (text: string, label: string) => void;
   zoom: number;
   snapPoints?: { x: number, y: number }[];
+  isDimmed?: boolean;
 }
 
-export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, activeTool, onSelect, onUpdate, onUpdateTransient, onDelete, onEditImage, onContextMenu, onCopy, zoom, snapPoints = [] }) => {
+export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, activeTool, onSelect, onUpdate, onUpdateTransient, onDelete, onEditImage, onContextMenu, onCopy, zoom, snapPoints = [], isDimmed = false }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -53,6 +123,12 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [item.content, item.type]);
+
+  useEffect(() => {
+    if (item.type === 'image' && isSelected && (!item.paletteColors || item.paletteColors.length === 0)) {
+      useMoodboardStore.getState().extractImagePalette(item.id);
+    }
+  }, [item.id, item.type, isSelected, item.paletteColors]);
 
   const isHandTool = activeTool === 'hand';
 
@@ -80,6 +156,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
               }}
               onBlur={(e) => onUpdate(item.id, { title: e.target.value })}
               onPointerDown={(e) => {
+                if (isHandTool) return;
                 e.stopPropagation();
                 (e.target as HTMLInputElement).focus();
               }}
@@ -103,6 +180,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
               }}
               onBlur={(e) => onUpdate(item.id, { content: e.target.value })}
               onPointerDown={(e) => {
+                if (isHandTool) return;
                 e.stopPropagation();
                 textareaRef.current?.focus();
               }}
@@ -132,6 +210,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
               }}
               onBlur={(e) => onUpdate(item.id, { title: e.target.value })}
               onPointerDown={(e) => {
+                if (isHandTool) return;
                 e.stopPropagation();
                 (e.target as HTMLInputElement).focus();
               }}
@@ -155,6 +234,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
               }}
               onBlur={(e) => onUpdate(item.id, { content: e.target.value })}
               onPointerDown={(e) => {
+                if (isHandTool) return;
                 e.stopPropagation();
                 (e.target as HTMLTextAreaElement).focus();
               }}
@@ -193,7 +273,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
                   }}
                   title="Copy Hex"
                 >
-                  <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                  <Copy size={16} />
                 </button>
               </div>
               <p
@@ -210,22 +290,52 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
             </div>
           </div>
         );
-      case 'image':
+      case 'image': {
+        const cropMask = item.cropMask;
+        const maskShape = cropMask?.maskShape || 'none';
+        const cropZoom = cropMask?.zoom ?? 1;
+        const panX = cropMask?.panX ?? 0;
+        const panY = cropMask?.panY ?? 0;
+
+        let clipPathStyle: string | undefined = undefined;
+        let borderRadiusStyle: string | undefined = undefined;
+        if (maskShape === 'circle') {
+          clipPathStyle = 'circle(50% at 50% 50%)';
+        } else if (maskShape === 'rounded') {
+          borderRadiusStyle = '24px';
+          clipPathStyle = 'inset(0 round 24px)';
+        } else if (maskShape === 'hexagon') {
+          clipPathStyle = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
+        } else if (maskShape === 'star') {
+          clipPathStyle = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+        }
+
         return (
-          <div className="w-full h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col group">
-            <div className="relative flex-1">
+          <div
+            className="w-full h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col group"
+            style={{
+              clipPath: clipPathStyle,
+              WebkitClipPath: clipPathStyle,
+              borderRadius: borderRadiusStyle,
+            }}
+          >
+            <div className="relative flex-1 overflow-hidden">
               <img
                 alt={item.title}
-                className="w-full h-full object-cover absolute inset-0"
+                className="w-full h-full object-cover absolute inset-0 transition-transform duration-75"
                 src={item.content || 'https://picsum.photos/300/200'}
                 referrerPolicy="no-referrer"
+                style={{
+                  transform: `scale(${cropZoom}) translate(${panX}px, ${panY}px)`,
+                  transformOrigin: 'center center',
+                }}
               />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs truncate">
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs truncate z-10">
                 {item.title || 'Image'}
               </div>
-              <div className={`absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center ${isHandTool ? 'hidden' : ''}`}>
+              <div className={`absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10 ${isHandTool ? 'hidden' : ''}`}>
                 <button
-                  className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-xs font-bold"
+                  className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-xs font-bold shadow-md hover:bg-slate-100"
                   onClick={(e) => {
                     if (isHandTool) return;
                     e.stopPropagation();
@@ -240,6 +350,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
             </div>
           </div>
         );
+      }
       case 'arrow':
         const start = item.start || { x: 0, y: 0 };
         const end = item.end || { x: 0, y: 0 };
@@ -252,6 +363,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
         const shortenedStart = tailStyle !== 'none' ? getShortenedLineStart(start, end, arrowSize * 0.7, controlPoint) : start;
 
         const handleDragStart = (e: React.PointerEvent, type: 'start' | 'end' | 'control') => {
+          if (isHandTool) return;
           e.stopPropagation();
           const target = e.currentTarget as SVGElement;
           target.setPointerCapture(e.pointerId);
@@ -429,7 +541,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
             </svg>
             {isSelected && document.getElementById('arrow-controls-layer') && createPortal(
               <svg className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
-                <g className="pointer-events-auto">
+                <g className={isHandTool ? 'pointer-events-none' : 'pointer-events-auto'}>
                   {/* Start Handle */}
                   <circle
                     cx={item.x + start.x}
@@ -492,6 +604,45 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
             ></div>
           </div>
         );
+      case 'bookmark':
+        const meta = item.urlMeta;
+        return (
+          <div className="w-full h-full bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              {meta?.favicon ? (
+                <img src={meta.favicon} alt="" className="w-4 h-4 rounded shrink-0" />
+              ) : (
+                <div className="w-4 h-4 bg-slate-200 rounded shrink-0" />
+              )}
+              <span className="text-xs font-semibold text-slate-500 truncate">{meta?.domain || 'bookmark'}</span>
+            </div>
+            {meta?.thumbnail && (
+              <div className="w-full h-24 mb-2 rounded overflow-hidden bg-slate-100 shrink-0">
+                <img src={meta.thumbnail} alt="" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <h4 className="text-sm font-bold text-slate-800 line-clamp-1 mb-1">{meta?.title || item.title || 'Bookmark Link'}</h4>
+            {meta?.description && (
+              <p className="text-xs text-slate-500 line-clamp-2">{meta.description}</p>
+            )}
+          </div>
+        );
+      case 'frame':
+        return (
+          <div
+            className="w-full h-full rounded-2xl border-2 border-dashed flex flex-col p-3 transition-colors pointer-events-none"
+            style={{
+              borderColor: item.frameColor || '#cbd5e1',
+              backgroundColor: item.color || `${item.frameColor || '#cbd5e1'}15`,
+            }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 bg-white/80 px-2 py-1 rounded shadow-xs">
+                {item.title || 'Section Frame'}
+              </span>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -500,27 +651,53 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
   return (
     <div
       id={`item-${item.id}`}
-      className={`moodboard-item item-${item.id} absolute ${isHandTool ? 'cursor-grab active:cursor-grabbing' : 'cursor-move'}`}
+      className={`moodboard-item item-${item.id} absolute ${isHandTool ? 'pointer-events-none select-none' : (item.isLocked ? 'cursor-default' : 'cursor-move')}`}
       style={{
         top: 0,
         left: 0,
         transform: `translate(${item.x}px, ${item.y}px) rotate(${item.rotation || 0}deg)`,
         width: item.width ? `${item.width}px` : 'auto',
         height: item.height ? `${item.height}px` : 'auto',
-        zIndex: isSelected ? 50 : 10,
+        zIndex: isSelected ? 50 : (item.type === 'frame' ? 1 : 10),
         transformOrigin: 'center center',
+        opacity: isDimmed ? 0.25 : 1,
+        pointerEvents: isDimmed ? 'none' : undefined,
       }}
       onPointerDown={(e) => {
+        if (isHandTool) return;
+        if (e.altKey && !item.isLocked) {
+          e.stopPropagation();
+          useMoodboardStore.getState().duplicateItems([item.id], { x: 0, y: 0 });
+          return;
+        }
         e.stopPropagation();
         onSelect(item.id);
       }}
       onContextMenu={(e) => {
+        if (isHandTool) return;
         if (onContextMenu) {
           onContextMenu(e, item.id);
         }
       }}
+      onMouseEnter={() => {
+        if (item.type === 'image' && (!item.paletteColors || item.paletteColors.length === 0)) {
+          useMoodboardStore.getState().extractImagePalette(item.id);
+        }
+      }}
     >
-      {isSelected && !isHandTool && item.type !== 'arrow' && (
+      {item.isLocked && (
+        <div
+          className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-amber-500 text-white shadow-md flex items-center justify-center z-50 cursor-pointer hover:bg-amber-600 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onUpdate(item.id, { isLocked: false });
+          }}
+          title="Locked item (Click to unlock)"
+        >
+          <Lock size={12} className="stroke-[2.5]" />
+        </div>
+      )}
+      {isSelected && !isHandTool && item.type !== 'arrow' && !item.isLocked && (
         <button
           className="absolute -top-3 -right-3 w-6 h-6 bg-white border border-slate-200 rounded-full shadow-sm flex items-center justify-center text-slate-400 hover:text-red-500 z-50"
           onPointerDown={(e) => {
@@ -528,11 +705,25 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
             onDelete(item.id);
           }}
         >
-          <span className="material-symbols-outlined text-[16px]">close</span>
+          <X size={16} />
         </button>
       )}
       {renderContent()}
+
+      {item.categories && item.categories.length > 0 && item.type !== 'arrow' && item.type !== 'pencil' && (
+        <div className="absolute bottom-1.5 left-2 right-2 flex flex-wrap gap-1 z-20 pointer-events-none">
+          {item.categories.map((cat, idx) => (
+            <span
+              key={idx}
+              className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-900/80 text-white backdrop-blur-xs shadow-xs truncate max-w-[100px]"
+            >
+              {cat}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
+
 

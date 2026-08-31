@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 import { useActivityStore } from './activityStore';
 import { useTrashStore } from './trashStore';
 import { useTeamStore } from './teamStore';
@@ -38,10 +38,23 @@ export interface Task {
 }
 
 interface TaskState {
+  _hasHydrated: boolean;
   tasks: Task[];
+  projectColumns: Record<string, ColumnDefinition[]>;
+  projectColumnOrders: Record<string, string[]>;
+  projectColumnNames: Record<string, Record<string, string>>;
+  projectStatusConfigs: Record<string, Record<string, { name: string; color: string }>>;
+  projectHiddenColumns: Record<string, string[]>;
+  currentProjectId: string | null;
+
   columns: ColumnDefinition[];
-  addColumnSchema: (name: string, type: ColumnDefinition['type'], options?: string[]) => void;
+  columnOrder: string[];
+  columnNames: Record<string, string>;
   statusConfigs?: Record<string, { name: string; color: string }>;
+  hiddenColumns: string[];
+
+  setProject: (projectId: string) => void;
+  addColumnSchema: (name: string, type: ColumnDefinition['type'], options?: string[]) => void;
   sortBy: { column: string; direction: 'asc' | 'desc' } | null;
   addTask: (task: Omit<Task, 'id'>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -54,17 +67,14 @@ interface TaskState {
   setTasks: (tasks: Task[]) => void;
   toggleSort: (columnId: string) => void;
   setSortDirection: (columnId: string, direction: 'asc' | 'desc') => void;
-  hiddenColumns: string[];
   toggleColumnVisibility: (columnId: string) => void;
   removeColumnSchema: (columnId: string) => void;
   moveColumn: (columnId: string, direction: 'left' | 'right') => void;
   reorderColumns: (activeColumnId: string, targetColumnId: string) => void;
-  columnOrder: string[];
   addTaskComment: (taskId: string, commentText: string) => void;
   updateStatusConfig: (statusId: string, updates: { name?: string; color?: string }) => void;
   isFieldsSidebarOpen: boolean;
   setFieldsSidebarOpen: (open: boolean) => void;
-  columnNames: Record<string, string>;
   updateColumnName: (columnId: string, name: string) => void;
 }
 
@@ -80,23 +90,85 @@ const getDefaultColorForPhase = (phase: string) => {
 export const useTaskStore = create<TaskState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       tasks: [],
+      projectColumns: {},
+      projectColumnOrders: {},
+      projectColumnNames: {},
+      projectStatusConfigs: {},
+      projectHiddenColumns: {},
+      currentProjectId: null,
       columns: [],
       columnNames: {},
+      columnOrder: ['title', 'assignee', 'dueDate', 'priority', 'status', 'comments', 'customField', 'pics'],
+      hiddenColumns: [],
+      sortBy: null,
+      isFieldsSidebarOpen: false,
+      setFieldsSidebarOpen: (open) => set({ isFieldsSidebarOpen: open }),
+
+      setProject: (projectId) => set((state) => {
+        if (state.currentProjectId === projectId) return {};
+
+        const updatedColumns = { ...state.projectColumns };
+        const updatedOrders = { ...state.projectColumnOrders };
+        const updatedNames = { ...state.projectColumnNames };
+        const updatedConfigs = { ...state.projectStatusConfigs };
+        const updatedHidden = { ...state.projectHiddenColumns };
+
+        // Save current properties of previous project before switching
+        if (state.currentProjectId) {
+          updatedColumns[state.currentProjectId] = state.columns || [];
+          updatedOrders[state.currentProjectId] = state.columnOrder || [];
+          updatedNames[state.currentProjectId] = state.columnNames || {};
+          updatedConfigs[state.currentProjectId] = state.statusConfigs || {};
+          updatedHidden[state.currentProjectId] = state.hiddenColumns || [];
+        }
+
+        // Load new values for the target project
+        const nextColumns = updatedColumns[projectId] || [];
+        const nextOrder = updatedOrders[projectId] || ['title', 'assignee', 'dueDate', 'priority', 'status', 'comments', 'customField', 'pics'];
+        const nextNames = updatedNames[projectId] || {};
+        const nextConfigs = updatedConfigs[projectId] || {};
+        const nextHidden = updatedHidden[projectId] || [];
+
+        return {
+          currentProjectId: projectId,
+          projectColumns: updatedColumns,
+          projectColumnOrders: updatedOrders,
+          projectColumnNames: updatedNames,
+          projectStatusConfigs: updatedConfigs,
+          projectHiddenColumns: updatedHidden,
+          columns: nextColumns,
+          columnOrder: nextOrder,
+          columnNames: nextNames,
+          statusConfigs: nextConfigs,
+          hiddenColumns: nextHidden
+        };
+      }),
+
       addColumnSchema: (name, type, options) => set((state) => {
         const id = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
           ? crypto.randomUUID()
           : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         const newColumn: ColumnDefinition = { id, name, type, width: 140, options };
+        const newColumns = [...(state.columns || []), newColumn];
+        const newOrder = [...(state.columnOrder || []), id];
+
+        const updatedColumns = { ...state.projectColumns };
+        const updatedOrders = { ...state.projectColumnOrders };
+        if (state.currentProjectId) {
+          updatedColumns[state.currentProjectId] = newColumns;
+          updatedOrders[state.currentProjectId] = newOrder;
+        }
+
         return {
-          columns: [...(state.columns || []), newColumn],
-          columnOrder: [...(state.columnOrder || []), id]
+          columns: newColumns,
+          columnOrder: newOrder,
+          projectColumns: updatedColumns,
+          projectColumnOrders: updatedOrders
         };
       }),
-      sortBy: null,
-      columnOrder: ['title', 'assignee', 'dueDate', 'priority', 'status', 'comments', 'customField', 'pics'],
-      isFieldsSidebarOpen: false,
-      setFieldsSidebarOpen: (open) => set({ isFieldsSidebarOpen: open }),
+
       addTask: (task) => set((state) => {
         const newTask = { ...task, id: Math.random().toString(36).substr(2, 9) } as Task;
         useActivityStore.getState().logActivity('task', `Added task: ${task.title}`, { category: 'task_created', targetId: newTask.id, targetName: newTask.title });
@@ -186,31 +258,30 @@ export const useTaskStore = create<TaskState>()(
       setSortDirection: (columnId, direction) => set((state) => ({
         sortBy: { column: columnId, direction }
       })),
-      hiddenColumns: [],
       toggleColumnVisibility: (columnId) => set((state) => {
         if (columnId === 'title') return {};
         const isHidden = state.hiddenColumns?.includes(columnId);
+        const newHidden = isHidden 
+          ? state.hiddenColumns.filter(id => id !== columnId)
+          : [...(state.hiddenColumns || []), columnId];
+
+        const updatedHidden = { ...state.projectHiddenColumns };
+        if (state.currentProjectId) {
+          updatedHidden[state.currentProjectId] = newHidden;
+        }
+
         return {
-          hiddenColumns: isHidden 
-            ? state.hiddenColumns.filter(id => id !== columnId)
-            : [...(state.hiddenColumns || []), columnId]
+          hiddenColumns: newHidden,
+          projectHiddenColumns: updatedHidden
         };
       }),
       removeColumnSchema: (columnId) => set((state) => {
         if (columnId === 'title') return {};
-        // Find property name related to columnId
         let propName: keyof Task | null = null;
         if (columnId === 'dueDate') propName = 'dueDate';
         if (columnId === 'assignee') propName = 'assignees';
         if (columnId === 'priority') propName = 'priority';
         if (columnId === 'status') propName = 'status';
-        if (columnId === 'title') propName = 'title'; // though deleting title might be dangerous
-        
-        // Instead of actually deleting properties from the typescript objects which might break the UI
-        // We will just add it to hiddenColumns so it's hidden entirely.
-        // If we strictly delete properties, typescript will complain and we might break other components.
-        // So we will just hide it. The prompt says: "completely cleans out the variable key definition map across all task data indices."
-        // We can set that property to undefined for all tasks.
         
         const updatedTasks = state.tasks.map(task => {
           const newTask = { ...task };
@@ -221,11 +292,28 @@ export const useTaskStore = create<TaskState>()(
           return newTask;
         });
 
+        const newColumns = (state.columns || []).filter(c => c.id !== columnId);
+        const newOrder = (state.columnOrder || []).filter(id => id !== columnId);
         const isHidden = state.hiddenColumns?.includes(columnId);
+        const newHidden = isHidden ? state.hiddenColumns : [...(state.hiddenColumns || []), columnId];
+
+        const updatedColumns = { ...state.projectColumns };
+        const updatedOrders = { ...state.projectColumnOrders };
+        const updatedHidden = { ...state.projectHiddenColumns };
+        if (state.currentProjectId) {
+          updatedColumns[state.currentProjectId] = newColumns;
+          updatedOrders[state.currentProjectId] = newOrder;
+          updatedHidden[state.currentProjectId] = newHidden;
+        }
 
         return {
           tasks: updatedTasks,
-          hiddenColumns: isHidden ? state.hiddenColumns : [...(state.hiddenColumns || []), columnId]
+          columns: newColumns,
+          columnOrder: newOrder,
+          hiddenColumns: newHidden,
+          projectColumns: updatedColumns,
+          projectColumnOrders: updatedOrders,
+          projectHiddenColumns: updatedHidden
         };
       }),
       moveColumn: (columnId, direction) => set((state) => {
@@ -242,7 +330,15 @@ export const useTaskStore = create<TaskState>()(
           newOrder[index + 1] = columnId;
         }
         
-        return { columnOrder: newOrder };
+        const updatedOrders = { ...state.projectColumnOrders };
+        if (state.currentProjectId) {
+          updatedOrders[state.currentProjectId] = newOrder;
+        }
+
+        return { 
+          columnOrder: newOrder,
+          projectColumnOrders: updatedOrders
+        };
       }),
       reorderColumns: (activeColumnId, targetColumnId) => set((state) => {
         const order = state.columnOrder || ['title', 'assignee', 'dueDate', 'priority', 'status', 'comments', 'customField', 'pics'];
@@ -255,7 +351,15 @@ export const useTaskStore = create<TaskState>()(
         newOrder.splice(activeIndex, 1);
         newOrder.splice(targetIndex, 0, activeColumnId);
         
-        return { columnOrder: newOrder };
+        const updatedOrders = { ...state.projectColumnOrders };
+        if (state.currentProjectId) {
+          updatedOrders[state.currentProjectId] = newOrder;
+        }
+
+        return { 
+          columnOrder: newOrder,
+          projectColumnOrders: updatedOrders
+        };
       }),
       addTaskComment: (taskId, commentText) => set((state) => ({
         tasks: state.tasks.map((t) => {
@@ -271,31 +375,56 @@ export const useTaskStore = create<TaskState>()(
           return t;
         })
       })),
-      updateStatusConfig: (statusId, updates) => set((state) => ({
-        statusConfigs: {
+      updateStatusConfig: (statusId, updates) => set((state) => {
+        const existingConfig = state.statusConfigs?.[statusId];
+        const defaultName = statusId.startsWith('status_') ? 'New Status' : statusId.toUpperCase();
+
+        const newConfigs = {
           ...state.statusConfigs,
           [statusId]: {
-            name: updates.name !== undefined ? updates.name : (state.statusConfigs?.[statusId]?.name || statusId.toUpperCase()),
-            color: updates.color !== undefined ? updates.color : (state.statusConfigs?.[statusId]?.color || getDefaultColorForPhase(statusId))
+            name: updates.name !== undefined ? updates.name : (existingConfig?.name || defaultName),
+            color: updates.color !== undefined ? updates.color : (existingConfig?.color || getDefaultColorForPhase(statusId))
           }
+        };
+
+        const updatedConfigs = { ...state.projectStatusConfigs };
+        if (state.currentProjectId) {
+          updatedConfigs[state.currentProjectId] = newConfigs;
         }
-      })),
+
+        return {
+          statusConfigs: newConfigs,
+          projectStatusConfigs: updatedConfigs
+        };
+      }),
       updateColumnName: (columnId, name) => set((state) => {
         const updatedColumns = (state.columns || []).map(col => 
           col.id === columnId ? { ...col, name } : col
         );
+        const newNames = {
+          ...(state.columnNames || {}),
+          [columnId]: name
+        };
+
+        const updatedColumnsMap = { ...state.projectColumns };
+        const updatedNamesMap = { ...state.projectColumnNames };
+        if (state.currentProjectId) {
+          updatedColumnsMap[state.currentProjectId] = updatedColumns;
+          updatedNamesMap[state.currentProjectId] = newNames;
+        }
+
         return {
           columns: updatedColumns,
-          columnNames: {
-            ...(state.columnNames || {}),
-            [columnId]: name
-          }
+          columnNames: newNames,
+          projectColumns: updatedColumnsMap,
+          projectColumnNames: updatedNamesMap
         };
       })
     }),
     {
       name: 'task-storage',
       storage: createFileStorage('tasks'),
+      onRehydrateStorage: () => () => { useTaskStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
         const merged = { ...currentState, ...persistedState };
         
@@ -358,9 +487,19 @@ export const useTaskStore = create<TaskState>()(
 
         merged.statusConfigs = merged.statusConfigs || {};
         merged.columnNames = merged.columnNames || {};
+        merged.projectColumns = merged.projectColumns || {};
+        merged.projectColumnOrders = merged.projectColumnOrders || {};
+        merged.projectColumnNames = merged.projectColumnNames || {};
+        merged.projectStatusConfigs = merged.projectStatusConfigs || {};
+        merged.projectHiddenColumns = merged.projectHiddenColumns || {};
         
         return merged;
       }
     }
   )
 );
+
+onStoreExternalUpdate('tasks', () => {
+  useTaskStore.persist.rehydrate();
+});
+

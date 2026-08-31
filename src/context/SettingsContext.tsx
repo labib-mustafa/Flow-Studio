@@ -123,6 +123,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   });
 
   const writeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitializedRef = useRef(false);
 
   // On mount, try to load from API (async, higher priority)
   useEffect(() => {
@@ -142,11 +143,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       })
       .catch(() => {
         // API unavailable — stick with localStorage data
+      })
+      .finally(() => {
+        isInitializedRef.current = true;
       });
   }, []);
 
   // Persist to localStorage + API on every settings change (debounced API write)
   useEffect(() => {
+    if (!isInitializedRef.current) return;
+
     localStorage.setItem('flowstudio-settings', JSON.stringify(settings));
 
     if (writeTimerRef.current) clearTimeout(writeTimerRef.current);

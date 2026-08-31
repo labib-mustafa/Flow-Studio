@@ -11,14 +11,19 @@ interface RightPanelProps {
 export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject }) => {
   const today = new Date();
   const [selectedDay, setSelectedDay] = useState(today.getDate());
-  const currentMonthName = today.toLocaleString('default', { month: 'long' }) + ' ' + today.getFullYear();
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const currentMonthName = viewDate.toLocaleString('default', { month: 'long' }) + ' ' + viewDate.getFullYear();
+  const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const weekDays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+  const firstDayOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+  // Adjust so Monday is 0, Sunday is 6
+  const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
   const { getEventsByDate, events, isEventModalOpen, setEventModalOpen } = useEventStore();
   
-  const selectedDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
+  const selectedDateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
   const dayEvents = getEventsByDate(selectedDateStr);
 
   const getEventStyle = (type: CalendarEvent['type']) => {
@@ -33,9 +38,15 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
   return (
     <aside className="w-80 flex-shrink-0 bg-white border-l border-slate-100 hidden 2xl:flex flex-col p-6 overflow-y-auto h-full">
       <div className="flex items-center justify-between mb-6">
-        <button className="text-slate-400 hover:text-slate-600 p-1"><span className="material-symbols-outlined text-sm">arrow_back_ios</span></button>
+        <button 
+          onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+          className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+        ><span className="material-symbols-outlined text-sm">arrow_back_ios</span></button>
         <h3 className="font-bold text-slate-800 tracking-tight">{currentMonthName}</h3>
-        <button className="text-slate-400 hover:text-slate-600 p-1"><span className="material-symbols-outlined text-sm">arrow_forward_ios</span></button>
+        <button 
+          onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+          className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+        ><span className="material-symbols-outlined text-sm">arrow_forward_ios</span></button>
       </div>
       
       <div className="mb-6">
@@ -45,7 +56,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1.5 text-center text-slate-600 font-medium text-xs">
-          <span></span><span></span>
+          {Array.from({ length: startOffset }).map((_, i) => <span key={`empty-${i}`}></span>)}
           {days.map(day => (
             <span 
               key={day} 
@@ -71,10 +82,10 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
       </button>
 
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-base text-slate-800">{today.toLocaleString('default', { month: 'short' })} {selectedDay} Schedule</h3>
+        <h3 className="font-bold text-base text-slate-800">{viewDate.toLocaleString('default', { month: 'short' })} {selectedDay} Schedule</h3>
         <div className="flex gap-2 text-slate-400">
-          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors">refresh</span>
-          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors">edit_document</span>
+          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors" onClick={() => {}}>refresh</span>
+          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors" onClick={() => {}}>edit_document</span>
         </div>
       </div>
 

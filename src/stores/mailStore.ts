@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 import { useLeadStore } from './leadStore';
 import { useAuthStore } from './authStore';
 import { useActivityStore } from './activityStore';
@@ -44,6 +44,34 @@ export interface EmailReply {
   receivedAt: string; // ISO string
 }
 
+export interface FollowUpStep {
+  stepIndex: number;
+  delayDays: number;
+  subjectTemplate: string;
+  bodyTemplate: string;
+}
+
+export interface EmailBatch {
+  id: string;
+  name: string;
+  leadIds: string[];
+  createdAt: string;
+  senderType: 'personal' | 'team';
+  steps: FollowUpStep[];
+  status: 'active' | 'paused' | 'completed';
+}
+
+export interface QueueItem {
+  id: string;
+  batchId: string;
+  leadId: string;
+  stepIndex: number;
+  scheduledAt: string;
+  subject: string;
+  body: string;
+  status: 'scheduled' | 'sending' | 'sent' | 'cancelled' | 'paused' | 'replied_stopped';
+}
+
 export interface FollowUpSettings {
   maxAttempts: number;
   followUpDelays: number[];
@@ -59,7 +87,6 @@ export interface FollowUpSettings {
   syncAllEmails?: boolean;
   displayName?: string;
 }
-
 interface MailState {
   sentEmails: SentEmail[];
   replies: EmailReply[];
@@ -69,6 +96,16 @@ interface MailState {
   syncReplies: (isAuto?: boolean) => Promise<void>;
   addSimulatedReply: (leadId: string, sentEmailId: string) => void;
   seedDummyData: () => void;
+  batches: EmailBatch[];
+  queue: QueueItem[];
+  createBatch: (name: string, leadIds: string[], subject: string, body: string, steps: FollowUpStep[], senderType?: 'personal' | 'team', cc?: string, templateId?: string) => Promise<{ success: boolean; errors?: string[] }>;
+  updateQueueItem: (id: string, updates: Partial<QueueItem>) => void;
+  pauseBatch: (id: string) => void;
+  resumeBatch: (id: string) => void;
+  cancelQueueItem: (id: string) => void;
+  sendQueueItemNow: (id: string) => Promise<{ success: boolean; error?: string }>;
+  processQueue: () => Promise<void>;
+  deleteBatch: (id: string) => void;
 }
 
 interface MailTemplateState {
@@ -85,6 +122,8 @@ export const useMailStore = create<MailState>()(
     (set, get) => ({
       sentEmails: [],
       replies: [],
+      batches: [],
+      queue: [],
       followUpSettings: { maxAttempts: 3, followUpDelays: [3, 4, 5] },
       
       seedDummyData: () => {
@@ -229,11 +268,11 @@ export const useMailStore = create<MailState>()(
               // Automatically update lead status
               useLeadStore.getState().updateLead(leadId, { status: 'Proposal Sent' });
             } else {
-              console.error('Failed to send to', lead.email, data.error);
+              console.error('Failed to send to', '[REDACTED]', data.error);
               result.errors.push(`Failed to send to ${lead.email}: ${data.error}`);
             }
           } catch (e: any) {
-            console.error('Failed to send email to', lead.email, e);
+            console.error('Failed to send email to', '[REDACTED]', e);
             result.errors.push(`Failed to send to ${lead.email}: ${e.message || 'Network error'}`);
           }
         }
@@ -252,6 +291,333 @@ export const useMailStore = create<MailState>()(
         set((state) => ({
           followUpSettings: { ...state.followUpSettings, ...settings }
         }));
+      },
+
+      createBatch: async (name, leadIds, subject, body, steps, senderType = 'personal', cc, templateId) => {
+        const state = get();
+        
+        const result = await state.sendBulkMail(leadIds, subject, body, templateId, senderType, cc);
+        if (!result.success) {
+          return { success: false, errors: result.errors };
+        }
+
+        const batchId = `batch_${Math.random().toString(36).substring(2, 9)}`;
+        const newBatch: EmailBatch = {
+          id: batchId,
+          name: name || `Batch Outreach - ${new Date().toLocaleDateString()}`,
+          leadIds,
+          createdAt: new Date().toISOString(),
+          senderType,
+          steps,
+          status: 'active'
+        };
+
+        const initialStep = steps.find(s => s.stepIndex === 1);
+        const newQueueItems: QueueItem[] = [];
+
+        if (initialStep) {
+          const delayMs = initialStep.delayDays * 24 * 60 * 60 * 1000;
+          const scheduledDate = new Date(Date.now() + delayMs);
+
+          leadIds.forEach(leadId => {
+            newQueueItems.push({
+              id: `q_${Math.random().toString(36).substring(2, 9)}`,
+              batchId,
+              leadId,
+              stepIndex: 1,
+              scheduledAt: scheduledDate.toISOString(),
+              subject: initialStep.subjectTemplate || `Re: ${subject}`,
+              body: initialStep.bodyTemplate,
+              status: 'scheduled'
+            });
+          });
+        }
+
+        set(state => ({
+          batches: [...state.batches, newBatch],
+          queue: [...state.queue, ...newQueueItems]
+        }));
+
+        return { success: true };
+      },
+
+      updateQueueItem: (id, updates) => {
+        set(state => ({
+          queue: state.queue.map(q => q.id === id ? { ...q, ...updates } : q)
+        }));
+      },
+
+      pauseBatch: (id) => {
+        set(state => ({
+          batches: state.batches.map(b => b.id === id ? { ...b, status: 'paused' } : b),
+          queue: state.queue.map(q => q.batchId === id && q.status === 'scheduled' ? { ...q, status: 'paused' } : q)
+        }));
+      },
+
+      resumeBatch: (id) => {
+        set(state => ({
+          batches: state.batches.map(b => b.id === id ? { ...b, status: 'active' } : b),
+          queue: state.queue.map(q => q.batchId === id && q.status === 'paused' ? { ...q, status: 'scheduled' } : q)
+        }));
+      },
+
+      cancelQueueItem: (id) => {
+        set(state => ({
+          queue: state.queue.map(q => q.id === id ? { ...q, status: 'cancelled' } : q)
+        }));
+      },
+
+      deleteBatch: (id) => {
+        set(state => ({
+          batches: state.batches.filter(b => b.id !== id),
+          queue: state.queue.filter(q => q.batchId !== id)
+        }));
+      },
+
+      sendQueueItemNow: async (id) => {
+        const state = get();
+        const item = state.queue.find(q => q.id === id);
+        if (!item || (item.status !== 'scheduled' && item.status !== 'paused')) {
+          return { success: false, error: 'Queue item not found or not in sendable status.' };
+        }
+
+        const authState = useAuthStore.getState();
+        const settings = state.followUpSettings;
+
+        const { leads } = useLeadStore.getState();
+        const lead = leads.find(l => l.id === item.leadId);
+        if (!lead || !lead.email) {
+          return { success: false, error: 'Lead not found or email address missing.' };
+        }
+
+        const batch = state.batches.find(b => b.id === item.batchId);
+        if (!batch) {
+          return { success: false, error: 'Batch not found.' };
+        }
+
+        let parsedBody = item.body;
+        parsedBody = parsedBody.replace(/{{name}}/g, lead.name.split(' ')[0] || 'there');
+        parsedBody = parsedBody.replace(/{{company}}/g, lead.company || 'your company');
+
+        let parsedSubject = item.subject;
+        parsedSubject = parsedSubject.replace(/{{name}}/g, lead.name.split(' ')[0] || 'there');
+        parsedSubject = parsedSubject.replace(/{{company}}/g, lead.company || 'your company');
+
+        const isTeam = batch.senderType === 'team' && settings.useTeamEmail;
+        const emailUser = (isTeam ? settings.emailUser : authState.user?.email) || settings.emailUser;
+        const accessToken = isTeam ? null : authState.accessToken;
+        const emailPass = settings.emailPass;
+        const fromName = (isTeam ? null : authState.user?.displayName) || settings.displayName || "Flow Studio";
+
+        if (!emailUser || (!emailPass && !accessToken)) {
+          return { success: false, error: 'Email credentials not configured.' };
+        }
+
+        try {
+          const res = await fetch('/api/mail/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              host: settings.smtpHost,
+              port: settings.smtpPort,
+              secure: settings.smtpSecure,
+              user: emailUser,
+              pass: emailPass,
+              accessToken: accessToken,
+              fromName: fromName,
+              to: lead.email,
+              subject: parsedSubject,
+              text: parsedBody,
+              html: parsedBody.replace(/\n/g, '<br/>')
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            const updatedQueue = state.queue.map(q => 
+              q.id === id ? { ...q, status: 'sent' as const } : q
+            );
+
+            const newEmail: SentEmail = {
+              id: data.messageId || `mail_${Math.random().toString(36).substring(2, 9)}`,
+              leadId: lead.id,
+              subject: parsedSubject,
+              body: parsedBody,
+              sentAt: new Date().toISOString(),
+              sentBy: emailUser,
+              sentToEmail: lead.email,
+              leadName: lead.name
+            };
+
+            useActivityStore.getState().logActivity(
+              'email', 
+              `Sent follow-up email to ${lead.name}`,
+              { 
+                category: 'email_sent', 
+                actorName: fromName || emailUser, 
+                targetId: lead.id, 
+                targetName: lead.name,
+                metadata: { subject: parsedSubject, sentToEmail: lead.email, step: item.stepIndex }
+              }
+            );
+
+            const nextStep = batch.steps.find(s => s.stepIndex === item.stepIndex + 1);
+            if (nextStep) {
+              const scheduledDate = new Date(Date.now() + nextStep.delayDays * 24 * 60 * 60 * 1000);
+              
+              updatedQueue.push({
+                id: `q_${Math.random().toString(36).substring(2, 9)}`,
+                batchId: batch.id,
+                leadId: lead.id,
+                stepIndex: nextStep.stepIndex,
+                scheduledAt: scheduledDate.toISOString(),
+                subject: nextStep.subjectTemplate || `Re: ${parsedSubject}`,
+                body: nextStep.bodyTemplate,
+                status: 'scheduled'
+              });
+            }
+
+            set({
+              queue: updatedQueue,
+              sentEmails: [...state.sentEmails, newEmail]
+            });
+
+            return { success: true };
+          } else {
+            return { success: false, error: data.error || 'Failed to send.' };
+          }
+        } catch (e: any) {
+          return { success: false, error: e.message || 'Network error.' };
+        }
+      },
+
+      processQueue: async () => {
+        const state = get();
+        const now = new Date();
+        const dueItems = state.queue.filter(item => 
+          item.status === 'scheduled' && 
+          new Date(item.scheduledAt) <= now
+        );
+
+        if (dueItems.length === 0) return;
+
+        const authState = useAuthStore.getState();
+        const settings = state.followUpSettings;
+
+        const { leads } = useLeadStore.getState();
+        const updatedQueue = [...state.queue];
+        const newEmails: SentEmail[] = [];
+
+        for (const item of dueItems) {
+          const lead = leads.find(l => l.id === item.leadId);
+          if (!lead || !lead.email) {
+            const idx = updatedQueue.findIndex(q => q.id === item.id);
+            if (idx !== -1) updatedQueue[idx] = { ...item, status: 'cancelled' };
+            continue;
+          }
+
+          const batch = state.batches.find(b => b.id === item.batchId);
+          if (!batch || batch.status === 'paused') {
+            continue;
+          }
+
+          const leadReplies = state.replies.filter(r => r.leadId === lead.id && new Date(r.receivedAt) > new Date(batch.createdAt));
+          if (leadReplies.length > 0) {
+            const idx = updatedQueue.findIndex(q => q.id === item.id);
+            if (idx !== -1) updatedQueue[idx] = { ...item, status: 'replied_stopped' };
+            continue;
+          }
+
+          let parsedBody = item.body;
+          parsedBody = parsedBody.replace(/{{name}}/g, lead.name.split(' ')[0] || 'there');
+          parsedBody = parsedBody.replace(/{{company}}/g, lead.company || 'your company');
+
+          let parsedSubject = item.subject;
+          parsedSubject = parsedSubject.replace(/{{name}}/g, lead.name.split(' ')[0] || 'there');
+          parsedSubject = parsedSubject.replace(/{{company}}/g, lead.company || 'your company');
+
+          const isTeam = batch.senderType === 'team' && settings.useTeamEmail;
+          const emailUser = (isTeam ? settings.emailUser : authState.user?.email) || settings.emailUser;
+          const accessToken = isTeam ? null : authState.accessToken;
+          const emailPass = settings.emailPass;
+          const fromName = (isTeam ? null : authState.user?.displayName) || settings.displayName || "Flow Studio";
+
+          if (!emailUser || (!emailPass && !accessToken)) {
+            continue;
+          }
+
+          try {
+            const res = await fetch('/api/mail/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                host: settings.smtpHost,
+                port: settings.smtpPort,
+                secure: settings.smtpSecure,
+                user: emailUser,
+                pass: emailPass,
+                accessToken: accessToken,
+                fromName: fromName,
+                to: lead.email,
+                subject: parsedSubject,
+                text: parsedBody,
+                html: parsedBody.replace(/\n/g, '<br/>')
+              })
+            });
+            const data = await res.json();
+            if (data.success) {
+              const qIdx = updatedQueue.findIndex(q => q.id === item.id);
+              if (qIdx !== -1) {
+                updatedQueue[qIdx] = { ...item, status: 'sent' };
+              }
+
+              newEmails.push({
+                id: data.messageId || `mail_${Math.random().toString(36).substring(2, 9)}`,
+                leadId: lead.id,
+                subject: parsedSubject,
+                body: parsedBody,
+                sentAt: new Date().toISOString(),
+                sentBy: emailUser,
+                sentToEmail: lead.email,
+                leadName: lead.name
+              });
+
+              useActivityStore.getState().logActivity(
+                'email', 
+                `Sent follow-up email to ${lead.name}`,
+                { 
+                  category: 'email_sent', 
+                  actorName: fromName || emailUser, 
+                  targetId: lead.id, 
+                  targetName: lead.name,
+                  metadata: { subject: parsedSubject, sentToEmail: lead.email, step: item.stepIndex }
+                }
+              );
+
+              const nextStep = batch.steps.find(s => s.stepIndex === item.stepIndex + 1);
+              if (nextStep) {
+                const scheduledDate = new Date(Date.now() + nextStep.delayDays * 24 * 60 * 60 * 1000);
+                
+                updatedQueue.push({
+                  id: `q_${Math.random().toString(36).substring(2, 9)}`,
+                  batchId: batch.id,
+                  leadId: lead.id,
+                  stepIndex: nextStep.stepIndex,
+                  scheduledAt: scheduledDate.toISOString(),
+                  subject: nextStep.subjectTemplate || `Re: ${parsedSubject}`,
+                  body: nextStep.bodyTemplate,
+                  status: 'scheduled'
+                });
+              }
+            }
+          } catch (e) {
+            console.error('Failed to send email in queue', e);
+          }
+        }
+
+        set({
+          queue: updatedQueue,
+          sentEmails: [...state.sentEmails, ...newEmails]
+        });
       },
 
       syncReplies: async (isAuto = false) => {
@@ -352,13 +718,19 @@ export const useMailStore = create<MailState>()(
     {
       name: 'flowstudio-mail-storage',
       storage: createFileStorage('mail'),
+      partialize: (state) => ({
+        ...state,
+        followUpSettings: {
+          ...state.followUpSettings,
+          emailPass: undefined,
+        },
+      }),
       merge: (persistedState: any, currentState) => {
-        const pEmails = persistedState.sentEmails || [];
-        const pReplies = persistedState.replies || [];
-        
         return {
           ...currentState,
           ...persistedState,
+          batches: persistedState.batches || [],
+          queue: persistedState.queue || [],
           followUpSettings: persistedState.followUpSettings || { maxAttempts: 3, followUpDelays: [3, 4, 5], syncAllEmails: false }
         };
       }
@@ -475,3 +847,8 @@ export const useMailTemplateStore = create<MailTemplateState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('mail', () => {
+  useMailStore.persist.rehydrate();
+});

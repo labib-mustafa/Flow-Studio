@@ -15,13 +15,16 @@ interface AssigneeUser {
   avatar: string;
 }
 
-export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({ task, children, onToggleAssignee: onToggleAssigneeProp }) => {
-  const { toggleTaskAssignee } = useTaskStore();
-  const members = useTeamStore((state) => state.members);
+const EMPTY_MEMBERS: any[] = [];
+const EMPTY_USERS: AssigneeUser[] = [];
+
+export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = React.memo(({ task, children, onToggleAssignee: onToggleAssigneeProp }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const members = useTeamStore((state) => open ? state.members : EMPTY_MEMBERS);
 
   const availableUsers = useMemo<AssigneeUser[]>(() => {
+    if (!open) return EMPTY_USERS;
     const teamUsers = members.map(m => ({
       id: m.id,
       name: m.name,
@@ -32,25 +35,29 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({ task, childr
       { id: 'user_1', name: 'Me', avatar: 'ID' },
       ...teamUsers
     ];
-  }, [members]);
+  }, [open, members]);
 
   const handleToggleAssignee = (user: AssigneeUser) => {
     if (onToggleAssigneeProp) {
       onToggleAssigneeProp(user.id);
     } else if (task) {
-      toggleTaskAssignee(task.id, user.id);
+      useTaskStore.getState().toggleTaskAssignee(task.id, user.id);
     }
   };
 
   const filteredUsers = useMemo(() => {
+    if (!open) return EMPTY_USERS;
     return availableUsers.filter(opt =>
       opt.name.toLowerCase().includes(search.toLowerCase())
     );
-  }, [availableUsers, search]);
+  }, [open, availableUsers, search]);
 
-  const people = filteredUsers.filter(u => !u.id.startsWith('agent_'));
+  const people = useMemo(() => {
+    if (!open) return EMPTY_USERS;
+    return filteredUsers.filter(u => !u.id.startsWith('agent_'));
+  }, [open, filteredUsers]);
 
-  const content = (
+  const content = open ? (
     <>
       <div className="px-2 pt-2 border-b border-transparent">
         <div className="relative">
@@ -97,7 +104,7 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({ task, childr
 
       </div>
     </>
-  );
+  ) : null;
 
   return (
     <CellPopover
@@ -111,4 +118,4 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({ task, childr
       {children}
     </CellPopover>
   );
-};
+});

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export interface DevFlags {
   showHiddenButtons: boolean;
@@ -20,6 +22,7 @@ interface DevState {
   flags: DevFlags;
   searchFilter: string;
   hiddenItemsRegistry: Record<string, DevHiddenItem[]>;
+  _hasHydrated: boolean;
 }
 
 interface DevActions {
@@ -28,96 +31,128 @@ interface DevActions {
   setSearchFilter: (filter: string) => void;
   registerHiddenItem: (category: string, item: Omit<DevHiddenItem, 'category' | 'isForced'>) => void;
   toggleHiddenItemForce: (category: string, itemId: string) => void;
+  setHydrated: (state: boolean) => void;
 }
 
 export type DevStore = DevState & DevActions;
 
-export const useDevStore = create<DevStore>((set) => ({
-  isDeveloperModeEnabled: false,
-  flags: {
-    showHiddenButtons: false,
-    forceShowTooltips: false,
-    showComponentBorders: false,
-    enableExperimentalFeatures: false,
-    disableLogin: false,
-  },
-  searchFilter: '',
-  hiddenItemsRegistry: {
-    'UI Components': [],
-    'Moodboard Engine': [],
-    'Leads Pipeline': [],
-    'State Inspectors': []
-  },
-  
-  toggleDeveloperMode: () => set((state) => {
-    const nextState = !state.isDeveloperModeEnabled;
-    
-    const nextFlags = {
-      showHiddenButtons: nextState,
-      forceShowTooltips: nextState,
-      showComponentBorders: nextState,
-      enableExperimentalFeatures: nextState,
-      disableLogin: state.flags.disableLogin, // keep current state or set to nextState? Usually dev mode toggles everything, but disableLogin is dangerous. Let's keep it as is.
-    };
-
-    if (nextState) {
-      document.body.classList.add('dev-showhiddenbuttons-enabled');
-      document.body.classList.add('dev-forceshowtooltips-enabled');
-      document.body.classList.add('dev-showcomponentborders-enabled');
-    } else {
-      document.body.classList.remove('dev-showhiddenbuttons-enabled');
-      document.body.classList.remove('dev-forceshowtooltips-enabled');
-      document.body.classList.remove('dev-showcomponentborders-enabled');
-    }
-    
-    return { 
-      isDeveloperModeEnabled: nextState,
-      flags: nextFlags
-    };
-  }),
-
-  toggleFlag: (flagName) => set((state) => {
-    const nextValue = !state.flags[flagName];
-    
-    // Manage dynamic global body classes for specific developer modes
+const syncBodyClasses = (flags: DevFlags) => {
+  if (typeof document === 'undefined') return;
+  (Object.keys(flags) as Array<keyof DevFlags>).forEach(flagName => {
     const clsName = `dev-${flagName.toLowerCase()}-enabled`;
-    if (nextValue) {
+    if (flags[flagName]) {
       document.body.classList.add(clsName);
     } else {
       document.body.classList.remove(clsName);
     }
-    
-    return {
+  });
+};
+
+export const useDevStore = create<DevStore>()(
+  persist(
+    (set) => ({
+      isDeveloperModeEnabled: false,
       flags: {
-        ...state.flags,
-        [flagName]: nextValue
-      }
-    };
-  }),
-
-  setSearchFilter: (searchFilter) => set({ searchFilter }),
-
-  registerHiddenItem: (category, item) => set((state) => {
-    const currentCategory = state.hiddenItemsRegistry[category] || [];
-    if (currentCategory.some(i => i.id === item.id)) return state;
-    
-    return {
+        showHiddenButtons: false,
+        forceShowTooltips: false,
+        showComponentBorders: false,
+        enableExperimentalFeatures: false,
+        disableLogin: true,
+      },
+      searchFilter: '',
       hiddenItemsRegistry: {
-        ...state.hiddenItemsRegistry,
-        [category]: [...currentCategory, { ...item, category, isForced: false }]
-      }
-    };
-  }),
+        'UI Components': [],
+        'Moodboard Engine': [],
+        'Leads Pipeline': [],
+        'State Inspectors': []
+      },
+      _hasHydrated: false,
+      setHydrated: (state) => set({ _hasHydrated: state }),
+      
+      toggleDeveloperMode: () => set((state) => {
+        const nextState = !state.isDeveloperModeEnabled;
+        
+        const nextFlags = {
+          showHiddenButtons: nextState,
+          forceShowTooltips: nextState,
+          showComponentBorders: nextState,
+          enableExperimentalFeatures: nextState,
+          disableLogin: state.flags.disableLogin,
+        };
 
-  toggleHiddenItemForce: (category, itemId) => set((state) => {
-    const currentCategory = state.hiddenItemsRegistry[category] || [];
-    return {
-      hiddenItemsRegistry: {
-        ...state.hiddenItemsRegistry,
-        [category]: currentCategory.map(item => 
-          item.id === itemId ? { ...item, isForced: !item.isForced } : item
-        )
-      }
-    };
-  })
-}));
+        syncBodyClasses(nextFlags);
+        
+        return { 
+          isDeveloperModeEnabled: nextState,
+          flags: nextFlags
+        };
+      }),
+
+      toggleFlag: (flagName) => set((state) => {
+        const nextValue = !state.flags[flagName];
+        const nextFlags = {
+          ...state.flags,
+          [flagName]: nextValue
+        };
+        
+        syncBodyClasses(nextFlags);
+        
+        return {
+          flags: nextFlags
+        };
+      }),
+
+      setSearchFilter: (searchFilter) => set({ searchFilter }),
+
+      registerHiddenItem: (category, item) => set((state) => {
+        const currentCategory = state.hiddenItemsRegistry[category] || [];
+        if (currentCategory.some(i => i.id === item.id)) return state;
+        
+        return {
+          hiddenItemsRegistry: {
+            ...state.hiddenItemsRegistry,
+            [category]: [...currentCategory, { ...item, category, isForced: false }]
+          }
+        };
+      }),
+
+      toggleHiddenItemForce: (category, itemId) => set((state) => {
+        const currentCategory = state.hiddenItemsRegistry[category] || [];
+        return {
+          hiddenItemsRegistry: {
+            ...state.hiddenItemsRegistry,
+            [category]: currentCategory.map(item => 
+              item.id === itemId ? { ...item, isForced: !item.isForced } : item
+            )
+          }
+        };
+      })
+    }),
+    {
+      name: 'flowstudio-dev-storage',
+      storage: createFileStorage('dev'),
+      merge: (persistedState: any, currentState) => {
+        if (!persistedState) return currentState;
+        return {
+          ...currentState,
+          ...persistedState,
+          flags: persistedState.flags ? { ...currentState.flags, ...persistedState.flags } : currentState.flags,
+          hiddenItemsRegistry: persistedState.hiddenItemsRegistry || currentState.hiddenItemsRegistry,
+        };
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setHydrated(true);
+          if (state.flags) {
+            syncBodyClasses(state.flags);
+          }
+        }
+      },
+    }
+  )
+);
+
+
+onStoreExternalUpdate('dev', () => {
+  useDevStore.persist.rehydrate();
+});

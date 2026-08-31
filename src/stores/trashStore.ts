@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export type TrashItemType = 'lead' | 'client' | 'project' | 'task' | 'team-member';
 
@@ -123,3 +123,8 @@ export const useTrashStore = create<TrashState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('trash', () => {
+  useTrashStore.persist.rehydrate();
+});

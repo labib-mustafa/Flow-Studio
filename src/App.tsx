@@ -22,6 +22,7 @@ import { useProjectStore } from './stores/projectStore';
 import { useTeamStore } from './stores/teamStore';
 
 import { LeadsPage } from './components/Leads/LeadsPage';
+import { ApifyLeadGeneratorPage } from './components/Leads/ApifyLeadGeneratorPage';
 import { EmailDraftsPage } from './components/Leads/EmailDraftsPage';
 import { SentEmailsPage } from './components/Leads/SentEmailsPage';
 import { TeamPage } from './components/Team/TeamPage';
@@ -35,10 +36,16 @@ import { TimePage } from './components/Time/TimePage';
 import { CalendarPage } from './components/Calendar/CalendarPage';
 import { useTrashStore } from './stores/trashStore';
 import { useSettings } from './hooks/useSettings';
-import { FileExplorer } from './components/GlobalComponents/FileExplorer/FileExplorer';
+import { TabbedFileExplorer } from './components/GlobalComponents/FileExplorer/TabbedFileExplorer';
 import { useAuthStore } from './stores/authStore';
 import { LoginPage } from './components/Auth/LoginPage';
 import { useDevStore } from './stores/devStore';
+import { SplashScreenModal } from './components/GlobalComponents/SplashScreenModal';
+import { Sparkles } from 'lucide-react';
+import { useAppReady } from './hooks/useAppReady';
+import { toast } from './stores/toastStore';
+import { ToastContainer } from './components/GlobalComponents/ToastContainer';
+import { ConfirmDialogModal } from './components/GlobalComponents/ConfirmDialogModal';
 
 export default function App() {
   const { user, loading, initialize } = useAuthStore();
@@ -56,7 +63,8 @@ export default function App() {
     );
   }
 
-  if (!user && !disableLogin) {
+  // Temporarily disabled login page by user request
+  if (false && !user && !disableLogin) {
     return <LoginPage />;
   }
 
@@ -68,9 +76,8 @@ export default function App() {
 }
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState(() => {
-    return localStorage.getItem('last_viewed_page') || 'projects';
-  });
+  const appReady = useAppReady();
+  const [currentView, setCurrentView] = useState('dashboard');
   const [isProjectSidebarOpen, setIsProjectSidebarOpen] = useState(false);
   const [userSidebarPreference, setUserSidebarPreference] = useState(false);
   const [isNotesFullScreen, setIsNotesFullScreen] = useState(false);
@@ -84,6 +91,7 @@ function AppContent() {
   }, [currentView]);
 
   const { settings } = useSettings();
+  const currentProject = useProjectStore(state => state.currentProject);
   const cleanupExpiredItems = useTrashStore(state => state.cleanupExpiredItems);
   const isTrashHydrated = useTrashStore(state => state._hasHydrated);
 
@@ -94,14 +102,36 @@ function AppContent() {
     }
   }, [settings.trashSettings?.retentionDays, cleanupExpiredItems, isTrashHydrated]);
 
-  const handleNotesFullScreen = (isFull: boolean) => {
-    setIsNotesFullScreen(isFull);
-    if (isFull) {
-      setIsProjectSidebarOpen(false);
-    } else {
-      setIsProjectSidebarOpen(userSidebarPreference);
-    }
-  };
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+N / Ctrl+N -> New Project (only if not in an input/textarea)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
+        const activeTag = document.activeElement?.tagName.toLowerCase();
+        if (activeTag !== 'input' && activeTag !== 'textarea') {
+          e.preventDefault();
+          setEditingProject(null);
+          setCurrentView('new-project');
+        }
+      }
+      
+      // Cmd+, / Ctrl+, -> Settings
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        setCurrentView('settings');
+      }
+
+      // Escape -> close modals, or go back if in full screen notes
+      if (e.key === 'Escape') {
+        if (isNotesFullScreen) {
+          setIsNotesFullScreen(false);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isNotesFullScreen]);
 
   useEffect(() => {
     if (currentView === 'project-notes' && !hasAutoCollapsedNotes) {
@@ -111,6 +141,27 @@ function AppContent() {
       setHasAutoCollapsedNotes(false);
     }
   }, [currentView, hasAutoCollapsedNotes]);
+
+  // Block rendering until all critical stores are hydrated from disk
+  if (!appReady) {
+    return (
+      <div className="h-screen w-screen bg-[#0a0a0b] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <span className="text-white/40 text-sm font-medium tracking-wide">Loading workspace…</span>
+        </div>
+      </div>
+    );
+  }
+
+  const handleNotesFullScreen = (isFull: boolean) => {
+    setIsNotesFullScreen(isFull);
+    if (isFull) {
+      setIsProjectSidebarOpen(false);
+    } else {
+      setIsProjectSidebarOpen(userSidebarPreference);
+    }
+  };
 
   const handleManualSidebarToggle = (isOpen: boolean) => {
     setIsProjectSidebarOpen(isOpen);
@@ -162,6 +213,19 @@ function AppContent() {
             let projectId = editingProject?.id;
             if (editingProject && editingProject.id) {
               useProjectStore.getState().updateProject(editingProject.id, projectData);
+              // Rename folder
+              const isDesktop = (window as any).electronAPI?.isDesktop;
+              if (isDesktop) {
+                (window as any).electronAPI.projects.renameFolder(editingProject.id, projectData.title || projectData.name);
+              } else {
+                fetch('/api/projects/rename-folder', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ projectId: editingProject.id, newProjectName: projectData.title || projectData.name }),
+                }).catch((err) => {
+                  toast.error('Failed to rename project folder', 'Please check your connection and try again.');
+                });
+              }
             } else {
               projectId = Math.random().toString(36).substr(2, 9);
               useProjectStore.getState().addProject({
@@ -175,6 +239,20 @@ function AppContent() {
                 deadline: projectData.deadline || '',
                 client: projectData.client || ''
               });
+
+              // Create folder
+              const isDesktop = (window as any).electronAPI?.isDesktop;
+              if (isDesktop) {
+                (window as any).electronAPI.projects.createFolder(projectId, projectData.title || projectData.name);
+              } else {
+                fetch('/api/projects/create-folder', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ projectId, projectName: projectData.title || projectData.name }),
+                }).catch((err) => {
+                  toast.error('Failed to create project folder', 'Please check your connection and try again.');
+                });
+              }
             }
 
             if (projectId) {
@@ -217,7 +295,10 @@ function AppContent() {
             isSidebarExpanded={isProjectSidebarOpen}
             onSidebarToggle={handleManualSidebarToggle}
           >
-            <TaskPage onTabChange={(tab) => setCurrentView(`project-${tab}`)} />
+            <TaskPage 
+              projectId={currentProject?.id}
+              onTabChange={(tab) => setCurrentView(`project-${tab}`)} 
+            />
           </ProjectDetailsLayout>
         );
       case 'project-files':
@@ -264,6 +345,8 @@ function AppContent() {
         );
       case 'leads':
         return <LeadsPage onNavigate={(view) => setCurrentView(view)} />;
+      case 'lead-generator':
+        return <ApifyLeadGeneratorPage onNavigate={(view) => setCurrentView(view)} />;
       case 'email-drafts':
         return <EmailDraftsPage onBack={() => setCurrentView('leads')} />;
       case 'sent-emails':
@@ -302,10 +385,7 @@ function AppContent() {
         );
       case 'files':
         return (
-          <ComingSoon
-            title="Files & Assets"
-            description="A powerful new way to manage, share, and collaborate on all your creative assets is currently being built. Stay tuned."
-          />
+          <TabbedFileExplorer sessionId="GLOBAL" rootPath="GLOBAL" />
         );
       case 'settings':
         return <SettingsPage />;
@@ -355,6 +435,10 @@ function AppContent() {
       <main className="flex-1 h-full overflow-hidden">
         {renderContent()}
       </main>
+
+      {/* Global Toast & Confirm Overlays */}
+      <ToastContainer />
+      <ConfirmDialogModal />
     </div>
   );
 }

@@ -79,11 +79,14 @@ export const StatusConfigPopover: React.FC<StatusConfigPopoverProps> = ({
       setNameInput(config.name);
       setHexInput(config.color);
     }
-  }, [isEditing, config]);
+  }, [isEditing, config.name, config.color]);
 
   const handleSaveName = () => {
     if (nameInput.trim() !== '') {
-      updateStatusConfig(statusId, { name: nameInput.trim() });
+      updateStatusConfig(statusId, { 
+        name: nameInput.trim(),
+        color: hexInput
+      });
       if (onSave) onSave(nameInput.trim());
     } else {
       if (onCancel) onCancel();
@@ -91,15 +94,22 @@ export const StatusConfigPopover: React.FC<StatusConfigPopoverProps> = ({
     setIsEditing(false);
   };
 
+  const updateStoreColor = (color: string) => {
+    updateStatusConfig(statusId, {
+      color,
+      name: nameInput.trim() || undefined
+    });
+  };
+
   const handleColorSelect = (color: string) => {
-    updateStatusConfig(statusId, { color });
     setHexInput(color);
+    updateStoreColor(color);
     setTier2Open(false);
   };
 
   const handleCustomHexSave = () => {
     if (/^#[0-9A-F]{6}$/i.test(hexInput)) {
-      updateStatusConfig(statusId, { color: hexInput });
+      updateStoreColor(hexInput);
       setTier3Open(false);
       setTier2Open(false);
     }
@@ -128,10 +138,10 @@ export const StatusConfigPopover: React.FC<StatusConfigPopoverProps> = ({
             <div className="flex flex-wrap gap-2 mb-4">
               {PRESET_COLORS.map(c => (
                 <button
-                  key={c}
-                  className="w-6 h-6 rounded-full flex items-center justify-center border border-slate-200 hover:scale-110 transition-transform"
-                  style={{ backgroundColor: c }}
-                  onClick={() => handleColorSelect(c)}
+                   key={c}
+                   className="w-6 h-6 rounded-full flex items-center justify-center border border-slate-200 hover:scale-110 transition-transform"
+                   style={{ backgroundColor: c }}
+                   onClick={() => handleColorSelect(c)}
                 />
               ))}
               
@@ -177,7 +187,10 @@ export const StatusConfigPopover: React.FC<StatusConfigPopoverProps> = ({
                           border-width: 2px;
                         }
                       `}</style>
-                       <HexColorPicker color={hexInput} onChange={setHexInput} />
+                       <HexColorPicker color={hexInput} onChange={(color) => {
+                         setHexInput(color);
+                         updateStoreColor(color);
+                       }} />
                     </div>
 
                     <div className="flex items-center gap-2 mb-3">
@@ -194,7 +207,9 @@ export const StatusConfigPopover: React.FC<StatusConfigPopoverProps> = ({
                          onChange={(e) => {
                            const newColor = tinycolor(e.target.value);
                            if (newColor.isValid()) {
-                             setHexInput(newColor.toHexString());
+                             const hex = newColor.toHexString();
+                             setHexInput(hex);
+                             updateStoreColor(hex);
                            }
                          }}
                          className="flex-1 w-0 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] text-slate-800 outline-none focus:border-blue-500 transition-colors"

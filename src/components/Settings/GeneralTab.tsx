@@ -11,9 +11,7 @@ export const GeneralTab: React.FC = () => {
     ? settings.profileImage
     : (user?.photoURL || settings.profileImage || '');
 
-  const displayName = settings.displayName === 'Design Pro'
-    ? (user?.displayName || settings.displayName)
-    : (settings.displayName ?? user?.displayName ?? '');
+  const displayName = settings.displayName || user?.displayName || '';
 
   const handleEditorToggle = (setting: keyof typeof settings.editorExperience) => {
     updateSettings({

@@ -36,9 +36,8 @@ export const FloatingBulkActionToolbar: React.FC<FloatingBulkActionToolbarProps>
   if (selectedCount === 0) return null;
 
   return (
-    <div 
-      className="fixed bottom-10 flex flex-nowrap whitespace-nowrap items-center bg-[#202024] text-gray-300 rounded-xl shadow-2xl h-11 px-3 border border-[#313235] z-[999] animate-fade-in-up"
-      style={{ left: 'calc(50% + (var(--sidebar-width, 240px) / 2))', transform: 'translateX(-50%)' }}
+    <div
+      className="fixed bottom-10 inset-x-0 mx-auto w-max flex flex-nowrap whitespace-nowrap items-center bg-[#202024] text-gray-300 rounded-xl shadow-2xl h-11 px-3 border border-[#313235] z-[999] animate-fade-in-up"
     >
       {/* Left Side */}
       <div className="flex items-center space-x-3 pr-3 whitespace-nowrap">
@@ -49,7 +48,7 @@ export const FloatingBulkActionToolbar: React.FC<FloatingBulkActionToolbarProps>
           <WithDevHoverBounds devId="bulk-action-close-btn" devName="Close Toolbar Button" devCategory="Task Operations">
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white rounded transition-colors"
+              className="text-gray-400 hover:text-red-400 rounded transition-colors"
             >
               <X size={14} />
             </button>

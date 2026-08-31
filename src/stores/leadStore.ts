@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 import { useClientStore } from './clientStore';
 import { useTrashStore } from './trashStore';
 import { useActivityStore } from './activityStore';
@@ -53,6 +53,7 @@ export interface ColumnDefinition {
 }
 
 export interface LeadState {
+  _hasHydrated: boolean;
   leads: Lead[];
   columns: ColumnDefinition[];
   columnLabels: ColumnLabels;
@@ -111,6 +112,7 @@ const DUMMY_LEADS: Lead[] = [];
 export const useLeadStore = create<LeadState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       leads: DUMMY_LEADS,
       columns: DEFAULT_COLUMNS,
       columnLabels: DEFAULT_COLUMN_LABELS,
@@ -145,7 +147,7 @@ export const useLeadStore = create<LeadState>()(
           last_updated_at: new Date().toISOString(),
           timeline: [{ date: new Date().toISOString(), event: 'Lead Created' }],
         };
-        set((state) => ({ leads: [...(state.leads || []), newLead] }));
+        set((state) => ({ leads: [newLead, ...(state.leads || [])] }));
         useActivityStore.getState().logActivity('lead', `Added new lead: ${newLead.name}`, { category: 'lead_added', targetId: newLead.id, targetName: newLead.name });
       },
       updateLead: (id, updates) => {
@@ -247,7 +249,7 @@ export const useLeadStore = create<LeadState>()(
           };
         });
 
-        set((state) => ({ leads: [...(state.leads || []), ...newLeads] }));
+        set((state) => ({ leads: [...newLeads, ...(state.leads || [])] }));
       },
       promoteLeadToClient: (id) => {
         const lead = (get().leads || []).find((l) => l.id === id);
@@ -339,6 +341,7 @@ export const useLeadStore = create<LeadState>()(
     {
       name: 'flowstudio-lead-storage',
       storage: createFileStorage('leads'),
+      onRehydrateStorage: () => () => { useLeadStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
         return {
           ...currentState,
@@ -354,3 +357,8 @@ export const useLeadStore = create<LeadState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('leads', () => {
+  useLeadStore.persist.rehydrate();
+});

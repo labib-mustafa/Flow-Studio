@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 import { useTrashStore } from './trashStore';
 import { useMailStore } from './mailStore';
 
@@ -23,6 +23,12 @@ export interface TeamMember {
   activeFocus?: string;
   skills?: string[];
   certificates?: string[];
+  profilePicScale?: number;
+  profilePicX?: number;
+  profilePicY?: number;
+  bannerScale?: number;
+  bannerX?: number;
+  bannerY?: number;
 }
 
 export interface TeamInvite {
@@ -33,6 +39,7 @@ export interface TeamInvite {
 }
 
 interface TeamState {
+  _hasHydrated: boolean;
   members: TeamMember[];
   invites: TeamInvite[];
   customRoles: string[];
@@ -52,6 +59,7 @@ const initialInvites: TeamInvite[] = [];
 export const useTeamStore = create<TeamState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       members: initialMembers,
       invites: initialInvites,
       customRoles: [],
@@ -164,6 +172,7 @@ export const useTeamStore = create<TeamState>()(
     {
       name: 'team-storage-v3',
       storage: createFileStorage('team'),
+      onRehydrateStorage: () => () => { useTeamStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
         const merged = { ...currentState, ...persistedState };
         if (merged.members && Array.isArray(merged.members)) {
@@ -190,3 +199,8 @@ export const useTeamStore = create<TeamState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('team', () => {
+  useTeamStore.persist.rehydrate();
+});

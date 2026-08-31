@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 import { useActivityStore } from './activityStore';
 import { useTrashStore } from './trashStore';
 
@@ -22,9 +22,13 @@ export interface Project {
   isPortfolio?: boolean;
   tasksCount?: number;
   commentsCount?: number;
+  isPinned?: boolean;
+  createdAt?: string;
+  pinnedAt?: string;
 }
 
 interface ProjectState {
+  _hasHydrated: boolean;
   projects: Project[];
   currentProject: Project;
   addProject: (project: Project) => void;
@@ -33,12 +37,15 @@ interface ProjectState {
     (id: string, updates: Partial<Project>): void;
   };
   deleteProject: (id: string) => void;
+  duplicateProject: (id: string) => void;
   setCurrentProject: (project: Project) => void;
+  togglePinProject: (id: string) => void;
 }
 
 export const useProjectStore = create<ProjectState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       projects: [],
       currentProject: null,
       addProject: (project) => set((state) => {
@@ -53,9 +60,10 @@ export const useProjectStore = create<ProjectState>()(
           tags: project.tags || [],
           completion: typeof project.completion === 'number' ? project.completion : (project.progress || 0),
           progress: typeof project.progress === 'number' ? project.progress : (project.completion || 0),
+          createdAt: project.createdAt || new Date().toISOString()
         };
         return {
-          projects: [...state.projects, completeProject]
+          projects: [completeProject, ...state.projects]
         };
       }),
       updateProject: (idOrUpdates: any, maybeUpdates?: any) => set((state) => {
@@ -121,18 +129,72 @@ export const useProjectStore = create<ProjectState>()(
           currentProject: state.currentProject.id === id ? state.projects.filter(p => p.id !== id)[0] || state.currentProject : state.currentProject
         }));
       },
-      setCurrentProject: (project) => set({ currentProject: project })
+      duplicateProject: (id) => {
+        const state = get();
+        const target = state.projects.find((p) => p.id === id);
+        if (!target) return;
+        const dupName = `${target.name || target.title || 'Untitled'} (Copy)`;
+        const newId = 'proj-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+        const duplicate: Project = {
+          ...target,
+          id: newId,
+          name: dupName,
+          title: dupName,
+          isPinned: false,
+          pinnedAt: undefined,
+          createdAt: new Date().toISOString()
+        };
+        state.addProject(duplicate);
+      },
+      setCurrentProject: (project) => set({ currentProject: project }),
+      togglePinProject: (id) => set((state) => {
+        const updatedProjects = state.projects.map((p) => {
+          if (p.id === id) {
+            const nextPinned = !p.isPinned;
+            useActivityStore.getState().logActivity('project', `${nextPinned ? 'Pinned' : 'Unpinned'} project: ${p.name || p.title || 'Untitled'}`);
+            return {
+              ...p,
+              isPinned: nextPinned,
+              pinnedAt: nextPinned ? new Date().toISOString() : undefined
+            };
+          }
+          return p;
+        });
+
+        let nextCurrent = state.currentProject;
+        if (nextCurrent && nextCurrent.id === id) {
+          const nextPinned = !nextCurrent.isPinned;
+          nextCurrent = {
+            ...nextCurrent,
+            isPinned: nextPinned,
+            pinnedAt: nextPinned ? new Date().toISOString() : undefined
+          };
+        }
+
+        return {
+          projects: updatedProjects,
+          currentProject: nextCurrent
+        };
+      })
     }),
     {
       name: 'project-storage',
       storage: createFileStorage('projects'),
+      onRehydrateStorage: () => () => { useProjectStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
         const merged = { ...currentState, ...persistedState };
         if (merged.projects && Array.isArray(merged.projects)) {
-          merged.projects = merged.projects.map((p: any) => ({
-            tags: [],
-            ...p
-          }));
+          let timeOffset = 0;
+          merged.projects = merged.projects.map((p: any) => {
+            const healed = {
+              tags: [],
+              ...p
+            };
+            if (!healed.createdAt) {
+              healed.createdAt = new Date(Date.now() - (timeOffset++) * 60000).toISOString();
+            }
+            return healed;
+          });
         } else {
           merged.projects = currentState.projects;
         }
@@ -149,3 +211,8 @@ export const useProjectStore = create<ProjectState>()(
     }
   )
 );
+
+onStoreExternalUpdate('projects', () => {
+  useProjectStore.persist.rehydrate();
+});
+

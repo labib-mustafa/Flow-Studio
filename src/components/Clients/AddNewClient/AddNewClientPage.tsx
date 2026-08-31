@@ -409,11 +409,11 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
       updateClient(clientToEditId, {
         name: newName,
         company: newCompany,
-        location: newLocation || 'Remote',
+        location: newLocation || '',
         avatarUrl: newAvatarUrl || undefined,
-        email: newEmail || 'hello@company.com',
+        email: newEmail || '',
         billingEmail: newBillingEmail || '',
-        phone: newPhone || '+1 (555) 000-0000',
+        phone: newPhone || '',
         websites: newWebsites ? newWebsites.split(',').map(s => s.trim()) : [],
         socialProfiles: newSocialProfiles.split(',').filter(x => x.trim()).map(p => ({ platform: 'Social', url: p.trim() })),
         stylePreferences: {
@@ -428,11 +428,11 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
       addClient({
         name: newName,
         company: newCompany,
-        role: `Representative at ${newCompany}`,
-        email: newEmail || 'hello@company.com',
+        role: '',
+        email: newEmail || '',
         billingEmail: newBillingEmail || '',
-        phone: newPhone || '+1 (555) 000-0000',
-        location: newLocation || 'Remote',
+        phone: newPhone || '',
+        location: newLocation || '',
         websites: newWebsites ? newWebsites.split(',').map(s => s.trim()) : [],
         socialProfiles: newSocialProfiles.split(',').filter(x => x.trim()).map(p => ({ platform: 'Social', url: p.trim() })),
         stylePreferences: {
@@ -581,10 +581,10 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                     {step === 1 && (
                       <motion.div 
                         key="step1" 
-                        initial={{ opacity: 0, x: 10 }} 
+                        initial={{ opacity: 0, x: 4 }} 
                         animate={{ opacity: 1, x: 0 }} 
-                        exit={{ opacity: 0, x: -10 }} 
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: 0, x: -4 }} 
+                        transition={{ duration: 0.08, ease: [0.16, 1, 0.3, 1] }}
                         className="p-4 sm:p-8 w-full overflow-y-auto custom-scrollbar flex-1 text-left"
                       >
                         <div className="space-y-6 max-w-5xl ml-0 mr-auto w-full">
@@ -729,10 +729,10 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                     {step === 2 && (
                       <motion.div 
                         key="step2" 
-                        initial={{ opacity: 0, x: 10 }} 
+                        initial={{ opacity: 0, x: 4 }} 
                         animate={{ opacity: 1, x: 0 }} 
-                        exit={{ opacity: 0, x: -10 }} 
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: 0, x: -4 }} 
+                        transition={{ duration: 0.08, ease: [0.16, 1, 0.3, 1] }}
                         className="h-full w-full flex-1 min-h-0 overflow-y-auto lg:overflow-hidden"
                       >
                         <div className="grid grid-cols-1 lg:grid-cols-2 lg:h-full lg:min-h-full">
@@ -1162,10 +1162,10 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                     {step === 3 && (
                       <motion.div 
                         key="step3" 
-                        initial={{ opacity: 0, x: 10 }} 
+                        initial={{ opacity: 0, x: 4 }} 
                         animate={{ opacity: 1, x: 0 }} 
-                        exit={{ opacity: 0, x: -10 }} 
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: 0, x: -4 }} 
+                        transition={{ duration: 0.08, ease: [0.16, 1, 0.3, 1] }}
                         className="h-full flex flex-col relative w-full flex-1 min-h-0"
                       >
                         <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden bg-white">

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { LeadTable } from './LeadTable';
 import { useLeadStore } from '../../stores/leadStore';
+import { confirm } from '../../stores/confirmStore';
 import { PillTab } from '../GlobalComponents/PillTab';
-import { Plus, Mail, Filter, Search, UserPlus, Settings } from 'lucide-react';
+import { Plus, Mail, BookUser, Filter, Search, UserPlus, Settings, Bot } from 'lucide-react';
 import { ImportModal } from './ImportModal';
 import { EmailComposerModal } from './EmailComposerModal';
+import { AddLeadModal } from './AddLeadModal';
 
 interface LeadsPageProps {
   onNavigate?: (view: string) => void;
@@ -25,6 +27,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
     deselectAllLeads
   } = useLeadStore();
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isBulkMailModalOpen, setIsBulkMailModalOpen] = useState(false);
   const [singleMailLeadId, setSingleMailLeadId] = useState<string | null>(null);
@@ -58,16 +61,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
   const archivedCount = safeLeads.filter(l => l.status === 'Archived').length;
 
   const handleCreateNewClick = () => {
-    addLead({
-      name: 'New Lead Name',
-      company: 'Draft Company',
-      email: '',
-      status: 'New',
-      estimated_value: 10000,
-      source: 'Manual Add',
-      notes_summary: 'Baseline entity committed via workspace toolbar onboard button.',
-      tags: []
-    });
+    setIsAddModalOpen(true);
   };
 
   // Nav pill categories
@@ -85,7 +79,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
       {/* Header Banner */}
       <header className="px-6 py-4 border-b border-slate-200/80 bg-white shrink-0 flex items-center justify-between gap-4 z-10 relative">
         <div className="flex items-center gap-2 w-1/3">
-          <Filter className="size-5 text-slate-900 shrink-0" />
+          <BookUser className="size-5 text-slate-900 shrink-0" />
           <h2 className="text-lg font-bold text-slate-900 tracking-tight">Leads Database Manager</h2>
         </div>
 
@@ -123,30 +117,27 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
           </button>
 
           <button
-            onClick={() => {
-              const dummies: any[] = [
-                { name: 'Sarah Jenkins', type: 'Enterprise', company: 'Acme Corp', email: 'sarah@acme.com', phone: '+1 555-0198', status: 'Contacted', socials: 'instagram.com/sarah_j', location: 'New York, NY', estimated_value: 45000, source: 'Outbound', notes_summary: 'Interested in Q3 launch.', tags: ['enterprise', 'q3'] },
-                { name: 'Michael Chen', type: 'Startup', company: 'NovaTech', email: 'm.chen@novatech.io', phone: '+1 555-0211', status: 'New', socials: 'threads.net/mikechen', location: 'San Francisco, CA', estimated_value: 12000, source: 'Referral', notes_summary: 'Needs basic integration.', tags: ['startup'] },
-                { name: 'Elena Rodriguez', type: 'Agency', company: 'Creative Solutions', email: 'elena@creative.agency', phone: '+1 555-0344', status: 'Proposal Sent', socials: 'behance.net/elenar', location: 'Austin, TX', estimated_value: 28000, source: 'Website', notes_summary: 'Very responsive.', tags: ['agency', 'hot'] },
-                { name: 'David Smith', type: 'SMB', company: 'Smith Hardware', email: 'david@smithhardware.com', phone: '+1 555-0455', status: 'Contacted', socials: 'dribbble.com/davidsmith', location: 'Chicago, IL', estimated_value: 5000, source: 'Event', notes_summary: 'Met at tradeshow.', tags: ['smb'] },
-                { name: 'Rachel Kim', type: 'Enterprise', company: 'Global Logistics', email: 'rachel.kim@global-log.com', phone: '+1 555-0677', status: 'Contacted', socials: 'whatsapp.com/rachel_kim', location: 'Seattle, WA', estimated_value: 85000, source: 'Inbound', notes_summary: 'Looking for full platform replacement.', tags: ['enterprise', 'priority'] },
-                { name: 'James Wilson', type: 'Consultant', company: 'Wilson Consulting', email: 'james@wilsonconsult.com', phone: '+1 555-0899', status: 'Archived', socials: 't.me/james_wilson', location: 'Boston, MA', estimated_value: 0, source: 'Cold Email', notes_summary: 'Not ready until next year.', tags: ['consultant', 'nurture'] },
-                { name: 'Emma Davis', type: 'Startup', company: 'FinFlow', email: 'emma@finflow.app', phone: '+1 555-0922', status: 'New', socials: 'figma.com/emmadavis', location: 'Miami, FL', estimated_value: 18000, source: 'Webinar', notes_summary: 'Downloaded Q2 report.', tags: ['startup', 'fintech'] },
-              ];
-              dummies.forEach(d => addLead(d));
-            }}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-sm flex items-center gap-2 outline-none shrink-0"
+            onClick={() => onNavigate?.('lead-generator')}
+            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-sm flex items-center gap-2 outline-none border border-indigo-200 shrink-0 cursor-pointer"
           >
-            <UserPlus className="w-3.5 h-3.5 shrink-0" />
-            Seed Data
+            <Bot className="w-4 h-4 shrink-0 text-indigo-600" />
+            Lead Scraper
           </button>
 
           <button
             onClick={() => setIsImportModalOpen(true)}
+            className="bg-white hover:bg-slate-50 text-slate-800 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-sm flex items-center gap-2 outline-none border border-slate-200 shrink-0 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+            Import Leads
+          </button>
+
+          <button
+            onClick={() => setIsAddModalOpen(true)}
             className="bg-slate-950 hover:bg-slate-900 text-white rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-md flex items-center gap-2 outline-none border border-slate-950 shrink-0 cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5 shrink-0" />
-            Import Leads
+            <UserPlus className="w-3.5 h-3.5 shrink-0" />
+            Add Lead
           </button>
         </div>
       </header>
@@ -229,8 +220,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
           <div className="w-px h-5 bg-white/15 shrink-0" />
 
           <button
-            onClick={() => {
-              if (window.confirm(`Convert ${selectedLeadIds.length} selected leads to Active Clients?`)) {
+            onClick={async () => {
+              const ok = await confirm.show({
+                title: 'Convert Leads to Clients?',
+                message: `Convert ${selectedLeadIds.length} selected leads to Active Clients?`,
+                type: 'info',
+                confirmText: 'Convert'
+              });
+              if (ok) {
                 bulkPromoteLeads(selectedLeadIds);
               }
             }}
@@ -241,8 +238,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
           </button>
 
           <button
-            onClick={() => {
-              if (window.confirm(`Are you sure you want to delete ${selectedLeadIds.length} selected leads?`)) {
+            onClick={async () => {
+              const ok = await confirm.danger(
+                `Delete ${selectedLeadIds.length} Leads?`,
+                'These leads will be deleted from the database.'
+              );
+              if (ok) {
                 bulkDeleteLeads(selectedLeadIds);
               }
             }}
@@ -294,6 +295,11 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
           });
         }}
         onAddManual={handleCreateNewClick}
+      />
+
+      <AddLeadModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
       />
 
       {isBulkMailModalOpen && selectedLeadIds.length > 0 && (

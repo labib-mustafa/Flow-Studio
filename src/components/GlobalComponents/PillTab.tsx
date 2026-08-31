@@ -2,7 +2,7 @@ import React from 'react';
 
 interface PillTabProps {
   label: string;
-  icon?: string;
+  icon?: React.ReactNode;
   isActive: boolean;
   onClick: () => void;
   counter?: number;
@@ -18,7 +18,13 @@ export const PillTab: React.FC<PillTabProps> = ({ label, icon, isActive, onClick
           : 'text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
       }`}
     >
-      {icon && <span className="material-symbols-outlined text-[16px]">{icon}</span>}
+      {icon && (
+        typeof icon === 'string' ? (
+          <span className="material-symbols-outlined text-[16px]">{icon}</span>
+        ) : (
+          <span className="flex items-center justify-center shrink-0">{icon}</span>
+        )
+      )}
       <span>{label}</span>
       {typeof counter !== 'undefined' && counter !== null && (
         <span

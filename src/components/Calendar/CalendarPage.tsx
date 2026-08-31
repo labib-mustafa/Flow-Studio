@@ -3,12 +3,13 @@ import { addMonths, subMonths, format } from 'date-fns';
 import { CalendarGrid } from './CalendarGrid';
 import { DayDetailPanel } from './DayDetailPanel';
 import { EventModal } from '../Dashboard/EventModal';
-import { Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight, Calendar1 } from 'lucide-react';
 
 export const CalendarPage: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const goToPrevMonth = () => setCurrentMonth((prev) => subMonths(prev, 1));
   const goToNextMonth = () => setCurrentMonth((prev) => addMonths(prev, 1));
@@ -26,16 +27,9 @@ export const CalendarPage: React.FC = () => {
       {/* Header */}
       <header className="px-6 py-4 border-b border-slate-200/80 bg-white shrink-0 flex items-center justify-between gap-4 z-10 relative">
         {/* Left: Icon + Title */}
-        <div className="flex items-center gap-3">
-          <div className="bg-slate-100 p-2 rounded-xl text-slate-700 border border-slate-200 shadow-sm">
-            <span className="material-symbols-outlined text-[20px]">calendar_month</span>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight leading-tight">
-              Calendar
-            </h2>
-            <p className="text-[11px] font-medium text-slate-500">Schedule & Events</p>
-          </div>
+        <div className="flex items-center gap-2">
+          <Calendar1 className="size-5 text-slate-900 shrink-0" />
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Calendar</h2>
         </div>
 
         {/* Center: Search */}
@@ -45,6 +39,8 @@ export const CalendarPage: React.FC = () => {
             className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50/50 text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 focus:bg-white transition-all font-medium"
             placeholder="Search events..."
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
@@ -95,6 +91,7 @@ export const CalendarPage: React.FC = () => {
             currentMonth={currentMonth}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
+            searchQuery={searchQuery}
           />
         </div>
 

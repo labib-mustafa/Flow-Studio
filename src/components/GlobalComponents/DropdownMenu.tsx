@@ -5,14 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 export interface DropdownOption {
   id: string;
   label: string;
-  icon?: string;
+  icon?: string | React.ReactNode;
   badge?: string;
   divider?: boolean;
   onClick?: () => void;
   className?: string;
   color?: string;
 }
-
+ 
 interface DropdownMenuProps {
   isOpen: boolean;
   onClose: () => void;
@@ -21,7 +21,7 @@ interface DropdownMenuProps {
   align?: 'left' | 'right';
   width?: number;
 }
-
+ 
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({ 
   isOpen, 
   onClose, 
@@ -31,14 +31,14 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   width = 240
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-
+ 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
-
+ 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
@@ -46,14 +46,14 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);
-
+ 
   if (!isOpen || !anchorRect) return null;
-
+ 
   const top = anchorRect.bottom + 8;
   const left = align === 'left' 
     ? anchorRect.left 
     : anchorRect.right - width;
-
+ 
   return createPortal(
     <AnimatePresence>
       <motion.div
@@ -87,11 +87,19 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                 }}
               >
                 {option.icon && (
-                  <span className={`material-symbols-outlined text-[20px] ${
-                    option.color ? '' : 'text-slate-500 group-hover:text-slate-900'
-                  }`} style={{ color: option.color }}>
-                    {option.icon}
-                  </span>
+                  typeof option.icon === 'string' ? (
+                    <span className={`material-symbols-outlined text-[20px] ${
+                      option.color ? '' : 'text-slate-500 group-hover:text-slate-900'
+                    }`} style={{ color: option.color }}>
+                      {option.icon}
+                    </span>
+                  ) : (
+                    <div className={`flex items-center justify-center shrink-0 w-5 h-5 ${
+                      option.color ? '' : 'text-slate-500 group-hover:text-slate-900'
+                    }`} style={{ color: option.color }}>
+                      {option.icon}
+                    </div>
+                  )
                 )}
                 <span className={`text-sm font-medium flex-1 ${
                   option.color ? '' : 'text-slate-700 group-hover:text-slate-900'

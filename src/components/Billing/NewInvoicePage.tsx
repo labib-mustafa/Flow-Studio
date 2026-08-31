@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBillingStore, InvoiceLineItem } from '../../stores/billingStore';
+import { useClientStore } from '../../stores/clientStore';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -8,39 +9,7 @@ interface NewInvoicePageProps {
   onSave?: () => void;
 }
 
-interface ClientOption {
-  name: string;
-  email: string;
-  avatar: string;
-  address: string;
-}
 
-const CLIENT_OPTIONS: ClientOption[] = [
-  {
-    name: 'Gabriel Banks',
-    email: 'gabriel@banks-enterprises.com',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBpauPIgwp57U0aFrctKzRbJ-y25760bg6EoGjHcRsOsHtAV_LymRc1fdbg4DHx4Gftdgfh3FSbAj3kEk79uXE4nFLXwP4YaWsAvMQFYFpqKSsc7priG7AnIhKyUv2u66aa7zgsKyItdxbWZxmwZRVg65YnRP6v38abW4m7-SXp7P2CsangrmXbSfifF78gBFMNirG-Z5yF4EfBNMgaFCfXu9DCl1anjQPuMKdUQ7CVCNCGPtBU9PoCKP6RASbCt3fFZlJRh_o6nTI',
-    address: '123 Market Street, Suite 400\nSan Francisco, CA 94103'
-  },
-  {
-    name: 'Claudia Welch',
-    email: 'claudia@welchstudios.com',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCZtayuSSxTFfVXgd9EtBfC30sR6FEcRcaXtV7PRw8T8aDVF9_yemlu2gmywizm_2azx9L4b9RxfEmXKX35IA3LvKpdkI07eT_IITa8YwoxJNZJM9I_Qty7EdwKbvBrlKhQqrnYFNGPkqZnhFlCNki6WaMkV8iR_gPJXdQmlM9NiMTuduU2-8owy1iJ2Br5jmGywanFCsm2MNR_inZTo0wdKBfWg7NGDpGPl48VZWpEO7GSgWTMOosXYJ11g7klgsEg0fpz6e7vvD8',
-    address: '884 Broadway Ave, Floor 12\nNew York, NY 10003'
-  },
-  {
-    name: 'Nina Sherman',
-    email: 'nina@shermancollective.io',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDlJeR3QoQLOWhKL4wyEDqbCA68NI9VBkyg6v006XyMjxiCIo0XbOrK_P6ab2Bp4YR0sCUPJKclfXCGVAlXJ-ZPZgBWddLnQi4u43fEBUC9kuu6JAPzDjGBxx0CAOK0vUN0aLylhMXqxGmOnL_DHYGVfW1y-VYUFMQkWBbg1OEDmGWAlakXHy_TqKOoTDa7gXGtte74wwOpBYAtEf2zh81JTfabd35hS8Fri61T_7G-pEAAgPvTuWKuLLcQ6KR2tHZVNlTBEI0iFLU',
-    address: '450 Lincoln Road, Suite 200\nMiami Beach, FL 33139'
-  },
-  {
-    name: 'Elizabeth Robbins',
-    email: 'e.robbins@robbinsgroup.com',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAxkD9LGw6lySkUzxEE-OPAH03F9w7CuvYwj0SavnEJQyK8ukuuPz0EuY_T2t4ZuGNCWJhj07svS4YgE4LuA7T4jV9fxffv8v028xhNclFAGNMWNLPNkppdsnw8rjly-DFwMdXBXE9kSPjuykeUHmVgTHZY6VIZ4tiTpO-IZWxzy3tvVS3UQ0ugSeMYW9evjVejLATa8AdiGnwazLTb9MJZuqD5tpLltg_jP7j1aB3rexpCHX0HIQha9_cDTsaMAHOuLnm16xz1_nk',
-    address: '770 Boylston St\nBoston, MA 02199'
-  }
-];
 
 const PAYMENT_METHOD_OPTIONS = [
   { id: 'Bank Transfer', icon: 'account_balance' },
@@ -88,34 +57,20 @@ export const PaymentLogo: React.FC<{ method: string; className?: string }> = ({ 
 export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }) => {
   const addInvoice = useBillingStore((state) => state.addInvoice);
 
-  const [selectedClient, setSelectedClient] = useState<ClientOption>(CLIENT_OPTIONS[0]);
+  const { clients } = useClientStore();
+  const [selectedClient, setSelectedClient] = useState<any>(clients.length > 0 ? clients[0] : null);
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const [billingAddress, setBillingAddress] = useState(CLIENT_OPTIONS[0].address);
+  const [billingAddress, setBillingAddress] = useState(clients.length > 0 && clients[0].location ? clients[0].location : '');
   const [shippingAddress, setShippingAddress] = useState('');
 
-  const [invoiceNumber, setInvoiceNumber] = useState('INV-2024-001');
-  const [issueDate, setIssueDate] = useState('2024-05-15');
-  const [dueDate, setDueDate] = useState('2024-05-30');
-  const [projectRef, setProjectRef] = useState('Q2 Brand Refresh - Initial Phase');
+  const [invoiceNumber, setInvoiceNumber] = useState(() => `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dueDate, setDueDate] = useState(() => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [projectRef, setProjectRef] = useState('');
 
   const [selectedMethods, setSelectedMethods] = useState<string[]>(['Bank Transfer']);
 
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([
-    {
-      id: 'li-1',
-      description: 'Brand Strategy Workshop',
-      subDescription: 'Initial discovery phase and stakeholder interviews',
-      quantity: 1,
-      rate: 2500.00
-    },
-    {
-      id: 'li-2',
-      description: 'UI/UX Design Phase 1',
-      subDescription: 'Wireframing and high-fidelity mockups for homepage',
-      quantity: 40,
-      rate: 150.00
-    }
-  ]);
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
 
   const [notes, setNotes] = useState('Payment is due within 15 days. Please include the invoice number on your check.');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -126,9 +81,9 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleSelectClient = (client: ClientOption) => {
+  const handleSelectClient = (client: any) => {
     setSelectedClient(client);
-    setBillingAddress(client.address);
+    setBillingAddress(client.location || '');
     setIsClientDropdownOpen(false);
   };
 
@@ -232,7 +187,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
       amount: total,
       status,
       recipientName: selectedClient.name,
-      recipientAvatar: selectedClient.avatar,
+      recipientAvatar: selectedClient.initials,
       recipientEmail: selectedClient.email,
       date: issueDate,
       dueDate,
@@ -318,7 +273,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                     onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
                     className="flex items-center gap-3 w-full p-3.5 border border-slate-200 rounded-2xl hover:border-primary focus-within:border-primary transition-all bg-white cursor-pointer shadow-sm select-none"
                   >
-                    <img src={selectedClient.avatar} alt={selectedClient.name} className="size-10 rounded-full object-cover border border-slate-100" />
+                    <img src={selectedClient.initials} alt={selectedClient.name} className="size-10 rounded-full object-cover border border-slate-100" />
                     <div className="flex-1 overflow-hidden">
                       <p className="font-bold text-slate-900 text-sm">{selectedClient.name}</p>
                       <p className="text-xs text-slate-500 truncate">{selectedClient.email}</p>
@@ -329,20 +284,30 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                   {/* Client Dropdown Options */}
                   {isClientDropdownOpen && (
                     <div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl z-30 overflow-hidden divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-150">
-                      {CLIENT_OPTIONS.map((opt) => (
+                      {clients.map((c) => (
                         <div
-                          key={opt.name}
-                          onClick={() => handleSelectClient(opt)}
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedClient({ name: c.name, email: c.email, avatar: c.initials || '' });
+                            setBillingAddress(c.location || '');
+                            setIsClientDropdownOpen(false);
+                          }}
                           className={`flex items-center gap-3 p-3.5 cursor-pointer transition-colors ${
-                            selectedClient.name === opt.name ? 'bg-primary/5 font-semibold' : 'hover:bg-slate-50'
+                            selectedClient.name === c.name ? 'bg-primary/5 font-semibold' : 'hover:bg-slate-50'
                           }`}
                         >
-                          <img src={opt.avatar} alt={opt.name} className="size-9 rounded-full object-cover" />
+                          {c.initials ? (
+                            <img src={c.initials} alt={c.name} className="size-9 rounded-full object-cover" />
+                          ) : (
+                            <div className="size-9 rounded-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-xs">
+                              {c.name.substring(0,2).toUpperCase()}
+                            </div>
+                          )}
                           <div className="flex-1">
-                            <p className="text-sm font-bold text-slate-900">{opt.name}</p>
-                            <p className="text-xs text-slate-500">{opt.email}</p>
+                            <p className="text-sm font-bold text-slate-900">{c.name}</p>
+                            <p className="text-xs text-slate-500">{c.email}</p>
                           </div>
-                          {selectedClient.name === opt.name && (
+                          {selectedClient.name === c.name && (
                             <span className="material-symbols-outlined text-primary text-sm">check</span>
                           )}
                         </div>

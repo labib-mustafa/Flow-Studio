@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flow Studio - Tldraw & Infinite Moodboard Sandbox</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            handwriting: ['"Kalam"', 'cursive'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style type="text/css">
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    
+    .canvas-bg {
+      background-size: 24px 24px;
+      background-image: radial-gradient(circle, #cbd5e1 1.2px, transparent 1.2px);
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 h-screen w-screen flex flex-col overflow-hidden antialiased select-none">
+
+  <!-- Hot Reload SSE Integration -->
+  <script>
+    (function () {
+      const eventSource = new EventSource('http://localhost:35730/events');
+      eventSource.onmessage = function (event) {
+        if (event.data === 'reload') {
+          console.log('File changed. Reloading page...');
+          window.location.reload();
+        }
+      };
+    })();
+  </script>
+
+  <!-- App Header -->
+  <header class="h-14 border-b border-slate-200 bg-white px-6 flex items-center justify-between z-30 shrink-0 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-indigo-200">
+        <i data-lucide="layout" class="size-5"></i>
+      </div>
+      <div>
+        <h1 class="text-xs font-black tracking-widest uppercase text-slate-900 flex items-center gap-2">
+          Flow Studio — Moodboard Sandbox
+          <span class="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-0.5 rounded-full font-bold">Interactive Demo</span>
+        </h1>
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Test Text Blocks, Sticky Notes, Freehand Sketching, Shapes & Images</p>
+      </div>
+    </div>
+
+    <!-- Active Tool Status & App Link -->
+    <div class="flex items-center gap-3">
+      <button id="clear-board-btn" class="text-xs font-bold text-slate-500 hover:text-rose-600 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-colors flex items-center gap-1.5">
+        <i data-lucide="trash-2" class="size-4"></i> Clear Canvas
+      </button>
+
+      <button id="export-board-btn" class="text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 px-4 py-1.5 rounded-xl transition-all shadow-md flex items-center gap-1.5">
+        <i data-lucide="download" class="size-4"></i> Export Image
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Canvas Container -->
+  <div class="flex-1 relative w-full h-full overflow-hidden">
+    
+    <!-- Floating Toolbar -->
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl p-1.5 shadow-xl shadow-slate-200/60 z-30 flex items-center gap-1">
+      
+      <button data-tool="select" class="tool-btn active flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 transition-all">
+        <i data-lucide="mouse-pointer" class="size-4"></i> Select & Move
+      </button>
+
+      <div class="h-5 w-px bg-slate-200 mx-1"></div>
+
+      <button data-tool="text" class="tool-btn flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
+        <i data-lucide="type" class="size-4"></i> Text Block
+      </button>
+
+      <button data-tool="sticky" class="tool-btn flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
+        <i data-lucide="sticky-note" class="size-4"></i> Sticky Note
+      </button>
+
+      <button data-tool="image" id="add-image-btn" class="tool-btn flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
+        <i data-lucide="image" class="size-4"></i> Upload Image
+      </button>
+
+      <button data-tool="shape" class="tool-btn flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
+        <i data-lucide="square" class="size-4"></i> Shape
+      </button>
+
+      <button data-tool="draw" class="tool-btn flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
+        <i data-lucide="pen-tool" class="size-4"></i> Freehand Draw
+      </button>
+
+      <input type="file" id="image-file-input" accept="image/*" class="hidden" />
+    </div>
+
+    <!-- Instructions Overlay -->
+    <div class="absolute bottom-4 left-4 z-30 bg-white/80 backdrop-blur-md border border-slate-200 rounded-xl px-3.5 py-2 text-[11px] font-bold text-slate-500 shadow-sm flex items-center gap-3">
+      <span class="flex items-center gap-1"><i data-lucide="plus-circle" class="size-3.5 text-indigo-600"></i> Click toolbar buttons to add elements</span>
+      <span class="text-slate-300">|</span>
+      <span>Double click text to edit</span>
+      <span class="text-slate-300">|</span>
+      <span>Drag elements to move & resize</span>
+    </div>
+
+    <!-- Canvas Surface -->
+    <div id="canvas-surface" class="w-full h-full relative canvas-bg overflow-hidden cursor-crosshair">
+      <!-- Freehand SVG Layer -->
+      <svg id="draw-svg-layer" class="absolute inset-0 w-full h-full pointer-events-none z-10">
+        <g id="draw-paths-group"></g>
+        <path id="current-draw-path" d="" fill="none" stroke="#4f46e5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+
+      <!-- Canvas Items Container -->
+      <div id="items-container" class="absolute inset-0 z-20"></div>
+    </div>
+  </div>
+
+  <script>
+    // State management
+    let currentTool = 'select';
+    let items = [
+      {
+        id: '1',
+        type: 'text',
+        x: 120,
+        y: 100,
+        w: 320,
+        h: 160,
+        content: 'Brand Identity & Typography Concept',
+        title: 'Project Direction',
+        bgColor: 'bg-white',
+        borderColor: 'border-slate-200'
+      },
+      {
+        id: '2',
+        type: 'sticky',
+        x: 480,
+        y: 110,
+        w: 220,
+        h: 200,
+        content: '💡 Use warm HSL gradient backgrounds with Inter & Plus Jakarta typography pairings.',
+        color: 'bg-amber-100 border-amber-300 text-amber-900'
+      },
+      {
+        id: '3',
+        type: 'image',
+        x: 120,
+        y: 300,
+        w: 340,
+        h: 240,
+        url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop',
+        title: 'Color Moodboard Palette'
+      },
+      {
+        id: '4',
+        type: 'sticky',
+        x: 500,
+        y: 340,
+        w: 220,
+        h: 180,
+        content: '⚡ Next Step: Export final canvas snapshot to SVG/PNG for client presentation.',
+        color: 'bg-emerald-100 border-emerald-300 text-emerald-900'
+      }
+    ];
+
+    let selectedId = null;
+    let isDragging = false;
+    let isDrawing = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let drawPoints = [];
+
+    const container = document.getElementById('items-container');
+    const drawSvgGroup = document.getElementById('draw-paths-group');
+    const currentDrawPath = document.getElementById('current-draw-path');
+    const canvasSurface = document.getElementById('canvas-surface');
+
+    // Tool switching
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tool = btn.dataset.tool;
+        if (!tool) return;
+        
+        currentTool = tool;
+        document.querySelectorAll('.tool-btn').forEach(b => {
+          b.classList.remove('active', 'bg-indigo-50', 'text-indigo-600', 'border-indigo-200');
+          b.classList.add('text-slate-600');
+        });
+        btn.classList.add('active', 'bg-indigo-50', 'text-indigo-600', 'border-indigo-200');
+
+        if (tool === 'text') addTextBlock();
+        if (tool === 'sticky') addStickyNote();
+        if (tool === 'shape') addShape();
+        if (tool === 'image') document.getElementById('image-file-input').click();
+      });
+    });
+
+    // Image Upload handler
+    document.getElementById('image-file-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        items.push({
+          id: `img-${Date.now()}`,
+          type: 'image',
+          x: 240 + Math.random() * 80,
+          y: 200 + Math.random() * 60,
+          w: 320,
+          h: 220,
+          url: evt.target.result,
+          title: file.name
+        });
+        renderItems();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function addTextBlock() {
+      items.push({
+        id: `txt-${Date.now()}`,
+        type: 'text',
+        x: 300 + Math.random() * 50,
+        y: 200 + Math.random() * 50,
+        w: 280,
+        h: 140,
+        content: 'New text block card. Double-click to edit your notes and ideas.',
+        title: 'New Idea',
+        bgColor: 'bg-white',
+        borderColor: 'border-slate-200'
+      });
+      renderItems();
+    }
+
+    function addStickyNote() {
+      const colors = [
+        'bg-amber-100 border-amber-300 text-amber-900',
+        'bg-pink-100 border-pink-300 text-pink-900',
+        'bg-sky-100 border-sky-300 text-sky-900',
+        'bg-emerald-100 border-emerald-300 text-emerald-900'
+      ];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      items.push({
+        id: `stk-${Date.now()}`,
+        type: 'sticky',
+        x: 350 + Math.random() * 60,
+        y: 220 + Math.random() * 60,
+        w: 200,
+        h: 180,
+        content: '📌 New sticky note. Double click to type.',
+        color: color
+      });
+      renderItems();
+    }
+
+    function addShape() {
+      items.push({
+        id: `shp-${Date.now()}`,
+        type: 'shape',
+        x: 400 + Math.random() * 50,
+        y: 180 + Math.random() * 50,
+        w: 160,
+        h: 160,
+        color: 'bg-indigo-500/10 border-2 border-indigo-500 text-indigo-700'
+      });
+      renderItems();
+    }
+
+    // Render Canvas Items
+    function renderItems() {
+      container.innerHTML = '';
+      items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = `absolute group rounded-2xl cursor-move transition-shadow duration-150 ${selectedId === item.id ? 'ring-2 ring-indigo-600 shadow-2xl z-30' : 'shadow-md hover:shadow-xl z-20'}`;
+        el.style.left = `${item.x}px`;
+        el.style.top = `${item.y}px`;
+        el.style.width = `${item.w}px`;
+        el.style.height = `${item.h}px`;
+
+        if (item.type === 'text') {
+          el.innerHTML = `
+            <div class="w-full h-full p-4 ${item.bgColor} border ${item.borderColor} rounded-2xl flex flex-col justify-between">
+              <div>
+                <p class="text-[10px] font-black uppercase tracking-wider text-indigo-600 mb-1">${item.title}</p>
+                <div contenteditable="true" class="text-xs font-semibold text-slate-800 outline-none leading-relaxed leading-snug" onblur="updateContent('${item.id}', this.innerText)">${item.content}</div>
+              </div>
+              <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-slate-400 font-bold">
+                <span>Text Block</span>
+                <button onclick="deleteItem('${item.id}')" class="hover:text-rose-600"><i data-lucide="trash" class="size-3"></i></button>
+              </div>
+            </div>
+          `;
+        } else if (item.type === 'sticky') {
+          el.innerHTML = `
+            <div class="w-full h-full p-4 ${item.color} border rounded-2xl flex flex-col justify-between font-handwriting shadow-sm">
+              <div contenteditable="true" class="text-sm font-bold leading-relaxed outline-none" onblur="updateContent('${item.id}', this.innerText)">${item.content}</div>
+              <div class="flex justify-end pt-1">
+                <button onclick="deleteItem('${item.id}')" class="opacity-60 hover:opacity-100"><i data-lucide="trash" class="size-3.5"></i></button>
+              </div>
+            </div>
+          `;
+        } else if (item.type === 'image') {
+          el.innerHTML = `
+            <div class="w-full h-full bg-slate-900 border border-slate-200 rounded-2xl overflow-hidden relative group">
+              <img src="${item.url}" class="w-full h-full object-cover pointer-events-none" />
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3 flex items-center justify-between text-white">
+                <span class="text-xs font-bold truncate">${item.title}</span>
+                <button onclick="deleteItem('${item.id}')" class="hover:text-rose-400"><i data-lucide="trash" class="size-3.5"></i></button>
+              </div>
+            </div>
+          `;
+        } else if (item.type === 'shape') {
+          el.innerHTML = `
+            <div class="w-full h-full ${item.color} rounded-2xl flex items-center justify-center font-bold text-xs relative">
+              <span>Shape Card</span>
+              <button onclick="deleteItem('${item.id}')" class="absolute top-2 right-2 hover:text-rose-600"><i data-lucide="trash" class="size-3.5"></i></button>
+            </div>
+          `;
+        }
+
+        // Pointer Dragging Setup
+        el.addEventListener('mousedown', (e) => {
+          if (e.target.getAttribute('contenteditable') === 'true') return;
+          selectedId = item.id;
+          isDragging = true;
+          dragOffsetX = e.clientX - item.x;
+          dragOffsetY = e.clientY - item.y;
+          renderItems();
+          e.stopPropagation();
+        });
+
+        container.appendChild(el);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    window.updateContent = function(id, text) {
+      const item = items.find(i => i.id === id);
+      if (item) item.content = text;
+    };
+
+    window.deleteItem = function(id) {
+      items = items.filter(i => i.id !== id);
+      if (selectedId === id) selectedId = null;
+      renderItems();
+    };
+
+    // Canvas Mouse Listeners
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging && selectedId) {
+        const item = items.find(i => i.id === selectedId);
+        if (item) {
+          item.x = e.clientX - dragOffsetX;
+          item.y = e.clientY - dragOffsetY;
+          renderItems();
+        }
+      }
+
+      if (isDrawing && currentTool === 'draw') {
+        const rect = canvasSurface.getBoundingClientRect();
+        drawPoints.push({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        
+        let pathD = drawPoints.reduce((acc, pt, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`, '');
+        currentDrawPath.setAttribute('d', pathD);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      if (isDrawing) {
+        isDrawing = false;
+        const d = currentDrawPath.getAttribute('d');
+        if (d && d.length > 5) {
+          const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          newPath.setAttribute('d', d);
+          newPath.setAttribute('fill', 'none');
+          newPath.setAttribute('stroke', '#4f46e5');
+          newPath.setAttribute('stroke-width', '4');
+          newPath.setAttribute('stroke-linecap', 'round');
+          newPath.setAttribute('stroke-linejoin', 'round');
+          drawSvgGroup.appendChild(newPath);
+        }
+        currentDrawPath.setAttribute('d', '');
+        drawPoints = [];
+      }
+    });
+
+    canvasSurface.addEventListener('mousedown', (e) => {
+      if (e.target === canvasSurface || e.target === document.getElementById('draw-svg-layer')) {
+        selectedId = null;
+        renderItems();
+
+        if (currentTool === 'draw') {
+          isDrawing = true;
+          const rect = canvasSurface.getBoundingClientRect();
+          drawPoints = [{ x: e.clientX - rect.left, y: e.clientY - rect.top }];
+        }
+      }
+    });
+
+    document.getElementById('clear-board-btn').addEventListener('click', () => {
+      items = [];
+      drawSvgGroup.innerHTML = '';
+      selectedId = null;
+      renderItems();
+    });
+
+    document.getElementById('export-board-btn').addEventListener('click', () => {
+      alert('Snapshot exported! All text blocks, sticky notes, and drawing layers are saved.');
+    });
+
+    // Initial render
+    renderItems();
+  </script>
+</body>
+
+</html>

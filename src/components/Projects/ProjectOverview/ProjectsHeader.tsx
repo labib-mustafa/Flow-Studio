@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Plus, Briefcase } from 'lucide-react';
+import { Search, Plus, FolderBookmark } from 'lucide-react';
 
 interface ProjectsHeaderProps {
   searchQuery?: string;
@@ -15,7 +15,7 @@ export const ProjectsHeader: React.FC<ProjectsHeaderProps> = ({
   return (
     <header className="px-6 py-4 bg-white border-b border-slate-200/80 flex items-center justify-between gap-4 shrink-0 z-20 sticky top-0 relative">
       <div className="flex items-center gap-2 w-1/3">
-        <Briefcase className="size-5 text-slate-900 shrink-0" />
+        <FolderBookmark className="size-5 text-slate-900 shrink-0" />
         <h2 className="text-lg font-bold text-slate-900 tracking-tight">Project Board</h2>
       </div>
 

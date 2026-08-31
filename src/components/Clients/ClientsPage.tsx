@@ -1,5 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useClientStore, Client, ClientNote, ProjectHistoryItem } from '../../stores/clientStore';
+import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useClientStore, Client } from '../../stores/clientStore';
+import { confirm } from '../../stores/confirmStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { AddNewClientPage } from './AddNewClient/AddNewClientPage';
 import { ClientDetailsPage } from './ClientsDetails/ClientDetailsPage';
@@ -10,7 +12,9 @@ import {
   UserPlus,
   Folder,
   Star,
+  Hourglass,
   MoreHorizontal,
+  MoreVertical,
   Mail,
   Phone,
   MapPin,
@@ -118,12 +122,67 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
     };
   }, [clients]);
 
+  // Local debounced search query state
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(localSearch);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [localSearch, setSearchQuery]);
+
   // Filters process
-  const filteredClients = clients.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.company.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const filteredClients = useMemo(() => {
+    return clients.filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.company.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [clients, searchQuery, statusFilter]);
+
+  // ResizeObserver for dynamic column count in grid
+  const [containerWidth, setContainerWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Math.max(320, window.innerWidth - 280);
+    }
+    return 800;
+  });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (containerRef.current) {
+      setContainerWidth(containerRef.current.getBoundingClientRect().width);
+    }
+  }, [isDetailViewOpen]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [isDetailViewOpen]);
+
+  const cols = containerWidth < 550 ? 1 : containerWidth < 850 ? 2 : containerWidth < 1200 ? 3 : 4;
+
+  const chunkedRows = useMemo(() => {
+    const chunks: Client[][] = [];
+    for (let i = 0; i < filteredClients.length; i += cols) {
+      chunks.push(filteredClients.slice(i, i + cols));
+    }
+    return chunks;
+  }, [filteredClients, cols]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: chunkedRows.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 340,
+    overscan: 3,
   });
 
   const handleCreateClient = (e: React.FormEvent) => {
@@ -144,11 +203,11 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
     const id = addClient({
       name: newName,
       company: newCompany,
-      role: newRole || `Representative at ${newCompany}`,
-      email: newEmail || 'hello@company.com',
+      role: newRole || '',
+      email: newEmail || '',
       billingEmail: newBillingEmail || '',
-      phone: newPhone || '+1 (555) 000-0000',
-      location: newLocation || 'Remote',
+      phone: newPhone || '',
+      location: newLocation || '',
       websites: newWebsites ? newWebsites.split(',').map(s => s.trim()) : [],
       socialProfiles: newSocialProfiles.split(',').filter(x => x.trim()).map(p => ({ platform: 'Social', url: p.trim() })),
       stylePreferences: {
@@ -169,19 +228,8 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
         { name: 'Primary', hex: '#3B82F6' },
         { name: 'Dark', hex: '#000000' }
       ],
-      brandFonts: [
-        { style: 'Aa', fontName: 'Inter Regular' }
-      ],
-      projectHistory: [
-        {
-          id: `p-init-${Date.now()}`,
-          title: 'Strategic Kickoff',
-          phase: 'Onboarding Phase',
-          statusType: 'ongoing',
-          desc: 'Onboarding',
-          dueText: 'Ongoing'
-        }
-      ]
+      brandFonts: [],
+      projectHistory: []
     });
 
     // Reset fields
@@ -227,7 +275,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
       clientId: selectedClient.id,
       clientInitials: selectedClient.initials,
       type: 'Urgent',
-      content: `Invoiced client John Doe for $${amountNum.toLocaleString()} (Invoice transaction auto-logged). Payment draft outstanding.`,
+      content: `Invoiced client ${selectedClient.name} for $${amountNum.toLocaleString()} (Invoice transaction auto-logged). Payment draft outstanding.`,
       authorInitials: 'SYS',
       tags: ['Billing', 'Invoice']
     });
@@ -239,14 +287,14 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
     e.preventDefault();
     if (!noteContent.trim()) return;
 
-    const initials = noteTargetClient ? (clients.find(c => c.id === noteTargetClient)?.initials || 'SYS') : 'JD';
+    const initials = noteTargetClient ? (clients.find(c => c.id === noteTargetClient)?.initials || 'SYS') : 'SYS';
 
     addNote({
       clientId: noteTargetClient || undefined,
       clientInitials: initials,
       type: noteType,
       content: noteContent,
-      authorInitials: 'JD', // Signed in user initials
+      authorInitials: 'SYS', // System user initials
       tags: noteTags.split(',').map(t => t.trim()).filter(Boolean)
     });
 
@@ -311,17 +359,16 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
             </div>
             <input
               type="text"
-              value={searchQuery}
+              value={localSearch}
               onChange={e => {
-                setSearchQuery(e.target.value);
-                selectClient(null);
+                setLocalSearch(e.target.value);
               }}
               placeholder="Search directory..."
               className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50/50 text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 focus:bg-white transition-all font-medium"
             />
-            {searchQuery && (
+            {localSearch && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setLocalSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center hover:text-slate-700 text-slate-400"
               >
                 <span className="material-symbols-outlined text-[14px]">close</span>
@@ -345,169 +392,78 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
       {/* Main Multi-Column Split */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Side: Client Stack & Bottom Notes */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar space-y-8 h-full ">
-          <div>
-            {/* Status Tabs */}
-            <div className="mb-6 flex flex-wrap items-center gap-2">
-              {(['All', 'Active', 'Prospect', 'Inactive'] as const).map(tab => (
-                <PillTab
-                  key={tab}
-                  label={tab}
-                  isActive={statusFilter === tab}
-                  onClick={() => setStatusFilter(tab)}
-                  counter={clientCounts[tab]}
-                />
-              ))}
-            </div>
+        <div className="flex-1 flex flex-col pt-6 h-full min-h-0 bg-slate-50">
+          {/* Status Tabs */}
+          <div className="mb-0 flex flex-wrap items-center gap-2 shrink-0 px-6">
+            {(['All', 'Active', 'Prospect', 'Inactive'] as const).map(tab => (
+              <PillTab
+                key={tab}
+                label={tab}
+                isActive={statusFilter === tab}
+                onClick={() => setStatusFilter(tab)}
+                counter={clientCounts[tab]}
+              />
+            ))}
+          </div>
 
-            {/* Clients Grid */}
+          {/* Scrollable Clients Grid */}
+          <div
+            ref={containerRef}
+            className="flex-1 overflow-y-auto custom-scrollbar relative pb-24 px-6"
+          >
             <AnimatePresence>
               {filteredClients.length === 0 ? (
                 <EmptySearchState
                   searchQuery={searchQuery}
-                  onClearSearch={() => setSearchQuery('')}
+                  onClearSearch={() => setLocalSearch('')}
                   onAddClient={() => setIsAddModalOpen(true)}
                 />
               ) : (
-                <div style={{ containerType: 'inline-size' }}>
-                  <div className="client-grid gap-6">
-                    <style>{`
-                      .client-grid {
-                        display: grid;
-                        grid-template-columns: 1fr;
-                      }
-                      @container (min-width: 550px) {
-                        .client-grid { grid-template-columns: repeat(2, 1fr); }
-                      }
-                      @container (min-width: 850px) {
-                        .client-grid { grid-template-columns: repeat(3, 1fr); }
-                      }
-                      @container (min-width: 1200px) {
-                        .client-grid { grid-template-columns: repeat(4, 1fr); }
-                      }
-                    `}</style>
-                    {filteredClients.map(client => {
-                      const isActiveSelected = client.id === selectedClientId;
-                      return (
-                        <div
-                          key={client.id}
-                          onClick={() => selectClient(client.id)}
-                          onDoubleClick={() => {
-                            selectClient(client.id);
-                            setDetailViewTab('overview');
-                            setIsDetailViewOpen(true);
-                          }}
-                          className={`shadow-sm group rounded-3xl p-6 border transition-colors duration-200 flex flex-col justify-between cursor-pointer ${isActiveSelected
-                              ? 'bg-white border-slate-900 ring-1 ring-slate-900 shadow-lg'
-                              : 'bg-white border-slate-200 hover:border-slate-400 hover:shadow-md'
-                            }`}
-                        >
-                          <div className="flex justify-between items-start mb-4">
-                            {/* Colored Initials Avatar with activity/status dot */}
-                            <div className="relative">
-                              {client.avatarUrl ? (
-                                <img
-                                  alt={client.name}
-                                  src={client.avatarUrl}
-                                  className="size-12 rounded-2xl object-cover shadow-sm border border-slate-100"
-                                  referrerPolicy="no-referrer"
-                                />
-                              ) : (
-                                <div className={`size-12 rounded-2xl flex items-center justify-center text-sm font-bold shadow-sm ${client.avatarBg || 'bg-slate-100 text-slate-600'}`}>
-                                  {client.initials}
-                                </div>
-                              )}
-                              <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-white rounded-full ${client.status === 'Active' ? 'bg-emerald-500' : client.status === 'Prospect' ? 'bg-blue-500' : 'bg-slate-400'
-                                }`}></span>
-                            </div>
-
-                            {/* Inner Dropdown Toggle */}
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveMenuClient(activeMenuClient === client.id ? null : client.id);
-                                }}
-                                className="p-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                              >
-                                <MoreHorizontal className="size-4" />
-                              </button>
-
-                              {/* Dropdown Menu Overlay */}
-                              {activeMenuClient === client.id && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setActiveMenuClient(null); }}></div>
-                                  <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openEditModal(client);
-                                        setActiveMenuClient(null);
-                                      }}
-                                      className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-semibold"
-                                    >
-                                      <Edit className="size-3.5" /> Edit Profile
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm(`Are you sure you want to delete ${client.name}?`)) {
-                                          deleteClient(client.id);
-                                        }
-                                        setActiveMenuClient(null);
-                                      }}
-                                      className="w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold"
-                                    >
-                                      <Trash2 className="size-3.5" /> Close Account
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Middle Text details */}
-                          <div className="flex-1 mt-2">
-                            <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug group-hover:text-blue-600 transition-colors">
-                              {client.name}
-                            </h3>
-                            <p className="text-xs font-semibold text-slate-400 mb-3">{client.company}</p>
-
-                            {/* Status badge */}
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${client.status === 'Active'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                : client.status === 'Prospect'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                  : 'bg-slate-50 text-slate-500 border-slate-200'
-                              }`}>
-                              {client.status}
-                            </span>
-                          </div>
-
-                          {/* Bottom Stats */}
-                          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-bold">
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                selectClient(client.id);
-                                setDetailViewTab('projects');
-                                setIsDetailViewOpen(true);
-                              }}
-                              className="flex items-center gap-1.5 hover:text-slate-800 transition-colors cursor-pointer"
-                            >
-                              <Folder className="size-3.5" />
-                              <span>{client.projectsCount} Project{client.projectsCount !== 1 ? 's' : ''}</span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 text-slate-900">
-                              <Star className={`size-3.5 ${client.rating !== null ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                              <span>{client.rating !== null ? client.rating.toFixed(1) : '--'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div
+                  style={{
+                    height: `${rowVirtualizer.getTotalSize() + 24}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                    const rowItems = chunkedRows[virtualRow.index] || [];
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        ref={rowVirtualizer.measureElement}
+                        data-index={virtualRow.index}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start + 24}px)`,
+                          display: 'grid',
+                          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                          gap: '24px',
+                          paddingBottom: '24px',
+                          zIndex: rowItems.some(c => c.id === selectedClientId) ? 10 : 1
+                        }}
+                      >
+                        {rowItems.map(client => (
+                          <ClientCard
+                            key={client.id}
+                            client={client}
+                            isActiveSelected={client.id === selectedClientId}
+                            activeMenuClient={activeMenuClient}
+                            setActiveMenuClient={setActiveMenuClient}
+                            openEditModal={openEditModal}
+                            deleteClient={deleteClient}
+                            selectClient={selectClient}
+                            setDetailViewTab={setDetailViewTab}
+                            setIsDetailViewOpen={setIsDetailViewOpen}
+                            formatCurrency={formatCurrency}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </AnimatePresence>
@@ -579,10 +535,10 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                         <button
                           onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                           className={`text-[10px] px-2.5 py-1.5 rounded-full font-black uppercase tracking-widest flex items-center gap-1.5 border cursor-pointer transition-all duration-200 ${selectedClient.status === 'Active'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-250 hover:bg-emerald-100/50'
-                              : selectedClient.status === 'Prospect'
-                                ? 'bg-blue-50 text-blue-700 border-blue-250 hover:bg-blue-100/50'
-                                : 'bg-slate-50 text-slate-500 border-slate-305 hover:bg-slate-200/50'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-250 hover:bg-emerald-100/50'
+                            : selectedClient.status === 'Prospect'
+                              ? 'bg-blue-50 text-blue-700 border-blue-250 hover:bg-blue-100/50'
+                              : 'bg-slate-50 text-slate-500 border-slate-305 hover:bg-slate-200/50'
                             }`}
                         >
                           <span className={`size-1.5 rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500 animate-pulse' : selectedClient.status === 'Prospect' ? 'bg-blue-500 animate-pulse' : 'bg-slate-400'}`}></span>
@@ -647,7 +603,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                         }}
                         className="w-full py-3 px-4 rounded-xl border border-slate-900 text-slate-900 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest active:scale-98 shadow-sm"
                       >
-                        <Eye className="size-3.5" /> Show Details
+                        <Eye className="size-3.5" /> View Details
                       </button>
                     </div>
                   </div>
@@ -799,11 +755,11 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                           >
                             <span
                               className={`leading-tight truncate max-w-[140px] ${f.style === 'Display' ? 'text-2xl font-black tracking-tighter' :
-                                  f.style === 'Headlines' ? 'text-lg font-extrabold tracking-tight' :
-                                    f.style === 'Body Text' ? 'text-sm font-normal' :
-                                      f.style === 'Accents' ? 'text-[10px] font-bold uppercase tracking-widest' :
-                                        f.style === 'Captions' ? 'text-xs font-medium text-slate-600' :
-                                          'text-xs font-bold leading-none'
+                                f.style === 'Headlines' ? 'text-lg font-extrabold tracking-tight' :
+                                  f.style === 'Body Text' ? 'text-sm font-normal' :
+                                    f.style === 'Accents' ? 'text-[10px] font-bold uppercase tracking-widest' :
+                                      f.style === 'Captions' ? 'text-xs font-medium text-slate-600' :
+                                        'text-xs font-bold leading-none'
                                 }`}
                               style={{ fontFamily: `"${f.fontName}", sans-serif` }}
                             >
@@ -833,10 +789,10 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                           <div
                             key={idx}
                             className={`p-3 rounded-2xl border transition-all ${hist.statusType === 'ongoing'
-                                ? 'bg-blue-50/50 border-blue-100 hover:bg-blue-50'
-                                : hist.statusType === 'upcoming'
-                                  ? 'bg-slate-50/50 border-slate-200 hover:bg-slate-100'
-                                  : 'bg-white border-slate-200 hover:border-emerald-250 hover:bg-emerald-50/10'
+                              ? 'bg-blue-50/50 border-blue-100 hover:bg-blue-50'
+                              : hist.statusType === 'upcoming'
+                                ? 'bg-slate-50/50 border-slate-200 hover:bg-slate-100'
+                                : 'bg-white border-slate-200 hover:border-emerald-250 hover:bg-emerald-50/10'
                               }`}
                           >
                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider mb-2">
@@ -1025,8 +981,8 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                           type="button"
                           onClick={() => setNoteType(type)}
                           className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${noteType === type
-                              ? 'bg-slate-900 text-white shadow-sm'
-                              : 'bg-slate-50 text-slate-400 border border-slate-200 hover:text-slate-700'
+                            ? 'bg-slate-900 text-white shadow-sm'
+                            : 'bg-slate-50 text-slate-400 border border-slate-200 hover:text-slate-700'
                             }`}
                         >
                           {type}
@@ -1081,3 +1037,355 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
     </div>
   );
 };
+
+// Memoized Cover Illustration Patterns matching test site
+const COVER_STYLES = [
+  // 01. Ambient Mesh Glow
+  {
+    bg: 'bg-[#090d16] border-slate-800/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <circle cx="250" cy="35" r="38" fill={color} fillOpacity="0.3" />
+        <circle cx="275" cy="65" r="22" fill={color} fillOpacity="0.15" />
+      </svg>
+    )
+  },
+  // 02. Monolith Polygon Cutouts
+  {
+    bg: 'bg-[#0d131f] border-slate-800',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <polygon points="180,-10 340,30 260,120" fill={color} fillOpacity="0.25" />
+        <polygon points="220,10 340,90 280,120" fill={color} fillOpacity="0.4" />
+      </svg>
+    )
+  },
+  // 03. Topo Contour Lines
+  {
+    bg: 'bg-[#181104] border-amber-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <path d="M120 10 C180 80, 240 20, 340 70" stroke={color} strokeWidth="1.5" opacity="0.8"/>
+        <path d="M140 30 C200 95, 260 35, 340 85" stroke={color} strokeWidth="1.25" opacity="0.6"/>
+        <path d="M160 50 C220 110, 280 50, 340 100" stroke={color} strokeWidth="1" opacity="0.4"/>
+      </svg>
+    )
+  },
+  // 04. Glassmorphic Panes
+  {
+    bg: 'bg-[#061816] border-emerald-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <rect x="180" y="20" width="75" height="48" rx="10" fill={color} fillOpacity="0.25" stroke={color} strokeWidth="1.25"/>
+        <rect x="210" y="40" width="75" height="48" rx="10" fill={color} fillOpacity="0.3" stroke={color} strokeWidth="1"/>
+      </svg>
+    )
+  },
+  // 05. 3D Volumetric Clay Sphere
+  {
+    bg: 'bg-[#10081d] border-purple-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <circle cx="240" cy="50" r="38" fill={color} fillOpacity="0.35" />
+        <circle cx="240" cy="50" r="22" stroke={color} strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
+      </svg>
+    )
+  },
+  // 06. Light Beam Flare Ray
+  {
+    bg: 'bg-[#0a071b] border-purple-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <polygon points="120,-10 340,60 340,112 180,112" fill={color} fillOpacity="0.35"/>
+        <circle cx="280" cy="40" r="6" fill={color}/>
+      </svg>
+    )
+  },
+  // 07. Diagonal Duo-Tone Split
+  {
+    bg: 'bg-[#1c0d02] border-amber-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <polygon points="160,0 320,0 320,112 240,112" fill={color} fillOpacity="0.3"/>
+        <line x1="160" y1="0" x2="240" y2="112" stroke={color} strokeWidth="2"/>
+      </svg>
+    )
+  },
+  // 08. Botanical Leaf Silhouette
+  {
+    bg: 'bg-[#091508] border-emerald-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <path d="M250 10 C 280 40, 290 80, 250 105 C 210 80, 220 40, 250 10 Z" fill={color} fillOpacity="0.3" stroke={color} strokeWidth="1.5"/>
+        <line x1="250" y1="10" x2="250" y2="105" stroke={color} strokeWidth="1.25"/>
+      </svg>
+    )
+  },
+  // 09. Retro Synth Horizon
+  {
+    bg: 'bg-[#051923] border-cyan-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <line x1="0" y1="70" x2="320" y2="70" stroke={color} strokeWidth="1.5"/>
+        <line x1="0" y1="85" x2="320" y2="85" stroke={color} strokeWidth="1" opacity="0.7"/>
+        <circle cx="160" cy="70" r="22" fill={color} fillOpacity="0.3"/>
+      </svg>
+    )
+  },
+  // 10. Concentric Orbit Radar
+  {
+    bg: 'bg-[#060f24] border-blue-950/80',
+    render: (color: string) => (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 112" fill="none">
+        <circle cx="240" cy="50" r="38" stroke={color} strokeWidth="1.5" opacity="0.6"/>
+        <circle cx="240" cy="50" r="22" stroke={color} strokeWidth="1" strokeDasharray="3 3"/>
+        <circle cx="240" cy="50" r="8" fill={color}/>
+      </svg>
+    )
+  }
+];
+
+const VIBRANT_COLORS = [
+  '#3B82F6', // Blue
+  '#10B981', // Emerald
+  '#8B5CF6', // Purple
+  '#F59E0B', // Amber
+  '#06B6D4', // Cyan
+  '#EC4899', // Pink
+  '#F97316', // Orange
+  '#6366F1', // Indigo
+];
+
+// Pure Hash Lookup Cache to eliminate lag
+const illustrationCache = new Map<string, { bg: string; render: (c: string) => React.ReactNode; color: string }>();
+
+function getClientIllustrationMemoized(clientId: string) {
+  if (illustrationCache.has(clientId)) {
+    return illustrationCache.get(clientId)!;
+  }
+  let hash = 0;
+  for (let i = 0; i < clientId.length; i++) {
+    hash = clientId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const absHash = Math.abs(hash);
+  const styleObj = COVER_STYLES[absHash % COVER_STYLES.length];
+  const color = VIBRANT_COLORS[(absHash >> 3) % VIBRANT_COLORS.length];
+  
+  const result = {
+    bg: styleObj.bg,
+    render: styleObj.render,
+    color
+  };
+  illustrationCache.set(clientId, result);
+  return result;
+}
+
+const ClientCard = React.memo(({
+  client,
+  isActiveSelected,
+  activeMenuClient,
+  setActiveMenuClient,
+  openEditModal,
+  deleteClient,
+  selectClient,
+  setDetailViewTab,
+  setIsDetailViewOpen,
+  formatCurrency
+}: {
+  client: Client;
+  isActiveSelected: boolean;
+  activeMenuClient: string | null;
+  setActiveMenuClient: (id: string | null) => void;
+  openEditModal: (c: Client) => void;
+  deleteClient: (id: string) => void;
+  selectClient: (id: string | null) => void;
+  setDetailViewTab: (tab: any) => void;
+  setIsDetailViewOpen: (open: boolean) => void;
+  formatCurrency: (val: number) => string;
+}) => {
+  const ongoingCount = client.projectHistory ? client.projectHistory.filter(p => p.statusType === 'ongoing').length : 0;
+  const completedCount = client.projectHistory ? client.projectHistory.filter(p => p.statusType === 'completed').length : 0;
+
+  const formatVol = (val: number) => {
+    if (val >= 1000) {
+      return `$${(val / 1000).toFixed(1).replace('.0', '')}k`;
+    }
+    return `$${val}`;
+  };
+
+  const ongoingVol = formatVol(client.outstandingAmount || 0);
+  const completedVol = formatVol(client.totalVolume || 0);
+
+  // Memoized illustration calculation per client ID for ZERO LAG
+  const illustration = React.useMemo(() => getClientIllustrationMemoized(client.id), [client.id]);
+
+  return (
+    <div
+      onClick={() => selectClient(client.id)}
+      onDoubleClick={() => {
+        selectClient(client.id);
+        setDetailViewTab('overview');
+        setIsDetailViewOpen(true);
+      }}
+      className={`relative bg-white border rounded-3xl p-5 flex flex-col justify-between cursor-pointer select-none transition-all duration-300 group max-w-[360px] w-full mx-auto ${isActiveSelected
+        ? 'border-slate-900 ring-1 ring-slate-900 shadow-md'
+        : 'border-slate-200/90 hover:border-slate-300 shadow-sm hover:shadow-md'
+        }`}
+      style={{ minHeight: '390px' }}
+    >
+      <div className="flex flex-col space-y-4">
+        {/* Top Cover Banner matching test site */}
+        <div className={`relative h-28 w-full rounded-2xl overflow-hidden ${illustration.bg} border flex items-center justify-center shrink-0`}>
+          {illustration.render(illustration.color)}
+
+          {/* Overlapping Avatar Ring */}
+          <div className="absolute left-4 bottom-3 z-10">
+            <div className="relative size-14">
+              {client.avatarUrl ? (
+                <img
+                  alt={client.name}
+                  src={client.avatarUrl}
+                  className="size-14 rounded-full object-cover border-2 border-white shadow-xs"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                    const fallback = (e.target as HTMLElement).nextElementSibling;
+                    if (fallback) fallback.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div className={`size-14 rounded-full bg-blue-600 text-white font-extrabold text-base flex items-center justify-center border-2 border-white shadow-xs ${client.avatarUrl ? 'hidden' : ''}`}>
+                {client.initials}
+              </div>
+            </div>
+          </div>
+
+          {/* Status Tag Pill */}
+          <div className="absolute right-3 top-3 z-10">
+            <span className="px-2.5 py-1 bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold rounded-full">
+              {client.status || 'Active'}
+            </span>
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div className="px-1 space-y-3.5">
+          {/* Name & Verified Row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-base font-extrabold text-slate-900 tracking-tight truncate" title={client.name}>
+                  {client.name}
+                </h3>
+                {client.status === 'Active' && (
+                  <CheckCircle className="size-4 text-blue-600 shrink-0" />
+                )}
+              </div>
+              <p className="text-xs text-slate-400 font-medium truncate mt-0.5">
+                {client.company || 'Client'} • {client.role || 'Executive'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1 text-xs text-emerald-600 font-bold shrink-0 pt-0.5">
+              <CheckCircle className="size-3.5" />
+              <span>Verified</span>
+            </div>
+          </div>
+
+          {/* 3-Column Metrics Box (1:1 with test site) */}
+          <div className="bg-slate-50/90 rounded-2xl p-3.5 border border-slate-100 transition-colors">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-2">Client Metrics</span>
+            <div className="grid grid-cols-3 divide-x divide-slate-200/70 text-center">
+              <div className="px-1">
+                <span className="block text-sm font-extrabold text-slate-900 leading-tight">{ongoingCount + completedCount}</span>
+                <span className="block text-[11px] font-medium text-slate-400 mt-0.5">Projects</span>
+              </div>
+              <div className="px-1">
+                <span className="block text-sm font-extrabold text-slate-900 leading-tight">{completedVol}</span>
+                <span className="block text-[11px] font-medium text-slate-400 mt-0.5">Volume</span>
+              </div>
+              <div className="px-1">
+                <span className={`block text-sm font-extrabold leading-tight ${client.outstandingAmount ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {ongoingVol}
+                </span>
+                <span className="block text-[11px] font-medium text-slate-400 mt-0.5">Pending</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Details Row */}
+          <div className="flex flex-col gap-2 text-[12px] pt-0.5">
+            <div className="flex justify-between items-center">
+              <span className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px]">Location</span>
+              <span className="text-slate-500 font-bold truncate max-w-[150px]">{client.location || 'United States'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="flex gap-2 items-center pt-3 mt-auto">
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveMenuClient(activeMenuClient === client.id ? null : client.id);
+            }}
+            className={`size-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors shrink-0 ${activeMenuClient === client.id ? 'bg-slate-200 text-slate-900' : ''
+              }`}
+          >
+            <MoreVertical className="size-4" />
+          </button>
+
+          {/* Dropdown Menu Overlay */}
+          {activeMenuClient === client.id && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={(e) => { e.stopPropagation(); setActiveMenuClient(null); }}></div>
+              <div className="absolute left-0 bottom-11 mt-1 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-40 py-1 overflow-hidden">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditModal(client);
+                    setActiveMenuClient(null);
+                  }}
+                  className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-semibold"
+                >
+                  <Edit className="size-3.5" /> Edit Profile
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setActiveMenuClient(null);
+                    const ok = await confirm.danger(
+                      `Delete ${client.name}?`,
+                      'This client will be moved to the Trash.'
+                    );
+                    if (ok) {
+                      deleteClient(client.id);
+                    }
+                  }}
+                  className="w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold"
+                >
+                  <Trash2 className="size-3.5" /> Close Account
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            selectClient(client.id);
+            setDetailViewTab('overview');
+            setIsDetailViewOpen(true);
+          }}
+          className="flex-1 h-10 rounded-full flex items-center justify-center gap-2 text-xs font-extrabold shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        >
+          <Eye className="size-4 shrink-0" />
+          <span>View Details</span>
+        </button>
+      </div>
+    </div>
+  );
+});

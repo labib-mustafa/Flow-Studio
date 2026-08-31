@@ -1,16 +1,63 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
+import { confirm } from '../../../stores/confirmStore';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Folder, File as FileIcon, Image as ImageIcon, FileText,
   Video, Plus, Search, ChevronRight, ChevronDown,
   Trash2, Edit2, Download, HardDrive, Monitor, ArrowLeft, ArrowRight, ArrowUp,
   Scissors, Copy, ClipboardPaste, List, LayoutGrid, X,
-  ZoomIn, ZoomOut, Upload, Home, Network, Star
+  ZoomIn, ZoomOut, Upload, Home, Network, Star, RefreshCcw,
+  ExternalLink, Info, ArrowUpDown, Check, Pin, PinOff, Music
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EmptyFileState } from '../EmptyFileState';
+import { useClipboardStore } from '../../../stores/clipboardStore';
+
+const AsyncThumbnail: React.FC<{ path: string, mode?: string, className?: string, alt?: string }> = ({ path, mode, className, alt }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  const imgRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '100px' });
+
+    if (imgRef.current) observer.observe(imgRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    let active = true;
+    const isDesktop = (window as any).electronAPI?.isDesktop;
+    if (isDesktop) {
+      (window as any).electronAPI.fs.readFileBase64(path, mode, { thumb: true })
+        .then((base64: string) => {
+          if (active) setSrc(`data:image/png;base64,${base64}`);
+        })
+        .catch(() => {
+          if (active) setSrc(null);
+        });
+    } else {
+      setSrc(`/api/fs/file?path=${encodeURIComponent(path)}&mode=${mode || ''}&thumb=true`);
+    }
+    return () => { active = false; };
+  }, [path, mode, isVisible]);
+
+  if (!src) return <div ref={imgRef} className={`bg-slate-100 animate-pulse ${className}`} />;
+  return <img src={src} alt={alt} className={className} loading="lazy" />;
+};
 
 interface FileExplorerProps {
-  rootPath: string;
+  initialPath?: string;
+  rootPath?: 'GLOBAL' | string;
+  onFileSelect?: (path: string) => void;
+  onPathChange?: (path: string, folderName: string) => void;
+  className?: string;
 }
 
 interface FSEntry {
@@ -39,19 +86,67 @@ const formatDate = (dateString: string) => {
     ' ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 };
 
+const AdobeFileDocumentIcon = ({ letter, bgColor, fgColor, borderColor, size = 16 }: { letter: string; bgColor: string; fgColor: string; borderColor?: string; size?: number }) => {
+  const w = size;
+  const h = Math.round(size * 1.18);
+  const fontSize = Math.max(8, Math.floor(size * 0.46));
+
+  return (
+    <div
+      className="relative shrink-0 flex items-center justify-center select-none inline-flex"
+      style={{ width: w, height: h }}
+    >
+      <svg width={w} height={h} viewBox="0 0 16 19" fill="none" className="shrink-0">
+        <path
+          d="M2.5 0.5H10.5L15.5 5.5V16.5C15.5 17.6 14.6 18.5 13.5 18.5H2.5C1.4 18.5 0.5 17.6 0.5 16.5V2.5C0.5 1.4 1.4 0.5 2.5 0.5Z"
+          fill={bgColor}
+          stroke={borderColor || fgColor}
+          strokeWidth="0.8"
+        />
+        <path d="M10.5 0.5V5.5H15.5L10.5 0.5Z" fill="rgba(255,255,255,0.3)" />
+      </svg>
+      <span
+        className="absolute font-extrabold tracking-tighter"
+        style={{
+          color: fgColor,
+          fontSize: fontSize,
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          top: '56%',
+          left: '50%',
+          transform: 'translate(-50%, -45%)',
+          lineHeight: 1
+        }}
+      >
+        {letter}
+      </span>
+    </div>
+  );
+};
+
 const getFileType = (name: string) => {
   const ext = name.split('.').pop()?.toLowerCase();
   switch (ext) {
-    case 'png': case 'jpg': case 'jpeg': case 'gif': case 'svg': case 'webp': return 'PNG Image';
-    case 'mp4': case 'mov': case 'avi': case 'mkv': return 'Video file';
+    case 'psd': case 'psb': return 'Adobe Photoshop Document';
+    case 'ai': case 'ait': case 'eps': return 'Adobe Illustrator Artwork';
+    case 'prproj': case 'prel': return 'Adobe Premiere Pro Project';
+    case 'aep': case 'aet': case 'aepx': return 'Adobe After Effects Project';
+    case 'indd': case 'idml': case 'indt': return 'Adobe InDesign Document';
+    case 'xd': return 'Adobe XD Document';
+    case 'lrtemplate': case 'xmp': case 'dng': case 'cr2': case 'nef': case 'arw': return 'Adobe Lightroom Photo';
+    case 'sesx': return 'Adobe Audition Session';
+    case 'fla': case 'swf': return 'Adobe Animate Project';
+    case 'sbs': case 'sbsar': return 'Adobe Substance 3D Asset';
+    case 'chproj': return 'Character Animator Project';
+    case 'png': case 'jpg': case 'jpeg': case 'gif': case 'svg': case 'webp': return 'Image File';
+    case 'mp4': case 'mov': case 'avi': case 'mkv': return 'Video File';
     case 'pdf': return 'PDF Document';
     case 'doc': case 'docx': return 'Word Document';
     case 'txt': return 'Text Document';
-    case 'zip': return 'ZIP file';
-    case 'json': return 'JSON file';
-    case 'js': return 'JavaScript file';
-    case 'ts': case 'tsx': return 'TypeScript file';
-    case 'md': return 'Markdown file';
+    case 'zip': case 'rar': case '7z': return 'Archive File';
+    case 'json': return 'JSON File';
+    case 'js': case 'jsx': return 'JavaScript File';
+    case 'ts': case 'tsx': return 'TypeScript File';
+    case 'md': return 'Markdown File';
     default: return ext ? `${ext.toUpperCase()} File` : 'File';
   }
 };
@@ -68,16 +163,41 @@ const FolderIcon = ({ size = 16, className = '' }: { size?: number; className?: 
 const getFileIcon = (name: string, size = 16) => {
   const ext = name.split('.').pop()?.toLowerCase();
   switch (ext) {
-    case 'png': case 'jpg': case 'jpeg': case 'gif': case 'svg': case 'webp':
-      return <ImageIcon className="text-blue-500" style={{ width: size, height: size }} />;
-    case 'mp4': case 'mov': case 'avi': case 'mkv':
-      return <Video className="text-purple-500" style={{ width: size, height: size }} />;
+    // Adobe Application File Documents
+    case 'psd': case 'psb':
+      return <AdobeFileDocumentIcon letter="Ps" bgColor="#001e36" fgColor="#31a8ff" borderColor="#005fa3" size={size} />;
+    case 'ai': case 'ait': case 'eps':
+      return <AdobeFileDocumentIcon letter="Ai" bgColor="#330000" fgColor="#ff9a00" borderColor="#ff7700" size={size} />;
+    case 'prproj': case 'prel':
+      return <AdobeFileDocumentIcon letter="Pr" bgColor="#00005b" fgColor="#9999ff" borderColor="#7070ff" size={size} />;
+    case 'aep': case 'aet': case 'aepx':
+      return <AdobeFileDocumentIcon letter="Ae" bgColor="#2d0036" fgColor="#d291ff" borderColor="#b854ff" size={size} />;
+    case 'indd': case 'idml': case 'indt':
+      return <AdobeFileDocumentIcon letter="Id" bgColor="#2b0018" fgColor="#ff3366" borderColor="#ff1a53" size={size} />;
+    case 'xd':
+      return <AdobeFileDocumentIcon letter="Xd" bgColor="#470024" fgColor="#ff26be" borderColor="#e600a1" size={size} />;
+    case 'lrtemplate': case 'xmp': case 'dng': case 'cr2': case 'nef': case 'arw':
+      return <AdobeFileDocumentIcon letter="Lr" bgColor="#002d38" fgColor="#31ecff" borderColor="#00b8d4" size={size} />;
+    case 'sesx':
+      return <AdobeFileDocumentIcon letter="Au" bgColor="#003632" fgColor="#00e5d1" borderColor="#00b3a4" size={size} />;
+    case 'fla': case 'swf':
+      return <AdobeFileDocumentIcon letter="An" bgColor="#330a00" fgColor="#ff4500" borderColor="#e03d00" size={size} />;
+    case 'sbs': case 'sbsar':
+      return <AdobeFileDocumentIcon letter="Sb" bgColor="#331a00" fgColor="#ff8c00" borderColor="#e07b00" size={size} />;
+    case 'chproj':
+      return <AdobeFileDocumentIcon letter="Ch" bgColor="#1d0036" fgColor="#a855f7" borderColor="#9333ea" size={size} />;
     case 'pdf':
-      return <FileText className="text-red-500" style={{ width: size, height: size }} />;
+      return <AdobeFileDocumentIcon letter="Pdf" bgColor="#360000" fgColor="#ff3b30" borderColor="#e02d22" size={size} />;
+
+    // General Formats
+    case 'png': case 'jpg': case 'jpeg': case 'gif': case 'svg': case 'webp':
+      return <ImageIcon className="text-blue-500 shrink-0" style={{ width: size, height: size }} />;
+    case 'mp4': case 'mov': case 'avi': case 'mkv':
+      return <Video className="text-purple-500 shrink-0" style={{ width: size, height: size }} />;
     case 'doc': case 'docx':
-      return <FileText className="text-blue-600" style={{ width: size, height: size }} />;
+      return <FileText className="text-blue-600 shrink-0" style={{ width: size, height: size }} />;
     default:
-      return <FileIcon className="text-slate-400" style={{ width: size, height: size }} />;
+      return <FileIcon className="text-slate-400 shrink-0" style={{ width: size, height: size }} />;
   }
 };
 
@@ -89,13 +209,89 @@ interface TreeNode {
   expanded?: boolean;
 }
 
-export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
-  const [currentPath, setCurrentPath] = useState('');
+export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPath, onFileSelect, onPathChange, className }) => {
+  const [currentPath, setCurrentPath] = useState(initialPath || '');
+  const isGlobal = rootPath === 'GLOBAL';
+
+  const onPathChangeRef = useRef(onPathChange);
+  useEffect(() => {
+    onPathChangeRef.current = onPathChange;
+  }, [onPathChange]);
+
+  useEffect(() => {
+    if (onPathChangeRef.current) {
+      let title = 'Home';
+      if (currentPath) {
+        const parts = currentPath.split(/[/\\]/).filter(Boolean);
+        if (parts.length > 0) {
+          title = parts[parts.length - 1];
+        }
+      } else if (!isGlobal && rootPath) {
+        title = rootPath.split(/[/\\]/).filter(Boolean).pop() || 'Project';
+      }
+      onPathChangeRef.current(currentPath, title);
+    }
+  }, [currentPath, rootPath, isGlobal]);
+
   const [files, setFiles] = useState<FSEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [localSearch, setLocalSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(localSearch);
+      setSearchQuery(localSearch);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [localSearch]);
   const [viewMode, setViewMode] = useState<ViewMode>('details');
+  const [gridItemSize, setGridItemSize] = useState(96);
   const [quickAccess, setQuickAccess] = useState<Record<string, string>>({});
+  
+  interface PinnedFolder {
+    name: string;
+    path: string;
+    icon?: 'desktop' | 'downloads' | 'pictures' | 'documents' | 'music' | 'videos' | 'folder';
+  }
+
+  const [pinnedFolders, setPinnedFolders] = useState<PinnedFolder[]>(() => {
+    try {
+      const saved = localStorage.getItem('flow_pinned_folders');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return [
+      { name: 'Desktop', path: 'desktop', icon: 'desktop' },
+      { name: 'Downloads', path: 'downloads', icon: 'downloads' },
+      { name: 'Pictures', path: 'pictures', icon: 'pictures' },
+      { name: 'Music', path: 'music', icon: 'music' },
+      { name: 'Videos', path: 'videos', icon: 'videos' },
+      { name: 'Documents', path: 'documents', icon: 'documents' },
+      { name: 'Mockups', path: 'Mockups', icon: 'folder' },
+      { name: 'Flow-Studio', path: 'Flow-Studio', icon: 'folder' },
+    ];
+  });
+
+  const togglePinFolder = (folderName: string, folderPath?: string) => {
+    setPinnedFolders((prev) => {
+      const targetPath = folderPath || folderName;
+      const isAlreadyPinned = prev.some((p) => p.name === folderName || p.path === targetPath);
+      let updated: PinnedFolder[];
+      if (isAlreadyPinned) {
+        updated = prev.filter((p) => p.name !== folderName && p.path !== targetPath);
+      } else {
+        updated = [...prev, { name: folderName, path: targetPath, icon: 'folder' }];
+      }
+      try {
+        localStorage.setItem('flow_pinned_folders', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+  };
+
+  const [showHidden, setShowHidden] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<'view' | 'sort' | null>(null);
 
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [pathInput, setPathInput] = useState('');
@@ -109,9 +305,104 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
   const [isDragging, setIsDragging] = useState(false);
 
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [clipboard, setClipboard] = useState<{ path: string; type: 'cut' | 'copy' } | null>(null);
-  const [history, setHistory] = useState<string[]>(['']);
+  const { clipboard, setClipboard } = useClipboardStore();
+  const [fileOpProgress, setFileOpProgress] = useState<{
+    isOpen: boolean;
+    type: 'copy' | 'move';
+    fileName: string;
+    source: string;
+    target: string;
+    progress: number;
+  } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item?: FSEntry; type: 'file' | 'folder' | 'background' } | null>(null);
+  const [history, setHistory] = useState<string[]>([initialPath || '']);
   const [historyIdx, setHistoryIdx] = useState(0);
+
+  const [inlineEdit, setInlineEdit] = useState<{
+    id: string;
+    originalName: string;
+    isCreating: boolean;
+    type: 'file' | 'folder';
+  } | null>(null);
+
+  const handleInlineEditSubmit = async (newName: string) => {
+    if (!inlineEdit) return;
+    const { id, isCreating, originalName, type } = inlineEdit;
+    setInlineEdit(null); // Clear immediately
+    
+    if (!newName.trim() || newName.startsWith('___temp___') || (!isCreating && newName === originalName)) {
+      if (isCreating) fetchFiles(); 
+      return;
+    }
+    
+    const targetDir = isGlobal ? currentPath : `${rootPath}/${currentPath}`.replace(/\/+/g, '/');
+    const newPath = `${targetDir}/${newName}`.replace(/\\/g, '/').replace(/\/+/g, '/');
+    const isDesktop = (window as any).electronAPI?.isDesktop;
+
+    try {
+      if (isCreating) {
+        if (type === 'folder') {
+          if (isDesktop) {
+            await (window as any).electronAPI.fs.mkdir(targetDir, newName, isGlobal ? 'global' : undefined);
+          } else {
+            await fetch('/api/fs/mkdir', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: targetDir, name: newName, mode: isGlobal ? 'global' : undefined })
+            });
+          }
+        } else {
+          if (isDesktop) {
+            await (window as any).electronAPI.fs.createFile(targetDir, newName, isGlobal ? 'global' : undefined);
+          } else {
+            await fetch('/api/fs/create-file', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: targetDir, name: newName, mode: isGlobal ? 'global' : undefined })
+            });
+          }
+        }
+      } else {
+        const oldPath = `${targetDir}/${originalName}`.replace(/\\/g, '/').replace(/\/+/g, '/');
+        if (isDesktop) {
+          await (window as any).electronAPI.fs.rename(oldPath, newPath, isGlobal ? 'global' : undefined);
+        } else {
+          await fetch('/api/fs/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldPath, newPath, mode: isGlobal ? 'global' : undefined })
+          });
+        }
+      }
+    } catch {
+      alert(`Failed to ${isCreating ? 'create' : 'rename'}`);
+    }
+    
+    fetchFiles();
+  };
+
+  const inlineEditInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (inlineEdit && inlineEditInputRef.current) {
+      inlineEditInputRef.current.focus();
+      if (inlineEdit.type === 'file' && inlineEdit.originalName.includes('.')) {
+        const lastDotIdx = inlineEdit.originalName.lastIndexOf('.');
+        if (lastDotIdx > 0) {
+          inlineEditInputRef.current.setSelectionRange(0, lastDotIdx);
+        } else {
+          inlineEditInputRef.current.select();
+        }
+      } else {
+        inlineEditInputRef.current.select();
+      }
+    }
+  }, [inlineEdit]);
+
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
 
   // Sort
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'type' | 'size'>('name');
@@ -121,29 +412,73 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
-  const isGlobal = rootPath === 'GLOBAL';
+  
+
+
+  const [drives, setDrives] = useState<FSEntry[]>([]);
 
   useEffect(() => {
+    const isDesktop = (window as any).electronAPI?.isDesktop;
+
     if (isGlobal) {
-      fetch('/api/fs/quick-access')
+      if (isDesktop) {
+        (window as any).electronAPI.fs.getQuickAccess()
+          .then((data: any) => setQuickAccess(data))
+          .catch(console.error);
+      } else {
+        fetch('/api/fs/quick-access')
+          .then(res => res.json())
+          .then(data => setQuickAccess(data))
+          .catch(console.error);
+      }
+    }
+
+    if (isDesktop) {
+      (window as any).electronAPI.fs.getDrives()
+        .then((data: any) => { if (data.files) setDrives(data.files); })
+        .catch(console.error);
+    } else {
+      fetch('/api/fs/drives')
         .then(res => res.json())
-        .then(data => setQuickAccess(data))
+        .then(data => { if (data.files) setDrives(data.files); })
         .catch(console.error);
     }
   }, [isGlobal]);
 
-  const fetchFiles = async () => {
+  const fetchSeqRef = useRef(0);
+
+  const fetchFiles = async (forceRefresh = false) => {
+    const seq = ++fetchSeqRef.current;
+    if (!forceRefresh) setFiles([]);
     setLoading(true);
     setSelectedItems(new Set());
     try {
-      const targetPath = isGlobal ? currentPath : `${rootPath}/${currentPath}`.replace(/\/+/g, '/');
-      const res = await fetch(`/api/fs/list?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}`);
-      const data = await res.json();
-      if (data.files) setFiles(data.files);
+      const isDesktop = (window as any).electronAPI?.isDesktop;
+
+      if (isGlobal && currentPath === '') {
+        if (isDesktop) {
+          const data = await (window as any).electronAPI.fs.getDrives();
+          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
+        } else {
+          const res = await fetch('/api/fs/drives');
+          const data = await res.json();
+          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
+        }
+      } else {
+        const targetPath = isGlobal ? currentPath : `${rootPath}/${currentPath}`.replace(/\/+/g, '/');
+        if (isDesktop) {
+          const data = await (window as any).electronAPI.fs.listFiles(targetPath, isGlobal ? 'global' : undefined, forceRefresh);
+          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
+        } else {
+          const res = await fetch(`/api/fs/list?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}`);
+          const data = await res.json();
+          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
+        }
+      }
     } catch (e) {
       console.error('Failed to fetch files', e);
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) setLoading(false);
     }
   };
 
@@ -173,6 +508,9 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
       : `${rootPath}/${currentPath}/${itemName}`.replace(/\/+/g, '/');
 
   const navigateTo = (newPath: string) => {
+    if (newPath === currentPath) return;
+    setFiles([]);
+    setLoading(true);
     const newHistory = history.slice(0, historyIdx + 1);
     newHistory.push(newPath);
     setHistory(newHistory);
@@ -183,6 +521,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
   const goBack = () => {
     if (historyIdx > 0) {
       const idx = historyIdx - 1;
+      setFiles([]);
+      setLoading(true);
       setHistoryIdx(idx);
       setCurrentPath(history[idx]);
     }
@@ -191,6 +531,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
   const goForward = () => {
     if (historyIdx < history.length - 1) {
       const idx = historyIdx + 1;
+      setFiles([]);
+      setLoading(true);
       setHistoryIdx(idx);
       setCurrentPath(history[idx]);
     }
@@ -202,67 +544,59 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
     navigateTo(parts.join('/'));
   };
 
-  const handleCreateFolder = async () => {
-    const name = prompt('Enter folder name:');
-    if (!name) return;
-    const targetPath = isGlobal ? currentPath : `${rootPath}/${currentPath}`.replace(/\/+/g, '/');
-    try {
-      await fetch('/api/fs/mkdir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: targetPath, name, mode: isGlobal ? 'global' : undefined })
-      });
-      fetchFiles();
-    } catch { alert('Failed to create folder'); }
+  const handleCreateFolder = () => {
+    setInlineEdit({ id: `___temp___${Date.now()}`, originalName: 'New folder', isCreating: true, type: 'folder' });
   };
 
-  const handleUploadClick = () => fileInputRef.current?.click();
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const targetPath = getAbsolutePath(file.name);
-    try {
-      setLoading(true);
-      await fetch(`/api/fs/upload?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-        body: file
-      });
-      fetchFiles();
-    } catch { alert('Upload failed'); setLoading(false); }
+  const handleCreateFile = (defaultName = 'New Text Document.txt') => {
+    setInlineEdit({ id: `___temp___${Date.now()}`, originalName: defaultName, isCreating: true, type: 'file' });
   };
 
-  const handleDelete = async () => {
+  const handleContextMenu = (e: React.MouseEvent, type: 'file' | 'folder' | 'background', item?: FSEntry) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (item && !selectedItems.has(item.name)) {
+      setSelectedItems(new Set([item.name]));
+    }
+    setContextMenu({ x: e.clientX, y: e.clientY, item, type });
+  };
+
+  const handleDelete = async (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (selectedItems.size === 0) return;
-    if (!confirm(`Delete ${selectedItems.size} item(s)?`)) return;
+    const isPermanent = e && e.shiftKey;
+    const ok = await confirm.danger(
+      `Delete ${selectedItems.size} Item(s)?`,
+      `Are you sure you want to delete ${selectedItems.size} item(s)${isPermanent ? ' permanently' : ' to the Trash'}?`
+    );
+    if (!ok) return;
     try {
+      const isDesktop = (window as any).electronAPI?.isDesktop;
       for (const itemName of selectedItems) {
-        await fetch('/api/fs/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: getAbsolutePath(itemName), mode: isGlobal ? 'global' : undefined })
-        });
+        const pathStr = getAbsolutePath(itemName);
+        if (isDesktop) {
+          if (isPermanent) {
+            await (window as any).electronAPI.fs.delete(pathStr, isGlobal ? 'global' : undefined);
+          } else {
+            await (window as any).electronAPI.fs.trash(pathStr, isGlobal ? 'global' : undefined);
+          }
+        } else {
+          await fetch('/api/fs/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: pathStr, mode: isGlobal ? 'global' : undefined })
+          });
+        }
       }
       fetchFiles();
     } catch { alert('Failed to delete some items'); }
   };
 
-  const handleRename = async () => {
+  const handleRename = () => {
     if (selectedItems.size !== 1) return;
     const itemName = Array.from(selectedItems)[0] as string;
-    const newName = prompt(`Rename "${itemName}" to:`, itemName);
-    if (!newName || newName === itemName) return;
-    const targetDir = isGlobal ? currentPath : `${rootPath}/${currentPath}`.replace(/\/+/g, '/');
-    const oldPath = `${targetDir}/${itemName}`.replace(/\\/g, '/').replace(/\/+/g, '/');
-    const newPath = `${targetDir}/${newName}`.replace(/\\/g, '/').replace(/\/+/g, '/');
-    try {
-      await fetch('/api/fs/rename', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oldPath, newPath, mode: isGlobal ? 'global' : undefined })
-      });
-      fetchFiles();
-    } catch { alert('Failed to rename'); }
+    const item = files.find(f => f.name === itemName);
+    if (!item) return;
+    setInlineEdit({ id: itemName, originalName: itemName, isCreating: false, type: item.isDir ? 'folder' : 'file' });
   };
 
   const handleCopy = () => {
@@ -277,28 +611,61 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
 
   const handlePaste = async () => {
     if (!clipboard) return;
-    const fileName = clipboard.path.split(/[/\\]/).pop();
-    const destPath = getAbsolutePath(fileName || 'pasted_file');
+    const fileName = clipboard.path.split(/[/\\]/).pop() || 'file';
+    const destPath = getAbsolutePath(fileName);
+
+    setFileOpProgress({
+      isOpen: true,
+      type: clipboard.type === 'copy' ? 'copy' : 'move',
+      fileName,
+      source: clipboard.path,
+      target: destPath,
+      progress: 20
+    });
+
+    const progressInterval = setInterval(() => {
+      setFileOpProgress((prev) => (prev ? { ...prev, progress: Math.min(prev.progress + 18, 90) } : null));
+    }, 100);
+
     try {
+      const isDesktop = (window as any).electronAPI?.isDesktop;
       if (clipboard.type === 'copy') {
-        await fetch('/api/fs/copy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sourcePath: clipboard.path, targetPath: destPath, mode: isGlobal ? 'global' : undefined })
-        });
+        if (isDesktop) {
+          await (window as any).electronAPI.fs.copy(clipboard.path, destPath, isGlobal ? 'global' : undefined);
+        } else {
+          await fetch('/api/fs/copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sourcePath: clipboard.path, targetPath: destPath, mode: isGlobal ? 'global' : undefined })
+          });
+        }
       } else {
-        await fetch('/api/fs/rename', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ oldPath: clipboard.path, newPath: destPath, mode: isGlobal ? 'global' : undefined })
-        });
+        if (isDesktop) {
+          await (window as any).electronAPI.fs.rename(clipboard.path, destPath, isGlobal ? 'global' : undefined);
+        } else {
+          await fetch('/api/fs/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldPath: clipboard.path, newPath: destPath, mode: isGlobal ? 'global' : undefined })
+          });
+        }
         setClipboard(null);
       }
-      fetchFiles();
-    } catch { alert('Failed to paste'); }
+      clearInterval(progressInterval);
+      setFileOpProgress((prev) => (prev ? { ...prev, progress: 100 } : null));
+      setTimeout(() => {
+        setFileOpProgress(null);
+        fetchFiles();
+      }, 350);
+    } catch {
+      clearInterval(progressInterval);
+      setFileOpProgress(null);
+      alert('Failed to paste');
+    }
   };
 
   const handleItemDoubleClick = (item: FSEntry) => {
+    if (!item.name || item.name.startsWith('___temp___') || inlineEdit?.id === item.name) return;
     if (item.isDir) {
       navigateTo(currentPath ? `${currentPath}/${item.name}` : item.name);
     } else {
@@ -310,12 +677,49 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
       if (!isImage) {
         setIsLoadingContent(true);
         const targetPath = getAbsolutePath(item.name);
-        fetch(`/api/fs/file?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}`)
-          .then(res => res.text())
-          .then(text => { setFileContent(text); setIsLoadingContent(false); })
-          .catch(() => { setFileContent('Error loading file content.'); setIsLoadingContent(false); });
+        const isDesktop = (window as any).electronAPI?.isDesktop;
+
+        if (isDesktop) {
+          (window as any).electronAPI.fs.readFileString(targetPath, isGlobal ? 'global' : undefined)
+            .then((text: string) => { setFileContent(text); setIsLoadingContent(false); })
+            .catch(() => { setFileContent('Error loading file content.'); setIsLoadingContent(false); });
+        } else {
+          fetch(`/api/fs/file?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}`)
+            .then(res => res.text())
+            .then(text => { setFileContent(text); setIsLoadingContent(false); })
+            .catch(() => { setFileContent('Error loading file content.'); setIsLoadingContent(false); });
+        }
       }
     }
+  };
+
+  const handleOpenNative = async () => {
+    if (selectedItems.size !== 1) return;
+    const itemName = Array.from(selectedItems)[0] as string;
+    const targetPath = getAbsolutePath(itemName);
+    try {
+      const isDesktop = (window as any).electronAPI?.isDesktop;
+      if (isDesktop) {
+        await (window as any).electronAPI.fs.openDefault(targetPath, isGlobal ? 'global' : undefined);
+      } else {
+        alert('Opening native apps is only supported in Desktop mode.');
+      }
+    } catch { alert('Failed to open native application'); }
+  };
+
+  const handleShowProperties = async () => {
+    if (selectedItems.size !== 1) return;
+    const itemName = Array.from(selectedItems)[0] as string;
+    const targetPath = getAbsolutePath(itemName);
+    try {
+      const isDesktop = (window as any).electronAPI?.isDesktop;
+      if (isDesktop) {
+        const props = await (window as any).electronAPI.fs.getProperties(targetPath, isGlobal ? 'global' : undefined);
+        alert(`Properties for ${itemName}:\n\nType: ${props.isDirectory ? 'Folder' : 'File'}\nSize: ${(props.size / 1024).toFixed(2)} KB\nCreated: ${new Date(props.created).toLocaleString()}\nModified: ${new Date(props.modified).toLocaleString()}`);
+      } else {
+        alert('Properties viewing is only supported in Desktop mode.');
+      }
+    } catch { alert('Failed to get properties'); }
   };
 
   const toggleSelection = (e: React.MouseEvent, itemName: string) => {
@@ -350,21 +754,107 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
     else { setSortBy(col); setSortAsc(true); }
   };
 
-  const displayedFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const displayedFiles = useMemo(() => {
+    return files.filter(f => {
+      if (!showHidden && f.name.startsWith('.')) return false;
+      return f.name.toLowerCase().includes(debouncedSearch.toLowerCase());
+    });
+  }, [files, debouncedSearch, showHidden]);
 
-  const sortedFiles = [...displayedFiles].sort((a, b) => {
-    // Folders first
-    if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
-    let cmp = 0;
-    if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
-    else if (sortBy === 'date') cmp = new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime();
-    else if (sortBy === 'size') cmp = a.size - b.size;
-    else if (sortBy === 'type') {
-      const ta = a.isDir ? 'File folder' : getFileType(a.name);
-      const tb = b.isDir ? 'File folder' : getFileType(b.name);
-      cmp = ta.localeCompare(tb);
+  const sortedFiles = useMemo(() => {
+    let arr = [...displayedFiles];
+    if (inlineEdit?.isCreating) {
+      arr.unshift({
+        name: inlineEdit.id,
+        isDir: inlineEdit.type === 'folder',
+        size: 0,
+        modifiedAt: new Date().toISOString()
+      } as FSEntry);
     }
-    return sortAsc ? cmp : -cmp;
+    return arr.sort((a, b) => {
+      // Folders first
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+      let cmp = 0;
+      if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
+      else if (sortBy === 'date') cmp = new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime();
+      else if (sortBy === 'size') cmp = a.size - b.size;
+      else if (sortBy === 'type') {
+        const ta = a.isDir ? 'File folder' : getFileType(a.name);
+        const tb = b.isDir ? 'File folder' : getFileType(b.name);
+        cmp = ta.localeCompare(tb);
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+  }, [displayedFiles, sortBy, sortAsc, inlineEdit]);
+
+  // ResizeObserver for dynamic column count in grid view
+  const [contentWidth, setContentWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Math.max(320, window.innerWidth - 280);
+    }
+    return 800;
+  });
+
+  useLayoutEffect(() => {
+    if (scrollContainerRef.current) {
+      setContentWidth(scrollContainerRef.current.getBoundingClientRect().width);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setContentWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(scrollContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        setGridItemSize(prev => {
+          const delta = e.deltaY > 0 ? -16 : 16;
+          const newSize = Math.max(48, Math.min(256, prev + delta));
+          if (newSize !== prev) {
+            if (newSize <= 64 && viewMode !== 'details') setViewMode('details');
+            else if (newSize > 64 && viewMode !== 'grid') setViewMode('grid');
+          }
+          return newSize;
+        });
+      }
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [viewMode]);
+
+  const gridCols = Math.max(1, Math.floor((contentWidth - 24) / (gridItemSize + 4)));
+
+  const chunkedFiles = useMemo(() => {
+    const chunks: FSEntry[][] = [];
+    for (let i = 0; i < sortedFiles.length; i += gridCols) {
+      chunks.push(sortedFiles.slice(i, i + gridCols));
+    }
+    return chunks;
+  }, [sortedFiles, gridCols]);
+
+  const detailsVirtualizer = useVirtualizer({
+    count: sortedFiles.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 28,
+    overscan: 10,
+  });
+
+  const gridVirtualizer = useVirtualizer({
+    count: chunkedFiles.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => gridItemSize + 4,
+    overscan: 5,
   });
 
   const SortArrow = ({ col }: { col: string }) =>
@@ -465,16 +955,22 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
         </tr>
       </thead>
       <tbody>
-        {sortedFiles.map((f, idx) => {
+        {detailsVirtualizer.getVirtualItems().length > 0 && detailsVirtualizer.getVirtualItems()[0].start > 0 && (
+          <tr style={{ height: `${detailsVirtualizer.getVirtualItems()[0].start}px` }} />
+        )}
+        {detailsVirtualizer.getVirtualItems().map(virtualRow => {
+          const f = sortedFiles[virtualRow.index];
+          if (!f) return null;
           const isSelected = selectedItems.has(f.name);
           return (
             <tr
-              key={idx}
+              key={virtualRow.key}
               onClick={(e) => toggleSelection(e, f.name)}
               onDoubleClick={() => handleItemDoubleClick(f)}
+              onContextMenu={(e) => handleContextMenu(e, f.isDir ? 'folder' : 'file', f)}
               className={`cursor-pointer select-none h-[28px] group ${isSelected
                 ? 'bg-[#cce4f7] text-slate-900'
-                : idx % 2 === 0
+                : virtualRow.index % 2 === 0
                   ? 'bg-white hover:bg-[#e8f4fd]'
                   : 'bg-[#f7f9fc] hover:bg-[#e8f4fd]'
                 }`}
@@ -485,7 +981,22 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
                     ? <FolderIcon size={16} />
                     : getFileIcon(f.name, 16)
                   }
-                  <span className="truncate">{f.name}</span>
+                      {inlineEdit?.id === f.name ? (
+                        <input
+                          ref={inlineEditInputRef}
+                          defaultValue={inlineEdit.originalName}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleInlineEditSubmit(e.currentTarget.value);
+                            if (e.key === 'Escape') setInlineEdit(null);
+                          }}
+                          onBlur={(e) => handleInlineEditSubmit(e.currentTarget.value)}
+                          onClick={e => e.stopPropagation()}
+                          onDoubleClick={e => e.stopPropagation()}
+                          className="w-full text-slate-900 border border-blue-400 px-1 py-0 outline-none text-[12px] bg-white h-[20px]"
+                        />
+                  ) : (
+                    <span className="truncate">{f.name}</span>
+                  )}
                 </div>
               </td>
               <td className="px-3 py-0.5 text-[12px] text-slate-600 truncate">{formatDate(f.modifiedAt)}</td>
@@ -496,51 +1007,113 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
             </tr>
           );
         })}
+        {detailsVirtualizer.getVirtualItems().length > 0 && (detailsVirtualizer.getTotalSize() - detailsVirtualizer.getVirtualItems()[detailsVirtualizer.getVirtualItems().length - 1].end) > 0 && (
+          <tr style={{ height: `${detailsVirtualizer.getTotalSize() - detailsVirtualizer.getVirtualItems()[detailsVirtualizer.getVirtualItems().length - 1].end}px` }} />
+        )}
       </tbody>
     </table>
   );
 
   // ── GRID VIEW ────────────────────────────────────────────────
   const renderGridView = () => (
-    <div className="p-3 grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-1">
-      {sortedFiles.map((f, idx) => {
-        const isSelected = selectedItems.has(f.name);
-        const ext = f.name.split('.').pop()?.toLowerCase();
-        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '');
-        const targetPath = getAbsolutePath(f.name);
-        const thumbUrl = `/api/fs/file?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}&thumb=true`;
-
+    <div className="p-3 flex flex-col">
+      {gridVirtualizer.getVirtualItems().length > 0 && gridVirtualizer.getVirtualItems()[0].start > 0 && (
+        <div style={{ height: `${gridVirtualizer.getVirtualItems()[0].start}px` }} />
+      )}
+      {gridVirtualizer.getVirtualItems().map(virtualRow => {
+        const rowItems = chunkedFiles[virtualRow.index] || [];
         return (
           <div
-            key={idx}
-            onClick={(e) => toggleSelection(e, f.name)}
-            onDoubleClick={() => handleItemDoubleClick(f)}
-            className={`flex flex-col items-center gap-1.5 p-2 rounded cursor-pointer select-none transition-colors ${isSelected ? 'bg-[#cce4f7]' : 'hover:bg-[#e8f4fd]'
-              }`}
+            key={virtualRow.key}
+            className="grid gap-1 mb-1"
+            style={{
+              gridTemplateColumns: `repeat(${gridCols}, minmax(${gridItemSize}px, 1fr))`,
+              height: `${gridItemSize}px`
+            }}
           >
-            <div className="w-16 h-14 flex items-center justify-center">
-              {f.isDir ? (
-                <FolderIcon size={52} />
-              ) : isImage ? (
-                <img src={thumbUrl} alt={f.name} className="w-full h-full object-contain" loading="lazy" />
-              ) : (
-                getFileIcon(f.name, 40)
-              )}
-            </div>
-            <span className="text-[11px] text-slate-800 text-center leading-tight w-full truncate px-1" title={f.name}>
-              {f.name}
-            </span>
+            {rowItems.map(f => {
+              const isSelected = selectedItems.has(f.name);
+              const targetPath = getAbsolutePath(f.name);
+              const iconSize = Math.max(24, Math.floor(gridItemSize * 0.45));
+              return (
+                <div
+                  key={f.name}
+                  onClick={(e) => toggleSelection(e, f.name)}
+                  onDoubleClick={() => handleItemDoubleClick(f)}
+                  onContextMenu={(e) => handleContextMenu(e, f.isDir ? 'folder' : 'file', f)}
+                  className={`flex flex-col items-center justify-center p-2 cursor-pointer select-none rounded border transition-colors ${isSelected ? 'bg-[#cce4f7] border-[#005fb8]' : 'bg-transparent border-transparent hover:bg-slate-100'
+                    }`}
+                >
+                  <div className="mb-1 flex items-center justify-center shrink-0" style={{ width: iconSize, height: iconSize }}>
+                    {f.isDir ? <FolderIcon size={iconSize} /> : <AsyncThumbnail path={targetPath} name={f.name} isGlobal={isGlobal} size={iconSize} />}
+                  </div>
+                  {inlineEdit?.id === f.name ? (
+                    <input
+                      ref={inlineEditInputRef}
+                      defaultValue={inlineEdit.originalName}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleInlineEditSubmit(e.currentTarget.value);
+                        if (e.key === 'Escape') setInlineEdit(null);
+                      }}
+                      onBlur={(e) => handleInlineEditSubmit(e.currentTarget.value)}
+                      onClick={e => e.stopPropagation()}
+                      onDoubleClick={e => e.stopPropagation()}
+                      className="w-[90%] text-slate-900 border border-blue-400 px-1 py-0 outline-none text-[11px] bg-white text-center rounded-sm h-[20px]"
+                    />
+                  ) : (
+                    <span className="text-[11px] text-slate-800 text-center leading-tight w-full truncate px-1" title={f.name}>
+                      {f.name}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
       })}
+      {gridVirtualizer.getVirtualItems().length > 0 && (gridVirtualizer.getTotalSize() - gridVirtualizer.getVirtualItems()[gridVirtualizer.getVirtualItems().length - 1].end) > 0 && (
+        <div style={{ height: `${gridVirtualizer.getTotalSize() - gridVirtualizer.getVirtualItems()[gridVirtualizer.getVirtualItems().length - 1].end}px` }} />
+      )}
     </div>
   );
 
   return (
     <div
-      className="flex flex-col h-full bg-white text-slate-800 overflow-hidden select-none"
+      className="flex flex-col h-full bg-white text-slate-800 overflow-hidden select-none outline-none"
       style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", fontSize: 13 }}
       onClick={() => setSelectedItems(new Set())}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (sortedFiles.length === 0) return;
+
+        const allNames = sortedFiles.map(f => f.name);
+        const currentSelection = Array.from(selectedItems)[0];
+        let currentIndex = currentSelection ? allNames.indexOf(currentSelection as string) : -1;
+
+        if (['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key)) {
+          e.preventDefault();
+          if (currentIndex === -1) {
+            currentIndex = 0;
+          } else {
+            if (viewMode === 'details') {
+              if (e.key === 'ArrowDown') currentIndex = Math.min(currentIndex + 1, allNames.length - 1);
+              if (e.key === 'ArrowUp') currentIndex = Math.max(currentIndex - 1, 0);
+            } else {
+              if (e.key === 'ArrowRight') currentIndex = Math.min(currentIndex + 1, allNames.length - 1);
+              if (e.key === 'ArrowLeft') currentIndex = Math.max(currentIndex - 1, 0);
+              if (e.key === 'ArrowDown') currentIndex = Math.min(currentIndex + gridCols, allNames.length - 1);
+              if (e.key === 'ArrowUp') currentIndex = Math.max(currentIndex - gridCols, 0);
+            }
+          }
+          const newSelection = allNames[currentIndex];
+          if (newSelection) setSelectedItems(new Set([newSelection]));
+        } else if (e.key === 'Enter') {
+          if (currentSelection) {
+            const item = sortedFiles.find(f => f.name === currentSelection);
+            if (item) handleItemDoubleClick(item);
+          }
+        }
+      }}
     >
       {/* ── TOP COMMAND BAR ─────────────────────────────────────── */}
       <div className="flex items-center gap-1 px-3 py-1.5 border-b border-slate-200 bg-white shrink-0 h-[44px]">
@@ -569,6 +1142,14 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
           title="Up"
         >
           <ArrowUp size={15} />
+        </button>
+
+        <button
+          onClick={() => fetchFiles(true)}
+          className="p-1.5 rounded hover:bg-slate-100 text-slate-600 transition-colors"
+          title="Refresh"
+        >
+          <RefreshCcw size={15} />
         </button>
 
         {/* Address bar */}
@@ -628,8 +1209,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            value={localSearch}
+            onChange={e => setLocalSearch(e.target.value)}
             placeholder={`Search ${breadcrumbs[breadcrumbs.length - 1] || 'This PC'}`}
             className="w-full h-[28px] pl-7 pr-3 text-[12px] bg-white border border-slate-300 rounded-full text-slate-800 placeholder-slate-400 outline-none hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
           />
@@ -662,41 +1243,104 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
         <button onClick={handleRename} disabled={!hasSingleSelection} title="Rename" className="p-1.5 rounded hover:bg-slate-100 text-slate-600 disabled:opacity-30 transition-colors">
           <Edit2 size={14} />
         </button>
-        <button onClick={handleDelete} disabled={!hasSelection} title="Delete" className="p-1.5 rounded hover:bg-red-50 text-slate-600 hover:text-red-600 disabled:opacity-30 transition-colors">
+        <button onClick={(e) => handleDelete(e)} disabled={!hasSelection} title="Delete (Shift to delete permanently)" className="p-1.5 rounded hover:bg-red-50 text-slate-600 hover:text-red-600 disabled:opacity-30 transition-colors">
           <Trash2 size={14} />
         </button>
 
         <div className="w-px h-5 bg-slate-200 mx-1" />
 
-        {/* Upload */}
-        <button
-          onClick={handleUploadClick}
-          className="flex items-center gap-1.5 px-2.5 h-[26px] rounded hover:bg-slate-100 text-[13px] text-slate-700 border border-transparent hover:border-slate-300 transition-colors"
-        >
-          <Upload size={14} className="text-blue-600" />
-          Upload
+        {/* Native Actions */}
+        <button onClick={handleOpenNative} disabled={!hasSingleSelection} title="Open in default app" className="p-1.5 rounded hover:bg-slate-100 text-slate-600 disabled:opacity-30 transition-colors">
+          <ExternalLink size={14} />
         </button>
-        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+        <button onClick={handleShowProperties} disabled={!hasSingleSelection} title="Properties" className="p-1.5 rounded hover:bg-slate-100 text-slate-600 disabled:opacity-30 transition-colors">
+          <Info size={14} />
+        </button>
+
+        <div className="w-px h-5 bg-slate-200 mx-1" />
 
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* View toggle */}
-        <div className="flex items-center gap-0.5">
+        {/* Sort Dropdown */}
+        <div className="relative">
           <button
-            onClick={() => setViewMode('details')}
-            title="Details"
-            className={`p-1.5 rounded transition-colors ${viewMode === 'details' ? 'bg-slate-200 text-slate-800' : 'hover:bg-slate-100 text-slate-500'}`}
+            onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')}
+            className={`flex items-center gap-1.5 px-2.5 h-[26px] rounded hover:bg-slate-100 text-[13px] font-medium transition-colors ${activeDropdown === 'sort' ? 'bg-slate-100 text-slate-800' : 'text-slate-700'}`}
           >
-            <List size={15} />
+            <ArrowUpDown size={14} className="text-slate-500" />
+            Sort
+            <ChevronDown size={14} className="text-slate-400" />
           </button>
+          
+          {activeDropdown === 'sort' && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
+              <div className="absolute top-full mt-1 left-0 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1.5 z-50 text-[13px] text-slate-700 animate-in fade-in slide-in-from-top-2 duration-200">
+                <button onClick={() => { handleSort('name'); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center justify-between">
+                  Name {sortBy === 'name' && <Check size={14} className="text-blue-600"/>}
+                </button>
+                <button onClick={() => { handleSort('date'); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center justify-between">
+                  Date modified {sortBy === 'date' && <Check size={14} className="text-blue-600"/>}
+                </button>
+                <button onClick={() => { handleSort('type'); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center justify-between">
+                  Type {sortBy === 'type' && <Check size={14} className="text-blue-600"/>}
+                </button>
+                <button onClick={() => { handleSort('size'); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center justify-between">
+                  Size {sortBy === 'size' && <Check size={14} className="text-blue-600"/>}
+                </button>
+                <div className="h-px bg-slate-200 my-1" />
+                <button onClick={() => { setSortAsc(true); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center justify-between">
+                  Ascending {sortAsc && <Check size={14} className="text-blue-600"/>}
+                </button>
+                <button onClick={() => { setSortAsc(false); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center justify-between">
+                  Descending {!sortAsc && <Check size={14} className="text-blue-600"/>}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* View Dropdown */}
+        <div className="relative">
           <button
-            onClick={() => setViewMode('grid')}
-            title="Large Icons"
-            className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-slate-200 text-slate-800' : 'hover:bg-slate-100 text-slate-500'}`}
+            onClick={() => setActiveDropdown(activeDropdown === 'view' ? null : 'view')}
+            className={`flex items-center gap-1.5 px-2.5 h-[26px] rounded hover:bg-slate-100 text-[13px] font-medium transition-colors ${activeDropdown === 'view' ? 'bg-slate-100 text-slate-800' : 'text-slate-700'}`}
           >
-            <LayoutGrid size={15} />
+            <List size={14} className="text-slate-500" />
+            View
+            <ChevronDown size={14} className="text-slate-400" />
           </button>
+          
+          {activeDropdown === 'view' && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
+              <div className="absolute top-full mt-1 right-0 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1.5 z-50 text-[13px] text-slate-700 animate-in fade-in slide-in-from-top-2 duration-200">
+                <button onClick={() => { setViewMode('grid'); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid size={14} className="text-slate-500"/> Grid View
+                  </div>
+                  {viewMode === 'grid' && <Check size={14} className="text-blue-600"/>}
+                </button>
+                <button onClick={() => { setViewMode('details'); setActiveDropdown(null); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <List size={14} className="text-slate-500"/> Details
+                  </div>
+                  {viewMode === 'details' && <Check size={14} className="text-blue-600"/>}
+                </button>
+                <div className="h-px bg-slate-200 my-1" />
+                <div className="px-3 py-1.5 flex items-center justify-between text-slate-500">
+                  <span className="font-medium">Show</span>
+                </div>
+                <button 
+                  onClick={() => { setShowHidden(!showHidden); setActiveDropdown(null); }} 
+                  className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center justify-between"
+                >
+                  Hidden items {showHidden && <Check size={14} className="text-blue-600"/>}
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Status label */}
@@ -711,61 +1355,91 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
       <div className="flex flex-1 min-h-0">
 
         {/* ── SIDEBAR ─────────────────────────────────────────── */}
-        <div className="w-[200px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto custom-scrollbar py-2">
+        <div className="w-[210px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto custom-scrollbar py-2 flex flex-col">
 
-          {/* Quick Access */}
-          <div className="px-3 pb-0.5">
-            <div className="flex items-center gap-1 py-0.5 text-[12px] font-semibold text-slate-500 uppercase tracking-wide">
-              <ChevronDown size={12} />
-              Quick Access
-            </div>
-          </div>
-          <div className="pl-5 pr-1 pb-2 space-y-0.5">
+          {/* Top Links: Home & Gallery */}
+          <div className="px-2 space-y-0.5 mb-1">
             <button
               onClick={() => navigateTo('')}
-              className={`w-full flex items-center gap-2 px-2 py-0.5 rounded text-[13px] text-left transition-colors ${currentPath === '' ? 'bg-[#cce4f7] text-slate-900' : 'hover:bg-slate-100 text-slate-700'
-                }`}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-1 rounded-md text-[13px] text-left font-medium transition-colors ${
+                currentPath === '' ? 'bg-[#cce4f7] text-slate-900' : 'hover:bg-slate-100 text-slate-700'
+              }`}
             >
-              <Home size={14} className="text-slate-500 shrink-0" />
+              <Home size={15} className="text-amber-600 shrink-0" />
               Home
             </button>
-            {quickLinks.map(([key, path]) => {
-              let icon = <Folder size={14} className="text-yellow-500 shrink-0" />;
-              if (key === 'desktop') icon = <Monitor size={14} className="text-blue-500 shrink-0" />;
-              if (key === 'downloads') icon = <Download size={14} className="text-green-600 shrink-0" />;
-              const isActive = currentPath === path;
+            <button
+              onClick={() => navigateTo('Pictures')}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-1 rounded-md text-[13px] text-left font-medium transition-colors ${
+                currentPath === 'Pictures' ? 'bg-[#cce4f7] text-slate-900' : 'hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              <ImageIcon size={15} className="text-blue-500 shrink-0" />
+              Gallery
+            </button>
+          </div>
+
+          <div className="h-px bg-slate-200/80 my-1.5 mx-3" />
+
+          {/* Pinned Quick Access List */}
+          <div className="px-2 space-y-0.5">
+            {pinnedFolders.map((item) => {
+              const resolvedPath = quickAccess[item.path.toLowerCase()] || item.path;
+              const isActive = currentPath === resolvedPath || currentPath === item.path;
+
+              let iconElement = <Folder size={14} className="text-amber-500 shrink-0" />;
+              if (item.icon === 'desktop') iconElement = <Monitor size={14} className="text-blue-500 shrink-0" />;
+              if (item.icon === 'downloads') iconElement = <Download size={14} className="text-emerald-600 shrink-0" />;
+              if (item.icon === 'pictures') iconElement = <ImageIcon size={14} className="text-sky-500 shrink-0" />;
+              if (item.icon === 'music') iconElement = <Music size={14} className="text-pink-500 shrink-0" />;
+              if (item.icon === 'videos') iconElement = <Video size={14} className="text-purple-500 shrink-0" />;
+              if (item.icon === 'documents') iconElement = <FileText size={14} className="text-slate-500 shrink-0" />;
+
               return (
-                <button
-                  key={key}
-                  onClick={() => navigateTo(path as string)}
-                  className={`w-full flex items-center gap-2 px-2 py-0.5 rounded text-[13px] text-left capitalize transition-colors ${isActive ? 'bg-[#cce4f7] text-slate-900' : 'hover:bg-slate-100 text-slate-700'
-                    }`}
+                <div
+                  key={item.name}
+                  onClick={() => navigateTo(resolvedPath)}
+                  className={`group flex items-center justify-between px-2.5 py-1 rounded-md text-[13px] text-left transition-colors cursor-pointer select-none ${
+                    isActive ? 'bg-[#cce4f7] text-slate-900 font-medium' : 'hover:bg-slate-100 text-slate-700'
+                  }`}
                 >
-                  {icon}
-                  {key}
-                </button>
+                  <div className="flex items-center gap-2.5 truncate flex-1 min-w-0 pr-1">
+                    {iconElement}
+                    <span className="truncate">{item.name}</span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePinFolder(item.name, item.path);
+                    }}
+                    title="Unpin from Quick Access"
+                    className="opacity-40 group-hover:opacity-100 p-0.5 rounded hover:bg-slate-200/70 transition-opacity shrink-0"
+                  >
+                    <Pin size={11} className="text-slate-500 fill-slate-500 rotate-45" />
+                  </button>
+                </div>
               );
             })}
           </div>
 
+          <div className="h-px bg-slate-200/80 my-1.5 mx-3" />
+
           {/* This PC */}
-          <div className="px-3 pb-0.5 border-t border-slate-100 pt-2">
+          <div className="px-3 pb-0.5 pt-1">
             <div className="flex items-center gap-1 py-0.5 text-[12px] font-semibold text-slate-500 uppercase tracking-wide">
               <ChevronDown size={12} />
               This PC
             </div>
           </div>
           <div className="pl-5 pr-1 space-y-0.5 pb-2">
-            {[
-              { label: 'Local Disk (C:)', icon: <HardDrive size={14} className="text-slate-500 shrink-0" />, path: 'C:' },
-            ].map(item => (
+            {drives.map(drive => (
               <button
-                key={item.path}
-                onClick={() => navigateTo('')}
+                key={drive.name}
+                onClick={() => navigateTo(drive.name)}
                 className="w-full flex items-center gap-2 px-2 py-0.5 rounded text-[13px] text-left hover:bg-slate-100 text-slate-700 transition-colors"
               >
-                {item.icon}
-                {item.label}
+                <HardDrive size={14} className="text-slate-500 shrink-0" />
+                Local Disk ({drive.name})
               </button>
             ))}
           </div>
@@ -784,39 +1458,43 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto custom-scrollbar relative bg-white"
           onClick={() => setSelectedItems(new Set())}
+          onContextMenu={(e) => handleContextMenu(e, 'background')}
         >
-          <AnimatePresence mode="wait">
-            {loading && files.length === 0 ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 flex items-center justify-center"
-              >
-                <div className="size-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              </motion.div>
-            ) : sortedFiles.length === 0 ? (
-              <EmptyFileState
-                searchQuery={searchQuery}
-                onClearSearch={() => setSearchQuery('')}
-              />
-            ) : (
-              <motion.div
-                key={`view-${viewMode}-${currentPath}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.1 }}
-              >
-                {currentPath === '' && isGlobal
-                  ? renderDrivesView()
-                  : viewMode === 'details'
-                    ? renderDetailsView()
-                    : renderGridView()
-                }
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {loading && files.length === 0 ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              <div className="size-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </motion.div>
+          ) : sortedFiles.length === 0 && (localSearch || debouncedSearch || searchQuery).trim() ? (
+            <EmptyFileState
+              searchQuery={localSearch || debouncedSearch || searchQuery}
+              onClearSearch={() => {
+                setLocalSearch('');
+                setDebouncedSearch('');
+                setSearchQuery('');
+              }}
+              onNewDocument={(e) => handleContextMenu(e, 'background')}
+            />
+          ) : (
+            <motion.div
+              key={`view-${viewMode}-${currentPath}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.1 }}
+            >
+              {currentPath === '' && isGlobal
+                ? renderDrivesView()
+                : viewMode === 'details'
+                  ? renderDetailsView()
+                  : renderGridView()
+              }
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -844,6 +1522,22 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
             </span>
           </>
         )}
+        <div className="ml-auto flex items-center gap-2">
+          <input
+            type="range"
+            min="48"
+            max="256"
+            step="8"
+            value={gridItemSize}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              setGridItemSize(val);
+              if (val <= 64 && viewMode !== 'details') setViewMode('details');
+              else if (val > 64 && viewMode !== 'grid') setViewMode('grid');
+            }}
+            className="w-24 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
       </div>
 
       {/* ── FILE VIEWER MODAL ───────────────────────────────────── */}
@@ -922,6 +1616,154 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath }) => {
                     </pre>
                   );
                 })()}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── CONTEXT MENU ────────────────────────────────────────── */}
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.1 }}
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            className="fixed z-[9999] w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {contextMenu.type === 'background' ? (
+              <>
+                <button onClick={() => { setContextMenu(null); handleCreateFolder(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                  <FolderIcon size={14} className="text-slate-400" /> New Folder
+                </button>
+                <div className="h-px bg-slate-100 my-1" />
+                <button onClick={() => { setContextMenu(null); handleCreateFile('New Text Document.txt'); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                  <FileIcon size={14} className="text-slate-400" /> New Text Document
+                </button>
+                <div className="h-px bg-slate-100 my-1" />
+                <button onClick={() => { setContextMenu(null); fetchFiles(true); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                  <RefreshCcw size={14} className="text-slate-400" /> Refresh
+                </button>
+                <div className="h-px bg-slate-100 my-1" />
+                <button onClick={() => { setContextMenu(null); handlePaste(); }} disabled={!clipboard} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span className="text-[14px] text-slate-400">📋</span> Paste
+                </button>
+              </>
+            ) : (
+              <>
+                {contextMenu.type === 'file' && (
+                  <button onClick={() => { setContextMenu(null); handleOpenNative(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2 font-medium">
+                    <ExternalLink size={14} className="text-blue-500" /> Open Default
+                  </button>
+                )}
+                {contextMenu.type === 'folder' && contextMenu.item && (
+                  <>
+                    <button onClick={() => { setContextMenu(null); navigateTo(contextMenu.item!.name); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2 font-medium">
+                      <FolderIcon size={14} className="text-amber-500" /> Open Folder
+                    </button>
+                    {pinnedFolders.some(p => p.name === contextMenu.item!.name || p.path === getAbsolutePath(contextMenu.item!.name)) ? (
+                      <button onClick={() => { togglePinFolder(contextMenu.item!.name, getAbsolutePath(contextMenu.item!.name)); setContextMenu(null); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                        <PinOff size={14} className="text-slate-400" /> Unpin from Quick Access
+                      </button>
+                    ) : (
+                      <button onClick={() => { togglePinFolder(contextMenu.item!.name, getAbsolutePath(contextMenu.item!.name)); setContextMenu(null); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                        <Pin size={14} className="text-blue-600" /> Pin to Quick Access
+                      </button>
+                    )}
+                  </>
+                )}
+                <div className="h-px bg-slate-100 my-1" />
+                <button onClick={() => { setContextMenu(null); handleCopy(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                  <span className="text-[14px] text-slate-400">📋</span> Copy
+                </button>
+                <button onClick={() => { setContextMenu(null); handleCut(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                  <span className="text-[14px] text-slate-400">✂️</span> Cut
+                </button>
+                <div className="h-px bg-slate-100 my-1" />
+                <button onClick={() => { setContextMenu(null); handleRename(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                  <Edit2 size={14} className="text-slate-400" /> Rename
+                </button>
+                <button onClick={(e) => { setContextMenu(null); handleDelete(e); }} className="w-full text-left px-3 py-1.5 text-[13px] text-red-600 hover:bg-red-50 flex items-center gap-2">
+                  <Trash2 size={14} className="text-red-500" /> Delete
+                </button>
+                <div className="h-px bg-slate-100 my-1" />
+                <button onClick={() => { setContextMenu(null); handleShowProperties(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                  <Info size={14} className="text-slate-400" /> Properties
+                </button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── FILE OPERATION PROGRESS MODAL ───────────────────────── */}
+      <AnimatePresence>
+        {fileOpProgress && fileOpProgress.isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99999] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-md p-6 space-y-5"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                    <Copy className="size-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-base">
+                      {fileOpProgress.type === 'copy' ? 'Copying Item' : 'Moving Item'}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {fileOpProgress.type === 'copy' ? 'Creating a copy in target directory' : 'Relocating to target directory'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                  {fileOpProgress.progress}%
+                </span>
+              </div>
+
+              {/* Path Info */}
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between text-slate-600">
+                  <span className="font-semibold text-slate-500">File:</span>
+                  <span className="font-bold text-slate-800 truncate max-w-[240px]" title={fileOpProgress.fileName}>
+                    {fileOpProgress.fileName}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-medium">Destination:</span>
+                  <span className="truncate max-w-[240px] text-slate-600 font-mono text-[11px]" title={fileOpProgress.target}>
+                    {fileOpProgress.target}
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
+                    initial={{ width: '0%' }}
+                    animate={{ width: `${fileOpProgress.progress}%` }}
+                    transition={{ ease: 'easeOut', duration: 0.2 }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+                  <span>{fileOpProgress.progress < 100 ? 'Processing...' : 'Complete!'}</span>
+                  <span>{fileOpProgress.progress}%</span>
+                </div>
               </div>
             </motion.div>
           </motion.div>

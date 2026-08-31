@@ -1,6 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { TabbedFileExplorer } from '../../GlobalComponents/FileExplorer/TabbedFileExplorer';
 import { useClientStore, Client, ClientNote, ProjectHistoryItem } from '../../../stores/clientStore';
 import { useClientDetailsStore } from '../../../stores/clientDetailsStore';
+import { confirm } from '../../../stores/confirmStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { AssignedExpertsSidebar, Expert } from '../../GlobalComponents/Sidebars/AssignedExpertsSidebar';
 import { ManageTagsSidebar } from '../Sidebars/ManageTagsSidebar';
@@ -32,7 +34,8 @@ import {
   Calendar,
   AlertCircle,
   Star,
-  Pencil
+  Pencil,
+  FolderOpen
 } from 'lucide-react';
 
 interface ClientDetailsPageProps {
@@ -124,7 +127,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: { ...useClientDetailsStore.getState(), pinnedAssets: newVal }, version: 0 })
-    }).catch(() => {});
+    }).catch(() => { });
     // Also update local store state
     useClientDetailsStore.setState({ pinnedAssets: newVal });
   };
@@ -240,7 +243,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
     setActivityLogs(prev => [
       {
         id: newLogId,
-        user: 'Sarah Connor',
+        user: 'You',
         action: 'updated branding categorization tags to:',
         target: updatedTags.join(', ') || 'No tags',
         time: 'Just now',
@@ -265,7 +268,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
     setActivityLogs(prev => [
       {
         id: newLogId,
-        user: 'Sarah Connor',
+        user: 'You',
         action: 'removed branding tag:',
         target: tagToRemove,
         time: 'Just now',
@@ -291,7 +294,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
     setActivityLogs(prev => [
       {
         id: newLogId,
-        user: 'Sarah Connor',
+        user: 'You',
         action: 'attached regulatory document',
         target: docName,
         time: 'Just now',
@@ -394,14 +397,14 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
       clientInitials: selectedClient.initials,
       type: noteType,
       content: noteContent,
-      authorInitials: 'JD', // Simulated signed-in designer
+      authorInitials: 'You',
       tags: noteTags.split(',').map(t => t.trim()).filter(Boolean)
     });
 
     // Add activity log
     const newActivity = {
       id: `act-${Date.now()}`,
-      user: 'Sarah Connor',
+      user: 'You',
       action: `added a ${noteType.toLowerCase()} note to`,
       target: selectedClient.name,
       time: 'Just now',
@@ -464,42 +467,28 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
   };
 
   const simulateUpload = (fileName: string) => {
-    setUploadProgress(10);
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev === null) return null;
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setUploadProgress(null);
-            const fileType = fileName.endsWith('.zip') ? 'zip' : fileName.endsWith('.pdf') ? 'pdf' : 'doc';
-            setPinnedAssets(prevAssets => [
-              {
-                id: `asset-${Date.now()}`,
-                name: fileName,
-                type: fileType,
-                date: 'Uploaded Just now'
-              },
-              ...prevAssets
-            ]);
-            // Add activity log
-            setActivityLogs(prevAct => [
-              {
-                id: `act-${Date.now()}`,
-                user: 'You',
-                action: 'uploaded asset',
-                target: fileName,
-                time: 'Just now',
-                type: 'comment'
-              },
-              ...prevAct
-            ]);
-          }, 600);
-          return 100;
-        }
-        return prev + 15;
-      });
-    }, 150);
+    const fileType = fileName.endsWith('.zip') ? 'zip' : fileName.endsWith('.pdf') ? 'pdf' : 'doc';
+    setPinnedAssets(prevAssets => [
+      {
+        id: `asset-${Date.now()}`,
+        name: fileName,
+        type: fileType,
+        date: 'Uploaded Just now'
+      },
+      ...prevAssets
+    ]);
+    // Add activity log
+    setActivityLogs(prevAct => [
+      {
+        id: `act-${Date.now()}`,
+        user: 'You',
+        action: 'uploaded asset',
+        target: fileName,
+        time: 'Just now',
+        type: 'comment'
+      },
+      ...prevAct
+    ]);
   };
 
   // Get specific notes for the currently active selected client index
@@ -613,8 +602,12 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
               </div>
 
               <button
-                onClick={() => {
-                  if (window.confirm(`Are you sure you want to delete ${selectedClient.name}? This will move them to the Trash.`)) {
+                onClick={async () => {
+                  const ok = await confirm.danger(
+                    `Delete ${selectedClient.name}?`,
+                    'This client account will be moved to the Trash.'
+                  );
+                  if (ok) {
                     deleteClient(selectedClient.id);
                     onBack();
                   }
@@ -752,16 +745,16 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                                 {formatted}
                               </span>
 
-                              {/* Delete button (âœ•) as shown in image */}
+                              {/* Delete button (X) as shown in image */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleRemoveTag(t);
                                 }}
-                                className="ml-1 text-white/60 hover:text-white transition-colors text-[11px] font-bold cursor-pointer select-none leading-none focus:outline-none"
+                                className="ml-1 text-white/60 hover:text-white transition-colors cursor-pointer select-none focus:outline-none flex items-center justify-center"
                                 title={`Remove tag: ${formatted}`}
                               >
-                                âœ•
+                                <X size={11} strokeWidth={2.5} />
                               </button>
                             </div>
                           );
@@ -960,10 +953,10 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                         </p>
                         <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-2 text-[10px]">
                           <span className="font-bold text-slate-900">
-                            {clientNotes.length > 0 ? clientNotes[0].authorInitials : 'Sarah C.'}
+                            {clientNotes.length > 0 ? clientNotes[0].authorInitials : 'You'}
                           </span>
                           <span className="text-slate-400 font-medium">
-                            {clientNotes.length > 0 ? clientNotes[0].timeText : 'â€¢ Yesterday'}
+                            {clientNotes.length > 0 ? clientNotes[0].timeText : '• Yesterday'}
                           </span>
                         </div>
                       </div>
@@ -1021,19 +1014,20 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
             </div>
 
             {/* Scrollable Action Content */}
-            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-10 scroll-smooth custom-scrollbar">
+            <div className={`flex-1 min-h-0 ${activeTab === 'files' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto space-y-10 scroll-smooth custom-scrollbar'}`}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.15 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.06, ease: [0.16, 1, 0.3, 1] }}
+                  className={activeTab === 'files' ? 'flex-1 min-h-0 flex flex-col' : ''}
                 >
 
                   {/* TAB: OVERVIEW */}
                   {activeTab === 'overview' && (
-                    <div className="space-y-10">
+                    <div className="space-y-10 px-8 py-6">
 
                       {/* Latest Tasks Module */}
                       <section>
@@ -1214,74 +1208,40 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                     </div>
                   )}
 
-                  {/* TAB: TASKS */}
                   {activeTab === 'tasks' && (
-                    <TaskPage onTabChange={(tab) => {
-                      if (tab === 'tasks') setActiveTab('tasks');
-                      else if (tab === 'files') setActiveTab('files');
-                      else if (tab === 'notes') setActiveTab('notes');
-                    }} />
+                    <TaskPage 
+                      projectId={selectedClient ? `client-${selectedClient.id}` : undefined}
+                      onTabChange={(tab) => {
+                        if (tab === 'tasks') setActiveTab('tasks');
+                        else if (tab === 'files') setActiveTab('files');
+                        else if (tab === 'notes') setActiveTab('notes');
+                      }} 
+                    />
                   )}
 
                   {/* TAB: FILES */}
                   {activeTab === 'files' && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div className="flex-1 min-h-[500px] border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col">
+                      {/* Header */}
+                      <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-3 bg-slate-50/50">
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                          <FolderOpen size={20} className="fill-current/20" />
+                        </div>
                         <div>
-                          <h3 className="text-lg font-black tracking-tight text-slate-900">Corporate Assets</h3>
-                          <p className="text-xs text-slate-400 font-medium mt-0.5">Manage brand stylesheets, graphics packages, and historical project attachments</p>
+                          <h3 className="text-base font-semibold text-slate-800">Client Files</h3>
+                          <p className="text-sm text-slate-500">Manage documents, assets, and deliverables</p>
                         </div>
                       </div>
-
-                      {/* Interactive Uploader Panel */}
-                      <div
-                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onDrop={handleFileDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl text-center cursor-pointer hover:bg-slate-100/50 hover:border-slate-400 transition-all ${isDragging ? 'border-indigo-600 bg-indigo-50/20' : ''
-                          }`}
-                      >
-                        <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">cloud_upload</span>
-                        <h4 className="text-sm font-black text-slate-600">Drag files here to pin them to the profile</h4>
-                        <p className="text-xs text-slate-400 font-medium mt-1">Supports PDF, ZIP, PNG, and AI directories up to 100MB</p>
-                        <button className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-wider">
-                          Select Manually
-                        </button>
-                      </div>
-
-                      {/* Asset Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                        {pinnedAssets.map(asset => (
-                          <div key={asset.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${asset.type === 'zip' ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-blue-600'
-                                }`}>
-                                <span className="material-symbols-outlined fill-1">
-                                  {asset.type === 'zip' ? 'folder_zip' : 'description'}
-                                </span>
-                              </div>
-                              <div className="overflow-hidden">
-                                <h4 className="text-sm font-black text-slate-900 truncate">{asset.name}</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">{asset.date}</p>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => setPinnedAssets(prev => prev.filter(a => a.id !== asset.id))}
-                              className="p-1.5 text-slate-400 hover:text-red-500 rounded hover:bg-slate-100 transition-colors"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          </div>
-                        ))}
+                      {/* Explorer */}
+                      <div className="flex-1 relative overflow-hidden bg-white min-h-[600px] h-full flex flex-col">
+                        <TabbedFileExplorer sessionId={`CLIENT_${selectedClient.id}`} rootPath="GLOBAL" />
                       </div>
                     </div>
                   )}
 
                   {/* TAB: FINANCIALS */}
                   {activeTab === 'financials' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 px-8 py-6">
                       <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                         <div>
                           <h3 className="text-lg font-black tracking-tight text-slate-900">Financial Statement</h3>
@@ -1380,7 +1340,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
 
                   {/* TAB: NOTES */}
                   {activeTab === 'notes' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 px-8 py-6">
                       <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                         <div>
                           <h3 className="text-lg font-black tracking-tight text-slate-900">Client Logs</h3>
@@ -1452,12 +1412,14 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
 
                   {/* TAB: PROJECTS */}
                   {activeTab === 'projects' && (
-                    <ProjectsPage
-                      clientName={selectedClient.name}
-                      onNewProject={onNewProject}
-                      onEditProject={onEditProject}
-                      onProjectClick={onProjectClick}
-                    />
+                    <div className='px-8 py-6'>
+                      <ProjectsPage
+                        clientName={selectedClient.name}
+                        onNewProject={onNewProject}
+                        onEditProject={onEditProject}
+                        onProjectClick={onProjectClick}
+                      />
+                    </div>
                   )}
 
                 </motion.div>

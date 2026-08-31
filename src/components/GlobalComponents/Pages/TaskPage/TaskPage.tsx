@@ -1,20 +1,37 @@
 import React from 'react';
 import { TaskList } from './TaskList';
 import { useTaskStore } from '../../../../stores/taskStore';
+import { useProjectStore } from '../../../../stores/projectStore';
 import FieldsSidebar from './FieldsSidebar';
 
 interface TaskPageProps {
   onTabChange: (tab: 'tasks' | 'files' | 'notes') => void;
+  projectId?: string;
 }
 
 import { AnimatePresence, motion } from 'motion/react';
 
-export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange }) => {
-  const { tasks, addTask, updateTask, isFieldsSidebarOpen, setFieldsSidebarOpen } = useTaskStore();
+export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) => {
+  const { tasks, addTask, updateTask, isFieldsSidebarOpen, setFieldsSidebarOpen, setProject } = useTaskStore();
+  const { currentProject } = useProjectStore();
+
+  const effectiveProjectId = projectId || currentProject?.id || 'default-project';
+
+  React.useEffect(() => {
+    if (effectiveProjectId) {
+      setProject(effectiveProjectId);
+    }
+  }, [effectiveProjectId, setProject]);
+
+  const projectTasks = React.useMemo(() => {
+    if (!effectiveProjectId) return [];
+    return tasks.filter(t => t.projectId === effectiveProjectId);
+  }, [tasks, effectiveProjectId]);
 
   const handleAddTask = (phase?: string) => {
+    if (!effectiveProjectId) return;
     addTask({
-      projectId: 'rebrand-2024',
+      projectId: effectiveProjectId,
       title: 'New Task',
       details: '',
       dueDate: '',
@@ -28,15 +45,15 @@ export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange }) => {
   return (
     <div id="task-page-container" className="relative flex-1 flex overflow-hidden h-full leading-normal bg-white">
       <div className="flex-1 overflow-y-auto relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex flex-col h-full min-w-0 px-8 py-6">
-        <TaskList 
-          onAddTask={handleAddTask} 
+        <TaskList
+          onAddTask={handleAddTask}
           onTaskClick={(task) => {
             const newTitle = prompt("Edit Task Title:", task.title);
             if (newTitle && newTitle.trim() !== "") {
               updateTask(task.id, { title: newTitle.trim() });
             }
           }}
-          tasks={tasks}
+          tasks={projectTasks}
         />
       </div>
 

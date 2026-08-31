@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export interface TimeEntry {
   id: string;
@@ -106,3 +106,8 @@ export const useTimeStore = create<TimeState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('time', () => {
+  useTimeStore.persist.rehydrate();
+});

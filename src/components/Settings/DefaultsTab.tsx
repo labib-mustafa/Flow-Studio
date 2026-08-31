@@ -150,7 +150,6 @@ export const DefaultsTab: React.FC = () => {
               <h4 className="text-sm font-semibold text-[#111111]">Default Typography</h4>
               <p className="text-[11px] text-slate-500">Set the base font family for text layers.</p>
             </div>
-            <button className="text-xs font-semibold text-[#111111] bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs">Manage Fonts</button>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

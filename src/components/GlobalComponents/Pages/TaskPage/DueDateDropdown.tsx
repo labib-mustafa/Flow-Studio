@@ -63,14 +63,14 @@ const generateCalendarDays = (year: number, month: number) => {
   return days;
 };
 
-export const DueDateDropdown: React.FC<DueDateDropdownProps> = ({ task, children, onUpdateDates }) => {
-  const { updateTaskDueDate, updateTaskDates } = useTaskStore();
-  
+const EMPTY_DAYS: any[] = [];
+
+export const DueDateDropdown: React.FC<DueDateDropdownProps> = React.memo(({ task, children, onUpdateDates }) => {
   const handleUpdateDates = (startDate: Date | null, dueDate: Date | null) => {
     if (onUpdateDates) {
       onUpdateDates(startDate, dueDate);
     } else {
-      updateTaskDates(task?.id || '', startDate, dueDate);
+      useTaskStore.getState().updateTaskDates(task?.id || '', startDate, dueDate);
     }
   };
   const [open, setOpen] = useState(false);
@@ -93,8 +93,9 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = ({ task, children
   });
 
   const calendarDays = useMemo(() => {
+    if (!open) return EMPTY_DAYS;
     return generateCalendarDays(viewDate.getFullYear(), viewDate.getMonth());
-  }, [viewDate]);
+  }, [open, viewDate]);
 
   // Keep input fields in sync with store changes
   React.useEffect(() => {
@@ -216,7 +217,7 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = ({ task, children
   const activeBorderClass = "border-zinc-800 shadow-sm bg-white";
   const inactiveBorderClass = "border-transparent bg-slate-50 opacity-70 hover:opacity-100 hover:bg-slate-100 cursor-text";
 
-  const content = (
+  const content = open ? (
     <div className="flex flex-col w-[560px] font-sans overflow-hidden">
       {/* Top Bar */}
       <div className="flex items-center gap-2 p-2 border-b border-slate-100">
@@ -369,7 +370,7 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = ({ task, children
         </div>
       </div>
     </div>
-  );
+  ) : null;
 
   return (
     <CellPopover
@@ -385,4 +386,4 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = ({ task, children
       })}
     </CellPopover>
   );
-};
+});

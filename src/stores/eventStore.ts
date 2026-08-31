@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createFileStorage } from '../lib/fileStorage';
+import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 
 export interface CalendarEvent {
   id: string;
@@ -10,6 +10,7 @@ export interface CalendarEvent {
   time: string; // HH:MM
   type: 'Call' | 'Design' | 'Team Sync' | 'Other';
   participants: string;
+  client?: any;
 }
 
 interface EventState {
@@ -70,3 +71,8 @@ export const useEventStore = create<EventState>()(
     }
   )
 );
+
+
+onStoreExternalUpdate('events', () => {
+  useEventStore.persist.rehydrate();
+});

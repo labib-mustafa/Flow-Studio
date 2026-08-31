@@ -5,23 +5,8 @@ export const TimeActivity: React.FC = () => {
   const { getActivityCounts, activities } = useActivityStore();
   const [hoveredDay, setHoveredDay] = useState<{ date: string; count: number; x: number; y: number } | null>(null);
 
-  // Debug log to trace hydration
-  console.log('[TimeActivity] Loaded activities count:', activities?.length);
-
-  // Force hydrate if store is empty (helps bypass any browser caching issues)
-  useEffect(() => {
-    if (activities.length === 0) {
-      fetch('/api/store/activities')
-        .then(res => res.json())
-        .then(data => {
-          if (data?.state?.activities?.length > 0) {
-            useActivityStore.setState({ activities: data.state.activities });
-          }
-        })
-        .catch(err => console.error('Failed to fetch dummy data', err));
-    }
-  }, [activities.length]);
-
+  // Wait for hydration or rely on useActivityStore
+  // (No dummy fetch)
   // Re-calculate the grid whenever activities change
   const { weeks, maxCount } = useMemo(() => {
     const counts = getActivityCounts();
@@ -29,25 +14,25 @@ export const TimeActivity: React.FC = () => {
     Object.values(counts).forEach(c => {
       if (c > max) max = c;
     });
-    
+
     // We want 52 columns of 7 days, ending on today.
     const today = new Date();
     // Normalize to midnight
     today.setHours(0, 0, 0, 0);
-    
+
     const days: { date: Date; dateStr: string; count: number }[] = [];
-    
+
     // Go back exactly 364 days + today = 365 days
     for (let i = 364; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      
+
       // format YYYY-MM-DD local
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
       const dateStr = `${yyyy}-${mm}-${dd}`;
-      
+
       days.push({
         date: d,
         dateStr,
@@ -58,14 +43,14 @@ export const TimeActivity: React.FC = () => {
     // Proper alignment:
     const startDayOfWeek = days[0].date.getDay(); // 0 = Sunday, 6 = Saturday
     const alignedWeeks: { dateStr: string; count: number; empty: boolean }[][] = [];
-    
+
     let currentWeek: { dateStr: string; count: number; empty: boolean }[] = [];
-    
+
     // Pad first week with empty days if needed
     for (let i = 0; i < startDayOfWeek; i++) {
       currentWeek.push({ dateStr: '', count: 0, empty: true });
     }
-    
+
     days.forEach(day => {
       currentWeek.push({ dateStr: day.dateStr, count: day.count, empty: false });
       if (currentWeek.length === 7) {
@@ -73,7 +58,7 @@ export const TimeActivity: React.FC = () => {
         currentWeek = [];
       }
     });
-    
+
     if (currentWeek.length > 0) {
       // Pad last week with empty days
       while (currentWeek.length < 7) {
@@ -118,10 +103,10 @@ export const TimeActivity: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 min-w-[750px]">
         <div>
           <h3 className="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-2">
-            Time Activity <span className="material-symbols-outlined text-[18px] text-blue-500">grid_on</span>
+            Time Activity
           </h3>
         </div>
-        
+
         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500">
           <span>Less</span>
           <div className="flex gap-1">
@@ -150,7 +135,7 @@ export const TimeActivity: React.FC = () => {
       </div>
 
       {hoveredDay && (
-        <div 
+        <div
           className="fixed z-50 bg-slate-950 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-2xl border border-slate-800 pointer-events-none animate-in fade-in zoom-in-95 duration-100 whitespace-nowrap"
           style={{
             left: hoveredDay.x,

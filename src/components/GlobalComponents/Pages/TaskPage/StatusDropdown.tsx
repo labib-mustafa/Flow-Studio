@@ -38,9 +38,11 @@ const TASK_TYPES = [
   { id: 'meeting', label: 'Meeting Note', icon: 'messages-square', isDefault: false },
 ];
 
-export const StatusDropdown: React.FC<StatusDropdownProps> = ({ task, children, triggerClassName = "w-full h-full", onSelectOption, onSelectTypeOption }) => {
-  const { updateTask, updateTaskType, statusConfigs } = useTaskStore();
+const EMPTY_OPTIONS: any[] = [];
+
+export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task, children, triggerClassName = "w-full h-full", onSelectOption, onSelectTypeOption }) => {
   const [open, setOpen] = useState(false);
+  const statusConfigs = useTaskStore(state => open ? state.statusConfigs : null);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'status' | 'type'>('status');
 
@@ -51,7 +53,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({ task, children, 
       let statusId = phase;
       if (phase === 'fawawf') statusId = 'inprogress';
       const status = statusId === 'done' ? 'Complete' : 'Incomplete';
-      updateTask(task.id, { phase: statusId as any, status: status as any });
+      useTaskStore.getState().updateTask(task.id, { phase: statusId as any, status: status as any });
     }
     setOpen(false);
   };
@@ -60,7 +62,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({ task, children, 
     if (onSelectTypeOption) {
       onSelectTypeOption(typeId);
     } else if (task) {
-      updateTaskType(task.id, typeId);
+      useTaskStore.getState().updateTaskType(task.id, typeId);
     }
     setOpen(false);
   };
@@ -72,6 +74,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({ task, children, 
   const [showAiPlaceholder, setShowAiPlaceholder] = useState(false);
 
   const statusOptions = useMemo(() => {
+    if (!open) return EMPTY_OPTIONS;
     const options = [
       { 
         id: 'todo', 
@@ -107,19 +110,20 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({ task, children, 
     }
 
     return options;
-  }, [statusConfigs]);
+  }, [open, statusConfigs]);
 
   const filteredStatuses = useMemo(() => {
+    if (!open) return EMPTY_OPTIONS;
     return statusOptions.filter(opt => 
       opt.label.toLowerCase().includes(search.toLowerCase())
     );
-  }, [search, statusOptions]);
+  }, [open, search, statusOptions]);
 
-  const notStarted = filteredStatuses.filter(s => s.category === 'Not started');
-  const active = filteredStatuses.filter(s => s.category === 'Active');
-  const closed = filteredStatuses.filter(s => s.category === 'Closed');
+  const notStarted = useMemo(() => open ? filteredStatuses.filter(s => s.category === 'Not started') : EMPTY_OPTIONS, [open, filteredStatuses]);
+  const active = useMemo(() => open ? filteredStatuses.filter(s => s.category === 'Active') : EMPTY_OPTIONS, [open, filteredStatuses]);
+  const closed = useMemo(() => open ? filteredStatuses.filter(s => s.category === 'Closed') : EMPTY_OPTIONS, [open, filteredStatuses]);
 
-  const content = (
+  const content = open ? (
     <div className="flex flex-col w-[260px] font-sans relative overflow-hidden">
       {showAiPlaceholder ? (
         <div className="flex flex-col p-4 w-full h-[250px] bg-slate-50 items-center justify-center text-center">
@@ -296,7 +300,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({ task, children, 
         </>
       )}
     </div>
-  );
+  ) : null;
 
   return (
     <CellPopover
@@ -310,4 +314,4 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({ task, children, 
       {children}
     </CellPopover>
   );
-};
+});

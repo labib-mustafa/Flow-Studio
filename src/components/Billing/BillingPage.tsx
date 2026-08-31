@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useBillingStore } from '../../stores/billingStore';
-import { Wallet, Download, Plus, Search } from 'lucide-react';
+import { Receipt, Download, Plus, Search } from 'lucide-react';
 import { useSettingsContext } from '../../context/SettingsContext';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -26,14 +26,20 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
 
   const [activeTab, setActiveTab] = useState<'All' | 'Pending' | 'Completed' | 'Draft'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>('inv-1');
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Modals for editing
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false);
-  const [addressNameInput, setAddressNameInput] = useState(billingAddress.name);
-  const [addressLine1Input, setAddressLine1Input] = useState(billingAddress.addressLine1);
-  const [addressLine2Input, setAddressLine2Input] = useState(billingAddress.addressLine2);
+  const [addressNameInput, setAddressNameInput] = useState(billingAddress.name || settings?.displayName || user?.displayName || '');
+  const [addressLine1Input, setAddressLine1Input] = useState(billingAddress.addressLine1 || settings?.companyName || '');
+  const [addressLine2Input, setAddressLine2Input] = useState(billingAddress.addressLine2 || '');
+
+  useEffect(() => {
+    setAddressNameInput(billingAddress.name || settings?.displayName || user?.displayName || '');
+    setAddressLine1Input(billingAddress.addressLine1 || settings?.companyName || '');
+    setAddressLine2Input(billingAddress.addressLine2 || '');
+  }, [billingAddress, settings, user]);
 
   // Card Number masking and suffix validation
   useEffect(() => {
@@ -45,10 +51,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
     if (!hasAsterisks || !hasValidSuffix) {
       const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
       updateSavedCard({
-        cardNumber: `**** **** **** ${randomSuffix}`
+        cardNumber: `**** **** **** ${randomSuffix}`,
+        brand: savedCard.brand || 'Mastercard'
       });
     }
-  }, [savedCard.cardNumber, updateSavedCard]);
+  }, [savedCard.cardNumber, savedCard.brand, updateSavedCard]);
 
   // Expiration date (validThru) validation logic
   useEffect(() => {
@@ -66,21 +73,16 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
         const month = parseInt(match[1], 10);
         const year = 2000 + parseInt(match[2], 10);
 
-        // Expiration date (last day of the expiration month)
         const expirationDate = new Date(year, month, 0);
-
-        // Day before the last day
         const dayBeforeLastDay = new Date(expirationDate);
         dayBeforeLastDay.setDate(dayBeforeLastDay.getDate() - 1);
 
-        // Reset if date is in the past, or if today is on or after the day before last day
         if (today >= dayBeforeLastDay || expirationDate < today) {
           needsReset = true;
         }
       }
 
       if (needsReset) {
-        // Calculate current date + 3 years
         const newExpDate = new Date();
         newExpDate.setFullYear(newExpDate.getFullYear() + 3);
 
@@ -88,17 +90,17 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
         const newYearStr = String(newExpDate.getFullYear()).slice(-2);
         const newValidThru = `${newMonthStr}/${newYearStr}`;
 
-        // Regenerate last 4 digits on expiration reset
         const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
         updateSavedCard({
           validThru: newValidThru,
-          cardNumber: `**** **** **** ${randomSuffix}`
+          cardNumber: `**** **** **** ${randomSuffix}`,
+          brand: savedCard.brand || 'Mastercard'
         });
       }
     };
 
     checkValidThru();
-  }, [savedCard.validThru, updateSavedCard]);
+  }, [savedCard.validThru, savedCard.brand, updateSavedCard]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -150,7 +152,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
       {/* Header Banner */}
       <header className="px-6 py-4 border-b border-slate-200/80 bg-white shrink-0 flex items-center justify-between gap-4 z-10 relative">
         <div className="flex items-center gap-2 w-1/3">
-          <Wallet className="size-5 text-slate-900 shrink-0" />
+          <Receipt className="size-5 text-slate-900 shrink-0" />
           <h2 className="text-lg font-bold text-slate-900 tracking-tight">Billing & Finance</h2>
           <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 border border-emerald-200/60">
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Account
@@ -229,13 +231,13 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-white/80 text-[18px] rotate-90">rss_feed</span>
-                          <span className="text-white font-black tracking-widest uppercase text-xs">{savedCard.brand}</span>
+                          <span className="text-white font-black tracking-widest uppercase text-xs">{savedCard.brand || 'CARD'}</span>
                         </div>
                       </div>
 
                       <div className="relative z-10 my-2">
                         <p className="font-mono text-lg sm:text-xl font-bold tracking-[0.2em] text-white drop-shadow-md text-center">
-                          {savedCard.cardNumber}
+                          {savedCard.cardNumber || '•••• •••• •••• ••••'}
                         </p>
                       </div>
 
@@ -243,12 +245,12 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                         <div>
                           <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Card Holder</p>
                           <p className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-white mt-0.5">
-                            {settings?.displayName === 'Design Pro' ? (user?.displayName || settings?.displayName) : (settings?.displayName || user?.displayName || savedCard.cardHolder || 'Bruce Wayne')}
+                            {settings?.displayName || user?.displayName || savedCard.cardHolder || 'Account Holder'}
                           </p>
                         </div>
                         <div>
                           <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Valid Thru</p>
-                          <p className="font-mono text-xs font-bold text-white mt-0.5">{savedCard.validThru}</p>
+                          <p className="font-mono text-xs font-bold text-white mt-0.5">{savedCard.validThru || '--/--'}</p>
                         </div>
                         <div className="flex items-center -space-x-3">
                           <div className="h-7 w-7 rounded-full bg-[#EB001B] opacity-90 mix-blend-screen shadow-md"></div>
@@ -360,8 +362,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-900'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900'
                         }`}
                     >
                       {tab}
@@ -377,7 +379,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
               <div className="col-span-2">Status</div>
               <div className="col-span-4">Client / Recipient</div>
               <div className="col-span-2">Issue Date</div>
-              <div className="col-span-2 text-right">Method / ID</div>
+              <div className="col-span-2">Method / ID</div>
             </div>
 
             {/* Table Rows */}
@@ -396,8 +398,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                       <div
                         onClick={() => toggleExpand(item.id)}
                         className={`grid grid-cols-1 md:grid-cols-12 items-center gap-4 rounded-2xl px-6 py-4 cursor-pointer transition-all border ${isExpanded
-                            ? 'bg-slate-900 text-white shadow-xl border-slate-900'
-                            : 'bg-white hover:bg-slate-50/80 border-slate-200/70'
+                          ? 'bg-slate-900 text-white shadow-xl border-slate-900'
+                          : 'bg-white hover:bg-slate-50/80 border-slate-200/70'
                           }`}
                       >
                         <div className="col-span-2 flex items-center justify-between md:justify-start">
@@ -410,12 +412,12 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                         <div className="col-span-2">
                           <span
                             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${isExpanded
-                                ? 'bg-white/20 text-white backdrop-blur-sm'
-                                : item.status === 'Completed'
-                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
-                                  : item.status === 'Pending'
-                                    ? 'bg-amber-50 text-amber-600 border border-amber-200/60'
-                                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              ? 'bg-white/20 text-white backdrop-blur-sm'
+                              : item.status === 'Completed'
+                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
+                                : item.status === 'Pending'
+                                  ? 'bg-amber-50 text-amber-600 border border-amber-200/60'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
                               }`}
                           >
                             <span className={`size-1.5 rounded-full ${isExpanded ? 'bg-white' : item.status === 'Completed' ? 'bg-emerald-500' : item.status === 'Pending' ? 'bg-amber-500' : 'bg-slate-400'
@@ -542,9 +544,9 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                                           showToast(`Invoice status updated to ${e.target.value}`);
                                         }}
                                         className={`text-xs font-bold px-2.5 py-1 rounded-lg border outline-none cursor-pointer appearance-none pr-6 bg-no-repeat bg-[right_0.25rem_center] bg-[length:12px_12px] ${item.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200/80' :
-                                            item.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200/80' :
-                                              item.status === 'Overdue' ? 'bg-red-50 text-red-600 border-red-200/80' :
-                                                'bg-slate-50 text-slate-600 border-slate-200/80'
+                                          item.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200/80' :
+                                            item.status === 'Overdue' ? 'bg-red-50 text-red-600 border-red-200/80' :
+                                              'bg-slate-50 text-slate-600 border-slate-200/80'
                                           }`}
                                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")` }}
                                       >

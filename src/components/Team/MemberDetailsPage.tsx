@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeamStore } from '../../stores/teamStore';
+import { confirm } from '../../stores/confirmStore';
 import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { TaskList } from '../GlobalComponents/Pages/TaskPage/TaskList';
@@ -131,8 +132,12 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
     e.target.value = '';
   };
 
-  const handleRemoveMember = () => {
-    if (window.confirm(`Are you sure you want to remove ${member.name} from the team directory?`)) {
+  const handleRemoveMember = async () => {
+    const ok = await confirm.danger(
+      `Remove ${member.name}?`,
+      `Are you sure you want to remove ${member.name} from the team directory?`
+    );
+    if (ok) {
       deleteMember(member.id);
       onBack();
     }
@@ -169,7 +174,7 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
     updateMember(member.id, { assignedProjects: newAssigned });
   };
 
-  const cubicTransition = { type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.4 };
+  const cubicTransition = { type: 'tween', ease: [0.16, 1, 0.3, 1], duration: 0.08 };
 
   const bannerGradient = member.department.toLowerCase().includes('design')
     ? 'from-indigo-100 via-purple-100 to-pink-100'
@@ -183,16 +188,16 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
       {/* Fixed Header (same as Project Details Page) */}
       <div className="bg-white border-b border-slate-200/80 shrink-0 flex flex-col z-20 px-10">
         <div id="member-navigation-tabs" className="flex items-center gap-2 py-3 overflow-x-auto no-scrollbar">
-          <button 
+          <button
             onClick={onBack}
             className="flex items-center justify-center size-8 rounded-[11px] bg-zinc-950 hover:bg-zinc-800 text-white shadow-sm hover:shadow active:scale-95 transition-all group mr-1 shrink-0 cursor-pointer"
             title="Back to Team Directory"
           >
-            <svg 
-              viewBox="416.66 432.14 158.84 158.84" 
+            <svg
+              viewBox="416.66 432.14 158.84 158.84"
               className="size-8"
             >
-              <polyline 
+              <polyline
                 fill="none"
                 stroke="#fff"
                 strokeLinecap="round"
@@ -218,11 +223,10 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
         {/* Scrollable Content Area */}
         <main
           id="member-main-content"
-          className={`flex-1 flex flex-col ${
-            isFullPageTab
-              ? 'bg-white overflow-hidden h-full'
-              : 'overflow-y-auto bg-[#f5f5f7] custom-scrollbar'
-          }`}
+          className={`flex-1 flex flex-col ${isFullPageTab
+            ? 'bg-white overflow-hidden h-full'
+            : 'overflow-y-auto bg-[#f5f5f7] custom-scrollbar'
+            }`}
         >
 
           {/* Dynamic Tab Content Container */}
@@ -230,9 +234,9 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                exit={{ opacity: 0, y: -4 }}
                 transition={cubicTransition}
                 className={isFullPageTab ? 'flex-1 flex flex-col h-full' : ''}
               >
@@ -246,7 +250,14 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
                       {/* Banner */}
                       <div className="relative w-full h-40 md:h-52 shrink-0 bg-slate-100 overflow-hidden">
                         {member.banner ? (
-                          <img src={member.banner} alt="Banner" className="w-full h-full object-cover" />
+                          <img
+                            src={member.banner}
+                            alt="Banner"
+                            className="w-full h-full object-cover origin-center"
+                            style={{
+                              transform: `scale(${member.bannerScale ?? 1}) translate(${member.bannerX ?? 0}px, ${member.bannerY ?? 0}px)`
+                            }}
+                          />
                         ) : (
                           <div className={`absolute inset-0 bg-gradient-to-br ${bannerGradient} opacity-90`}>
                             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none mix-blend-overlay"></div>
@@ -261,7 +272,7 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
                         <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
 
                           {/* Overlapping Profile Picture */}
-                          <div className="relative -mt-16 md:-mt-20 size-28 md:size-36 rounded-full bg-white p-1.5 shadow-sm border border-slate-100 group shrink-0">
+                          <div className="relative -mt-16 md:-mt-20 size-28 md:size-36 rounded-full bg-white p-1 shadow-sm border border-slate-100 group shrink-0">
                             <div className="w-full h-full rounded-full overflow-hidden bg-slate-100">
                               {member.profilePic ? (
                                 <img src={member.profilePic} alt={member.name} className="w-full h-full object-cover" />
@@ -541,84 +552,84 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
         {/* Right Messaging Sidebar */}
         {activeTab === 'overview' && (
           <aside className={`${isSidebarCollapsed ? 'w-16' : 'w-80'} border-l border-slate-200 bg-white hidden lg:flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden`}>
-          {isSidebarCollapsed ? (
-            <div className="flex-1 flex flex-col items-center py-6 gap-6">
-              <button
-                type="button"
-                onClick={() => setIsSidebarCollapsed(false)}
-                className="size-8 flex items-center justify-center hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-xl transition-all cursor-pointer"
-                title="Expand Sidebar"
-              >
-                <ChevronLeft className="size-5" />
-              </button>
-              <div className="flex-1 flex items-center justify-center w-full">
-                <div className="rotate-90 origin-center whitespace-nowrap text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 select-none">
-                  <MessageCircle className="size-3.5 text-blue-500 -rotate-90" /> Direct Message
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-                <h3 className="text-xs font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wider">
-                  <MessageCircle className="size-4 text-blue-500 animate-pulse" /> Direct Message
-                </h3>
+            {isSidebarCollapsed ? (
+              <div className="flex-1 flex flex-col items-center py-6 gap-6">
                 <button
                   type="button"
-                  onClick={() => setIsSidebarCollapsed(true)}
-                  className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
-                  title="Collapse Sidebar"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="size-8 flex items-center justify-center hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-xl transition-all cursor-pointer"
+                  title="Expand Sidebar"
                 >
-                  <ChevronRight className="size-4" />
+                  <ChevronLeft className="size-5" />
                 </button>
+                <div className="flex-1 flex items-center justify-center w-full">
+                  <div className="rotate-90 origin-center whitespace-nowrap text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 select-none">
+                    <MessageCircle className="size-3.5 text-blue-500 -rotate-90" /> Direct Message
+                  </div>
+                </div>
               </div>
-
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/20 custom-scrollbar">
-                {messages.map(msg => {
-                  const isMe = msg.sender === 'me';
-                  return (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-                    >
-                      <div className={`px-3.5 py-2.5 max-w-[85%] rounded-[1.25rem] text-xs font-semibold leading-relaxed ${isMe
-                        ? 'bg-blue-500 text-white rounded-tr-sm'
-                        : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
-                        }`}>
-                        {msg.text}
-                      </div>
-                      <span className="text-[9px] text-slate-400 font-bold mt-1 px-1">{msg.time}</span>
-                    </motion.div>
-                  );
-                })}
-                <div ref={messagesEndRef} />
-              </div>
-
-              <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2 relative">
-                  <input
-                    type="text"
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    placeholder="Message..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-full pl-4 pr-10 py-3 text-xs focus:outline-none focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-400 font-medium"
-                  />
+            ) : (
+              <>
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+                  <h3 className="text-xs font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wider">
+                    <MessageCircle className="size-4 text-blue-500 animate-pulse" /> Direct Message
+                  </h3>
                   <button
-                    type="submit"
-                    disabled={!messageInput.trim()}
-                    className={`absolute right-1.5 top-1.5 bottom-1.5 aspect-square rounded-full flex items-center justify-center transition-all ${messageInput.trim()
-                      ? 'bg-blue-500 text-white hover:scale-105 active:scale-95 shadow-sm'
-                      : 'bg-slate-100 text-slate-300'
-                      }`}
+                    type="button"
+                    onClick={() => setIsSidebarCollapsed(true)}
+                    className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+                    title="Collapse Sidebar"
                   >
-                    <Send className="size-3.5 ml-0.5" />
+                    <ChevronRight className="size-4" />
                   </button>
-                </form>
-              </div>
-            </>
-          )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/20 custom-scrollbar">
+                  {messages.map(msg => {
+                    const isMe = msg.sender === 'me';
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                      >
+                        <div className={`px-3.5 py-2.5 max-w-[85%] rounded-[1.25rem] text-xs font-semibold leading-relaxed ${isMe
+                          ? 'bg-blue-500 text-white rounded-tr-sm'
+                          : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
+                          }`}>
+                          {msg.text}
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-bold mt-1 px-1">{msg.time}</span>
+                      </motion.div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+                  <form onSubmit={handleSendMessage} className="flex items-center gap-2 relative">
+                    <input
+                      type="text"
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      placeholder="Message..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-full pl-4 pr-10 py-3 text-xs focus:outline-none focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-400 font-medium"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!messageInput.trim()}
+                      className={`absolute right-1.5 top-1.5 bottom-1.5 aspect-square rounded-full flex items-center justify-center transition-all ${messageInput.trim()
+                        ? 'bg-blue-500 text-white hover:scale-105 active:scale-95 shadow-sm'
+                        : 'bg-slate-100 text-slate-300'
+                        }`}
+                    >
+                      <Send className="size-3.5 ml-0.5" />
+                    </button>
+                  </form>
+                </div>
+              </>
+            )}
           </aside>
         )}
       </div>

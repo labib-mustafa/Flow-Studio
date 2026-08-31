@@ -68,7 +68,7 @@ export const Renewals: React.FC<RenewalsProps> = ({ onNavigate, onProjectClick }
             Renewals
           </button>
           <span className="ml-auto bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-            {activeTab === 'renewals' ? (pendingInvoices.length > 0 ? pendingInvoices.length : 4) : upcomingDeadlines.length}
+            {activeTab === 'renewals' ? pendingInvoices.length : upcomingDeadlines.length}
           </span>
         </div>
 
@@ -96,38 +96,11 @@ export const Renewals: React.FC<RenewalsProps> = ({ onNavigate, onProjectClick }
                 </div>
               ))
             ) : (
-              <>
-                <div onClick={() => onNavigate?.('billing')} className="flex justify-between items-center group cursor-pointer p-2.5 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-all">
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">Adobe Creative Cloud</p>
-                    <p className="text-[10px] text-slate-500">Software Suite</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="bg-rose-50 text-rose-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-100 uppercase tracking-wider">2 DAYS</span>
-                    <p className="text-xs font-bold text-slate-900 mt-1">$54.99</p>
-                  </div>
-                </div>
-                <div onClick={() => onNavigate?.('billing')} className="flex justify-between items-center group cursor-pointer p-2.5 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-all">
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">Figma Professional</p>
-                    <p className="text-[10px] text-slate-500">Design Tool</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="bg-amber-50 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-wider">5 DAYS</span>
-                    <p className="text-xs font-bold text-slate-900 mt-1">$45.00</p>
-                  </div>
-                </div>
-                <div onClick={() => onNavigate?.('billing')} className="flex justify-between items-center group cursor-pointer p-2.5 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-all">
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">Slack Enterprise</p>
-                    <p className="text-[10px] text-slate-500">Communication</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="bg-blue-50 text-blue-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-wider">12 DAYS</span>
-                    <p className="text-xs font-bold text-slate-900 mt-1">$120.00</p>
-                  </div>
-                </div>
-              </>
+              <div className="flex flex-col items-center justify-center p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <span className="material-symbols-outlined text-3xl text-slate-300 mb-2">task_alt</span>
+                <p className="text-sm font-bold text-slate-800">No Pending Renewals</p>
+                <p className="text-xs text-slate-500 mt-1">You're all caught up for now.</p>
+              </div>
             )
           ) : (
             upcomingDeadlines.length > 0 ? (

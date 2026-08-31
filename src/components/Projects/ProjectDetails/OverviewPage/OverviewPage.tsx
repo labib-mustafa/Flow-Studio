@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useProjectStore } from '../../../../stores/projectStore';
 import { useTaskStore } from '../../../../stores/taskStore';
 import { useClientStore } from '../../../../stores/clientStore';
@@ -8,7 +9,7 @@ import {
   Edit2, Calendar, CheckCircle2, Clock, Tag, Plus, X,
   Image as ImageIcon, Sparkles, Building2, Layers,
   ArrowUpRight, ExternalLink, FileText, Palette, TrendingUp, AlertCircle,
-  ChevronDown
+  ChevronDown, Upload, Trash2
 } from 'lucide-react';
 
 export const OverviewPage: React.FC = () => {
@@ -16,6 +17,59 @@ export const OverviewPage: React.FC = () => {
   const { tasks } = useTaskStore();
   const [isEditing, setIsEditing] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
+  const [imageError, setImageError] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const processFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        const base64Url = event.target.result as string;
+        setFormData(prev => ({
+          ...prev,
+          thumbnail: base64Url,
+          image: base64Url
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      processFile(file);
+    } else {
+      const url = e.dataTransfer.getData('text/plain');
+      if (url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/'))) {
+        setFormData(prev => ({
+          ...prev,
+          thumbnail: url,
+          image: url
+        }));
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      processFile(file);
+    }
+  };
 
   React.useEffect(() => {
     if (isEditing) {
@@ -103,6 +157,7 @@ export const OverviewPage: React.FC = () => {
   React.useEffect(() => {
     if (currentProject) {
       setFormData({ ...currentProject });
+      setImageError(false);
     }
   }, [currentProject]);
 
@@ -191,9 +246,9 @@ export const OverviewPage: React.FC = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.08, ease: [0.16, 1, 0.3, 1] }}
       id="project-overview-container"
       className="relative flex-1 overflow-y-auto custom-scrollbar bg-slate-50/60"
     >
@@ -230,13 +285,14 @@ export const OverviewPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* TILE 1: Visual Showcase & Banner (8 cols) */}
-          <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between group">
+          <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between group">
             <div className="relative w-full h-[320px] sm:h-[400px] rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center">
-              {bannerUrl ? (
+              {bannerUrl && !imageError ? (
                 <>
                   <img
                     src={bannerUrl}
                     alt={projectName}
+                    onError={() => setImageError(true)}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent opacity-90 transition-opacity" />
@@ -267,20 +323,32 @@ export const OverviewPage: React.FC = () => {
                   </div>
                 </>
               ) : (
-                /* Premium Empty Banner State */
+                /* Premium Empty/Error Banner State */
                 <div className="w-full h-full bg-gradient-to-br from-slate-50 via-slate-100/80 to-slate-200/50 flex flex-col items-center justify-center text-slate-400 p-8 text-center border border-dashed border-slate-300 rounded-2xl">
                   <div className="size-16 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center mb-4 text-slate-400 group-hover:scale-110 group-hover:text-zinc-900 transition-all duration-300">
-                    <ImageIcon className="size-8" />
+                    {imageError ? <AlertCircle className="size-8 text-red-500" /> : <ImageIcon className="size-8" />}
                   </div>
-                  <span className="text-base font-bold text-slate-800 mb-1">No Cover Banner Uploaded</span>
+                  <span className="text-base font-bold text-slate-800 mb-1">
+                    {imageError ? 'Failed to Load Cover Banner' : 'No Cover Banner Uploaded'}
+                  </span>
                   <p className="text-xs text-slate-500 max-w-sm mb-6 leading-relaxed">
-                    Personalize your command center by adding a branded hero image, Figma preview, or moodboard visual.
+                    {imageError
+                      ? 'The image URL could not be retrieved. It may be broken, offline, or restricted.'
+                      : 'Personalize your command center by adding a branded hero image, Figma preview, or moodboard visual.'}
                   </p>
                   <button
                     onClick={() => setIsEditing(true)}
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
                   >
-                    <Plus className="size-3.5 text-emerald-400" /> Upload Project Banner
+                    {imageError ? (
+                      <>
+                        <Edit2 className="size-3.5 text-blue-400" /> Edit Cover Banner
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="size-3.5 text-emerald-400" /> Upload Project Banner
+                      </>
+                    )}
                   </button>
                 </div>
               )}
@@ -489,195 +557,250 @@ export const OverviewPage: React.FC = () => {
       </div>
 
       {/* Sleek Edit Modal */}
-      <AnimatePresence>
-        {isEditing && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0"
-              onClick={handleCancel}
-            />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative bg-white w-full max-w-2xl shadow-2xl rounded-3xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
-            >
-              <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">Edit Project Details</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Update project attributes, status, and banner visuals.</p>
-                </div>
-                <button
-                  onClick={handleCancel}
-                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Project Name</label>
-                  <input
-                    type="text"
-                    value={formData.name || formData.title || ''}
-                    onChange={e => setFormData({ ...formData, name: e.target.value, title: e.target.value })}
-                    placeholder="Enter project title..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
-                  />
+      {createPortal(
+        <AnimatePresence>
+          {isEditing && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-[2px] animate-fade-in">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0"
+                onClick={handleCancel}
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="relative bg-white w-full max-w-2xl shadow-2xl rounded-3xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
+              >
+                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Edit Project Details</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Update project attributes, status, and banner visuals.</p>
+                  </div>
+                  <button
+                    onClick={handleCancel}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                  >
+                    <X className="size-5" />
+                  </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="relative" ref={clientDropdownRef}>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Client Name</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={formData.client || ''}
-                        onChange={e => {
-                          setFormData({ ...formData, client: e.target.value });
-                          setShowClientSuggestions(true);
-                          setFocusedIndex(0);
-                        }}
-                        onFocus={() => {
-                          setShowClientSuggestions(true);
-                          setFocusedIndex(0);
-                        }}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Client or organization"
-                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-10 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all rounded-xl"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowClientSuggestions(!showClientSuggestions)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors"
-                        title="Toggle clients list"
-                      >
-                        <ChevronDown className={`size-4 transition-transform duration-250 ${showClientSuggestions ? 'rotate-180' : ''}`} />
-                      </button>
+                <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Project Name</label>
+                    <input
+                      type="text"
+                      value={formData.name || formData.title || ''}
+                      onChange={e => setFormData({ ...formData, name: e.target.value, title: e.target.value })}
+                      placeholder="Enter project title..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="relative" ref={clientDropdownRef}>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Client Name</label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={formData.client || ''}
+                          onChange={e => {
+                            setFormData({ ...formData, client: e.target.value });
+                            setShowClientSuggestions(true);
+                            setFocusedIndex(0);
+                          }}
+                          onFocus={() => {
+                            setShowClientSuggestions(true);
+                            setFocusedIndex(0);
+                          }}
+                          onKeyDown={handleKeyDown}
+                          placeholder="Client or organization"
+                          className="w-full bg-slate-50 border border-slate-200 pl-10 pr-10 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all rounded-xl"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowClientSuggestions(!showClientSuggestions)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors"
+                          title="Toggle clients list"
+                        >
+                          <ChevronDown className={`size-4 transition-transform duration-250 ${showClientSuggestions ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+
+                      {/* Suggestions dropdown */}
+                      <AnimatePresence>
+                        {showClientSuggestions && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                            className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar"
+                          >
+                            {filteredClients.length > 0 ? (
+                              <div className="py-1.5 divide-y divide-slate-100/60">
+                                {filteredClients.map((client, idx) => {
+                                  const isHighlighted = idx === focusedIndex;
+                                  const displayName = client.company || client.name;
+                                  return (
+                                    <button
+                                      key={client.id}
+                                      type="button"
+                                      onClick={() => handleSelectClient(displayName)}
+                                      onMouseEnter={() => setFocusedIndex(idx)}
+                                      className={`w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left ${isHighlighted ? 'bg-slate-50' : 'hover:bg-slate-50/50'
+                                        }`}
+                                    >
+                                      {client.avatarUrl ? (
+                                        <img
+                                          src={client.avatarUrl}
+                                          alt={client.name}
+                                          className="size-8 rounded-full object-cover shrink-0 border border-slate-100"
+                                        />
+                                      ) : (
+                                        <div className={`size-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm ${client.avatarBg || 'bg-slate-100 text-slate-700'}`}>
+                                          {client.initials || client.name.charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-semibold text-slate-900 truncate">
+                                          {client.company || client.name}
+                                        </p>
+                                        {client.company && (
+                                          <p className="text-[11px] font-medium text-slate-400 truncate mt-0.5">
+                                            Contact: {client.name}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="px-4 py-6 text-xs text-slate-400 text-center font-medium">
+                                No active clients match "{formData.client}"
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
-                    {/* Suggestions dropdown */}
-                    <AnimatePresence>
-                      {showClientSuggestions && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                          transition={{ duration: 0.15, ease: "easeOut" }}
-                          className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar"
-                        >
-                          {filteredClients.length > 0 ? (
-                            <div className="py-1.5 divide-y divide-slate-100/60">
-                              {filteredClients.map((client, idx) => {
-                                const isHighlighted = idx === focusedIndex;
-                                const displayName = client.company || client.name;
-                                return (
-                                  <button
-                                    key={client.id}
-                                    type="button"
-                                    onClick={() => handleSelectClient(displayName)}
-                                    onMouseEnter={() => setFocusedIndex(idx)}
-                                    className={`w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left ${isHighlighted ? 'bg-slate-50' : 'hover:bg-slate-50/50'
-                                      }`}
-                                  >
-                                    {client.avatarUrl ? (
-                                      <img
-                                        src={client.avatarUrl}
-                                        alt={client.name}
-                                        className="size-8 rounded-full object-cover shrink-0 border border-slate-100"
-                                      />
-                                    ) : (
-                                      <div className={`size-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm ${client.avatarBg || 'bg-slate-100 text-slate-700'}`}>
-                                        {client.initials || client.name.charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-semibold text-slate-900 truncate">
-                                        {client.company || client.name}
-                                      </p>
-                                      {client.company && (
-                                        <p className="text-[11px] font-medium text-slate-400 truncate mt-0.5">
-                                          Contact: {client.name}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="px-4 py-6 text-xs text-slate-400 text-center font-medium">
-                              No active clients match "{formData.client}"
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Deadline</label>
+                      <DatePickerInput
+                        value={formData.deadline || ''}
+                        onChange={val => setFormData({ ...formData, deadline: val })}
+                        placeholder="Select target deadline..."
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Deadline</label>
-                    <DatePickerInput
-                      value={formData.deadline || ''}
-                      onChange={val => setFormData({ ...formData, deadline: val })}
-                      placeholder="Select target deadline..."
-                    />
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Project Status</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {['Active', 'In Progress', 'On Hold', 'Completed'].map(s => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, status: s })}
+                          className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all ${formData.status === s ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Banner Image</label>
+
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`relative w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center text-center transition-all ${isDragging
+                        ? 'border-zinc-950 bg-zinc-50'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                        }`}
+                    >
+                      {formData.thumbnail || formData.image ? (
+                        <div className="w-full relative rounded-xl overflow-hidden aspect-[3/1] border border-slate-200 group/preview">
+                          <img
+                            src={formData.thumbnail || formData.image}
+                            alt="Banner Preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, thumbnail: '', image: '' }))}
+                              className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-md transition-all active:scale-95"
+                              title="Remove Banner"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center py-4">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                          />
+                          <div className="size-10 rounded-xl bg-white shadow-sm border border-slate-200 flex items-center justify-center mb-3 text-slate-400">
+                            <Upload className="size-5" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 mb-1">
+                            Drag & drop an image here
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            or click to browse local files (PNG, JPG, SVG)
+                          </span>
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Or enter Image URL</label>
+                      <input
+                        type="text"
+                        value={formData.thumbnail || formData.image || ''}
+                        onChange={e => setFormData({ ...formData, thumbnail: e.target.value, image: e.target.value })}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1.5">Leave blank to display the project cover empty state.</p>
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Project Status</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {['Active', 'In Progress', 'On Hold', 'Completed'].map(s => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, status: s })}
-                        className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all ${formData.status === s ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
+                <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+                  <button
+                    onClick={handleCancel}
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all duration-200"
+                  >
+                    Save Changes
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Banner Image URL</label>
-                  <input
-                    type="text"
-                    value={formData.thumbnail || formData.image || ''}
-                    onChange={e => setFormData({ ...formData, thumbnail: e.target.value, image: e.target.value })}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1.5">Leave blank to display the project cover empty state.</p>
-                </div>
-              </div>
-
-              <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
-                <button
-                  onClick={handleCancel}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all duration-200"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { useProjectStore } from '../../../../stores/projectStore';
 import { useTaskStore } from '../../../../stores/taskStore';
 import { useMoodboardStore } from '../../../../stores/moodboardStore';
+import { Dock, CircleCheck, FileText, NotepadText, PanelsTopLeft } from 'lucide-react';
 
 import { PillTab } from '../../../GlobalComponents/PillTab';
 
@@ -21,8 +22,8 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ currentTab, onTabC
   }
   const { name, client, status, deadline } = currentProject;
 
-  const [notesCount, setNotesCount] = React.useState(3);
-  const [filesCount, setFilesCount] = React.useState(5);
+  const [notesCount, setNotesCount] = React.useState(0);
+  const [filesCount, setFilesCount] = React.useState(0);
 
   React.useEffect(() => {
     const updateCounts = () => {
@@ -38,7 +39,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ currentTab, onTabC
         if (savedFiles) {
           setFilesCount(JSON.parse(savedFiles).length);
         } else {
-          setFilesCount(5); // Default mock files length
+          setFilesCount(0);
         }
       } catch (_) { }
     };
@@ -81,31 +82,31 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ currentTab, onTabC
         <div className="flex items-center gap-1.5 shrink-0">
           <PillTab
             label="Overview"
-            icon="info"
+            icon={<Dock size={16} />}
             isActive={currentTab === 'overview'}
             onClick={() => onTabChange('overview')}
           />
           <PillTab
             label="Tasks"
-            icon="task_alt"
+            icon={<CircleCheck size={16} />}
             isActive={currentTab === 'tasks'}
             onClick={() => onTabChange('tasks')}
           />
           <PillTab
             label="Files"
-            icon="description"
+            icon={<FileText size={16} />}
             isActive={currentTab === 'files'}
             onClick={() => onTabChange('files')}
           />
           <PillTab
             label="Notes"
-            icon="edit_note"
+            icon={<NotepadText size={16} />}
             isActive={currentTab === 'notes'}
             onClick={() => onTabChange('notes')}
           />
           <PillTab
             label="Moodboard"
-            icon="dashboard"
+            icon={<PanelsTopLeft size={16} />}
             isActive={currentTab === 'moodboard'}
             onClick={() => onTabChange('moodboard')}
           />

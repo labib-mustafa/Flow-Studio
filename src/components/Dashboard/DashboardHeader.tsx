@@ -11,7 +11,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onNavigate }) 
   const { user } = useAuthStore();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const name = settings?.displayName === 'Design Pro' ? (user?.displayName || settings?.displayName) : (settings?.displayName || user?.displayName || 'Alex');
+  const name = settings?.displayName || user?.displayName || 'User';
 
   return (
     <header className="mb-2">

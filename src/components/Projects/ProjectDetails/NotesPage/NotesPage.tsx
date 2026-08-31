@@ -1,8 +1,49 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TextCursorInput, Check, Info, AlertTriangle, Eye } from 'lucide-react';
+import { 
+  TextCursorInput, 
+  Check, 
+  Info, 
+  AlertTriangle, 
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Plus,
+  PlusCircle,
+  FilePlus,
+  FileText,
+  FileEdit,
+  Trash2,
+  Undo2,
+  Redo2,
+  ListPlus,
+  Italic,
+  Type,
+  Highlighter,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
+  List,
+  ListOrdered,
+  Link2,
+  Image,
+  Table,
+  Minus,
+  Ban,
+  Lock,
+  Maximize2,
+  Minimize2,
+  MessageSquare,
+  CheckCircle2,
+  Send,
+  X,
+  CloudUpload
+} from 'lucide-react';
 import { ColorPicker } from '../../../BlockEditor/ColorPicker/ColorPicker';
 import { createHighlightColor, getReadableTextColor, ensureContrast, rgbToHexStr, getLuminance } from '../../../../utils/colorUtils';
+import { useProjectStore } from '../../../../stores/projectStore';
+import { onStoreExternalUpdate } from '../../../../lib/fileStorage';
 
 interface NotesPageProps {
   onTabChange: (tab: 'tasks' | 'files' | 'notes') => void;
@@ -19,6 +60,10 @@ interface Note {
 }
 
 export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenToggle }) => {
+  const { currentProject } = useProjectStore();
+  const notesKey = currentProject?.id ? `notes-list-${currentProject.id}` : 'notes-list';
+  const activeNoteIdKey = currentProject?.id ? `active-note-id-${currentProject.id}` : 'active-note-id';
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
@@ -50,8 +95,8 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const savedNotes = localStorage.getItem('notes-list');
-    const lastActiveId = localStorage.getItem('active-note-id');
+    const savedNotes = localStorage.getItem(notesKey);
+    const lastActiveId = localStorage.getItem(activeNoteIdKey);
 
     if (savedNotes) {
       const parsedNotes = JSON.parse(savedNotes);
@@ -60,10 +105,13 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
         setActiveNoteId(lastActiveId);
       } else if (parsedNotes.length > 0) {
         setActiveNoteId(parsedNotes[0].id);
+      } else {
+        setActiveNoteId(null);
       }
     } else {
-      // Default notes
-      const defaultNotes: Note[] = [
+      // Default notes only for demo project
+      const isDemo = !currentProject || currentProject.id === 'rebrand-2024';
+      const defaultNotes: Note[] = isDemo ? [
         {
           id: '1',
           title: 'Discovery Phase Notes',
@@ -102,25 +150,61 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           timestamp: 'Oct 12',
           time: 'Oct 12'
         }
-      ];
+      ] : [];
       setNotes(defaultNotes);
-      setActiveNoteId('1');
-      localStorage.setItem('notes-list', JSON.stringify(defaultNotes));
+      if (defaultNotes.length > 0) {
+        setActiveNoteId('1');
+        localStorage.setItem(notesKey, JSON.stringify(defaultNotes));
+        localStorage.setItem(activeNoteIdKey, '1');
+      } else {
+        setActiveNoteId(null);
+        localStorage.setItem(notesKey, JSON.stringify([]));
+        localStorage.removeItem(activeNoteIdKey);
+      }
     }
-  }, []);
+  }, [notesKey, activeNoteIdKey]);
+
+  useEffect(() => {
+    const fetchApiNotes = async () => {
+      try {
+        const res = await fetch('/api/store/notes');
+        if (res.ok) {
+          const data = await res.json();
+          const apiNotes = data.state?.defaultNotes || data.defaultNotes;
+          if (Array.isArray(apiNotes) && apiNotes.length > 0) {
+            setNotes((prevNotes) => {
+              const map = new Map<string, Note>();
+              prevNotes.forEach(n => map.set(n.id, n));
+              apiNotes.forEach((n: Note) => map.set(n.id, n));
+              const combined = Array.from(map.values());
+              return combined;
+            });
+          }
+        }
+      } catch {}
+    };
+
+    fetchApiNotes();
+    const unsub = onStoreExternalUpdate('notes', fetchApiNotes);
+    return unsub;
+  }, [currentProject?.id]);
+
 
   const activeNote = notes.find(n => n.id === activeNoteId);
 
+  // Keep track of the currently loaded note ID to avoid resetting editor HTML while typing
+  const loadedNoteIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (activeNote && editorRef.current && titleRef.current) {
-      if (editorRef.current.innerHTML !== activeNote.content) {
+      // Only set innerHTML/title if we are switching to a different note or if it hasn't been loaded yet
+      if (loadedNoteIdRef.current !== activeNoteId) {
         editorRef.current.innerHTML = activeNote.content;
-      }
-      if (titleRef.current.innerText !== activeNote.title) {
         titleRef.current.innerText = activeNote.title;
+        loadedNoteIdRef.current = activeNoteId;
       }
     }
-  }, [activeNoteId]);
+  }, [activeNoteId, activeNote]);
 
   const saveContent = () => {
     if (!activeNoteId) return;
@@ -142,8 +226,8 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
     });
 
     setNotes(updatedNotes);
-    localStorage.setItem('notes-list', JSON.stringify(updatedNotes));
-    localStorage.setItem('active-note-id', activeNoteId);
+    localStorage.setItem(notesKey, JSON.stringify(updatedNotes));
+    localStorage.setItem(activeNoteIdKey, activeNoteId);
   };
 
   const addNewNote = () => {
@@ -158,29 +242,29 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
     const updatedNotes = [newNote, ...notes];
     setNotes(updatedNotes);
     setActiveNoteId(newNote.id);
-    localStorage.setItem('notes-list', JSON.stringify(updatedNotes));
-    localStorage.setItem('active-note-id', newNote.id);
+    localStorage.setItem(notesKey, JSON.stringify(updatedNotes));
+    localStorage.setItem(activeNoteIdKey, newNote.id);
   };
 
   const selectNote = (id: string) => {
     saveContent(); // Save current before switching
     setActiveNoteId(id);
-    localStorage.setItem('active-note-id', id);
+    localStorage.setItem(activeNoteIdKey, id);
   };
 
   const deleteNote = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     const updatedNotes = notes.filter(n => n.id !== id);
     setNotes(updatedNotes);
-    localStorage.setItem('notes-list', JSON.stringify(updatedNotes));
+    localStorage.setItem(notesKey, JSON.stringify(updatedNotes));
 
     if (activeNoteId === id) {
       if (updatedNotes.length > 0) {
         setActiveNoteId(updatedNotes[0].id);
-        localStorage.setItem('active-note-id', updatedNotes[0].id);
+        localStorage.setItem(activeNoteIdKey, updatedNotes[0].id);
       } else {
         setActiveNoteId(null);
-        localStorage.removeItem('active-note-id');
+        localStorage.removeItem(activeNoteIdKey);
       }
     }
   };
@@ -826,22 +910,22 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
             className={`absolute top-1/2 -translate-y-1/2 -right-3 z-[99999] flex items-center justify-center w-6 h-6 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-primary hover:border-primary shadow-sm transition-all duration-300 ${!isNotesListOpen ? 'rotate-180' : ''}`}
             title={isNotesListOpen ? "Collapse List" : "Expand List"}
           >
-            <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+            <ChevronLeft size={18} />
           </button>
 
           <div id="notes-search-add" className={`p-4 space-y-3 border-b border-slate-100 bg-white min-w-[288px] transition-opacity duration-300 ${!isNotesListOpen ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
             <div className="relative">
               <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
-                <span className="material-symbols-outlined text-base">search</span>
+                <Search size={18} />
               </span>
               <input id="notes-search-input" className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search notes..." type="text" />
             </div>
             <button
               id="add-new-note-button"
               onClick={addNewNote}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-black text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
             >
-              <span className="material-symbols-outlined text-base font-bold">add</span>
+              <Plus size={18} strokeWidth={2.5} />
               New Note
             </button>
           </div>
@@ -850,7 +934,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
             {notes.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                 <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                  <span className="material-symbols-outlined text-slate-400">note_add</span>
+                  <FilePlus size={24} className="text-slate-400" />
                 </div>
                 <p className="text-sm font-semibold text-slate-900 mb-1">No notes yet</p>
                 <p className="text-xs text-slate-500">Create your first note to get started.</p>
@@ -877,7 +961,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200"
                     title="Delete Note"
                   >
-                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                    <Trash2 size={18} />
                   </button>
                 </div>
               ))
@@ -887,12 +971,12 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           {/* Collapsed State Icons */}
           {!isNotesListOpen && (
             <div className="absolute inset-0 flex flex-col items-center pt-6 gap-6 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setIsNotesListOpen(true)}>
-              <span className="material-symbols-outlined text-slate-400">search</span>
-              <span className="material-symbols-outlined text-primary">add_circle</span>
+              <Search size={20} className="text-slate-400" />
+              <PlusCircle size={20} className="text-primary" />
               <div className="w-6 h-px bg-slate-200"></div>
-              <span className="material-symbols-outlined text-slate-400">description</span>
-              <span className="material-symbols-outlined text-slate-400">description</span>
-              <span className="material-symbols-outlined text-slate-400">description</span>
+              <FileText size={20} className="text-slate-400" />
+              <FileText size={20} className="text-slate-400" />
+              <FileText size={20} className="text-slate-400" />
             </div>
           )}
         </div>
@@ -905,7 +989,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           {!activeNoteId ? (
             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/30">
               <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-slate-300 text-4xl">edit_note</span>
+                <FileEdit size={44} className="text-slate-300" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">No note selected</h3>
               <p className="text-slate-500 max-w-xs mx-auto mb-8">Select a note from the sidebar or create a new one to start writing.</p>
@@ -913,7 +997,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                 onClick={addNewNote}
                 className="flex items-center gap-2 py-2.5 px-6 bg-primary text-white font-semibold rounded-xl hover:bg-blue-600 transition-all shadow-md hover:shadow-lg active:scale-95 mx-auto"
               >
-                <span className="material-symbols-outlined">add</span>
+                <Plus size={18} />
                 Create New Note
               </button>
             </div>
@@ -1001,7 +1085,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors"
                   title="Undo"
                 >
-                  <span className="material-symbols-outlined text-[16px]">undo</span>
+                  <Undo2 size={18} />
                 </button>
                 <button
                   onMouseDown={(e) => e.preventDefault()}
@@ -1009,7 +1093,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors"
                   title="Redo"
                 >
-                  <span className="material-symbols-outlined text-[16px]">redo</span>
+                  <Redo2 size={18} />
                 </button>
 
                 <div className="h-4 w-px bg-slate-300 mx-1"></div>
@@ -1022,7 +1106,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors flex items-center gap-1"
                       title="Add Row"
                     >
-                      <span className="material-symbols-outlined text-[16px]">add_row</span>
+                      <ListPlus size={18} />
                       <span className="text-[10px] font-bold">+ROW</span>
                     </button>
                     <button
@@ -1031,7 +1115,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       className="p-1 text-red-400 hover:bg-red-50 rounded transition-colors flex items-center gap-1"
                       title="Delete Row"
                     >
-                      <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+                      <Trash2 size={18} />
                       <span className="text-[10px] font-bold">-ROW</span>
                     </button>
                     <div className="h-4 w-px bg-slate-200 mx-1"></div>
@@ -1041,7 +1125,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors flex items-center gap-1"
                       title="Add Column"
                     >
-                      <span className="material-symbols-outlined text-[16px]">add_column</span>
+                      <ListPlus size={18} className="rotate-90" />
                       <span className="text-[10px] font-bold">+COL</span>
                     </button>
                     <button
@@ -1050,7 +1134,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       className="p-1 text-red-400 hover:bg-red-50 rounded transition-colors flex items-center gap-1"
                       title="Delete Column"
                     >
-                      <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+                      <Trash2 size={18} />
                       <span className="text-[10px] font-bold">-COL</span>
                     </button>
                     <div className="h-4 w-px bg-slate-200 mx-1"></div>
@@ -1060,7 +1144,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors flex items-center gap-1"
                       title="Delete Table"
                     >
-                      <span className="material-symbols-outlined text-[16px]">delete_forever</span>
+                      <Trash2 size={18} />
                       <span className="text-[10px] font-bold">TABLE</span>
                     </button>
                   </>
@@ -1118,7 +1202,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center border ${commandStates.italic ? 'bg-slate-200 text-primary border-primary' : 'text-slate-700 hover:bg-slate-100 border-slate-200'}`}
                   title="Italic"
                 >
-                  <span className="material-symbols-outlined text-[16px]">format_italic</span>
+                  <Italic size={18} />
                 </button>
                 <button
                   onMouseDown={(e) => e.preventDefault()}
@@ -1138,14 +1222,9 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`relative p-1 rounded transition-all duration-200 w-7 h-7 flex items-center justify-center ${activeColorPicker === 'text' ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
                     title={`Text Color${commandStates.foreColor && commandStates.foreColor !== 'mixed' ? ': ' + commandStates.foreColor : ''}`}
                   >
-                    <span
-                      className="material-symbols-outlined text-[18px] text-slate-700"
-                      style={{ clipPath: 'inset(0px 0px 4px 0px)' }}
-                    >
-                      format_color_text
-                    </span>
+                    <Type size={20} className="text-slate-700" />
                     <div
-                      className="absolute bottom-[6px] w-[16px] h-[3px] transition-all duration-200"
+                      className="absolute bottom-[3px] w-[16px] h-[3px] transition-all duration-200"
                       style={{
                         backgroundColor: commandStates.foreColor === 'mixed' ? 'transparent' : commandStates.foreColor,
                         backgroundImage: commandStates.foreColor === 'mixed' ? 'linear-gradient(to right, #ff0000, #00ff00, #0000ff)' : 'none',
@@ -1171,14 +1250,9 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`relative p-1 rounded transition-all duration-200 w-7 h-7 flex items-center justify-center ${activeColorPicker === 'highlight' ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
                     title={`Highlight Color${commandStates.hiliteColor && commandStates.hiliteColor !== 'mixed' && commandStates.hiliteColor !== 'transparent' ? ': ' + commandStates.hiliteColor : ''}`}
                   >
-                    <span
-                      className="material-symbols-outlined text-[18px] text-slate-700"
-                      style={{ clipPath: 'inset(0px 0px 4px 0px)' }}
-                    >
-                      format_ink_highlighter
-                    </span>
+                    <Highlighter size={20} className="text-slate-700" />
                     <div
-                      className="absolute bottom-[6px] w-[16px] h-[3px] transition-all duration-200"
+                      className="absolute bottom-[3px] w-[16px] h-[3px] transition-all duration-200"
                       style={{
                         backgroundColor: commandStates.hiliteColor === 'mixed'
                           ? 'transparent'
@@ -1213,7 +1287,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyLeft ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Align Left"
                   >
-                    <span className="material-symbols-outlined text-[16px]">format_align_left</span>
+                    <AlignStartVertical size={18} />
                   </button>
                   <button
                     onMouseDown={(e) => e.preventDefault()}
@@ -1221,7 +1295,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Align Center"
                   >
-                    <span className="material-symbols-outlined text-[16px]">format_align_center</span>
+                    <AlignCenterVertical size={18} />
                   </button>
                   <button
                     onMouseDown={(e) => e.preventDefault()}
@@ -1229,7 +1303,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyRight ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Align Right"
                   >
-                    <span className="material-symbols-outlined text-[16px]">format_align_right</span>
+                    <AlignEndVertical size={18} />
                   </button>
                 </div>
 
@@ -1242,7 +1316,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       }`}
                     title="Alignment"
                   >
-                    <span className="material-symbols-outlined text-[16px]">format_align_left</span>
+                    <AlignStartVertical size={18} />
                   </button>
                   <AnimatePresence>
                     {activeDropdown === 'align' && (
@@ -1259,7 +1333,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                           className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyLeft ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Align Left"
                         >
-                          <span className="material-symbols-outlined text-[16px]">format_align_left</span>
+                          <AlignStartVertical size={18} />
                         </button>
                         <button
                           onMouseDown={(e) => e.preventDefault()}
@@ -1267,7 +1341,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                           className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Align Center"
                         >
-                          <span className="material-symbols-outlined text-[16px]">format_align_center</span>
+                          <AlignCenterVertical size={18} />
                         </button>
                         <button
                           onMouseDown={(e) => e.preventDefault()}
@@ -1275,7 +1349,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                           className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyRight ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Align Right"
                         >
-                          <span className="material-symbols-outlined text-[16px]">format_align_right</span>
+                          <AlignEndVertical size={18} />
                         </button>
                       </motion.div>
                     )}
@@ -1292,7 +1366,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Bullet List"
                   >
-                    <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
+                    <List size={18} />
                   </button>
                   <button
                     onMouseDown={(e) => e.preventDefault()}
@@ -1300,7 +1374,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertOrderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Numbered List"
                   >
-                    <span className="material-symbols-outlined text-[16px]">format_list_numbered</span>
+                    <ListOrdered size={18} />
                   </button>
                 </div>
 
@@ -1313,7 +1387,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       }`}
                     title="Lists"
                   >
-                    <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
+                    <List size={18} />
                   </button>
                   <AnimatePresence>
                     {activeDropdown === 'list' && (
@@ -1330,7 +1404,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                           className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Bullet List"
                         >
-                          <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
+                          <List size={18} />
                         </button>
                         <button
                           onMouseDown={(e) => e.preventDefault()}
@@ -1338,7 +1412,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                           className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertOrderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Numbered List"
                         >
-                          <span className="material-symbols-outlined text-[16px]">format_list_numbered</span>
+                          <ListOrdered size={18} />
                         </button>
                       </motion.div>
                     )}
@@ -1353,7 +1427,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors w-6 h-6 flex items-center justify-center"
                   title="Insert Link"
                 >
-                  <span className="material-symbols-outlined text-[16px]">link</span>
+                  <Link2 size={18} />
                 </button>
                 <button
                   onMouseDown={(e) => e.preventDefault()}
@@ -1361,7 +1435,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors w-6 h-6 flex items-center justify-center"
                   title="Insert Image"
                 >
-                  <span className="material-symbols-outlined text-[16px]">image</span>
+                  <Image size={18} />
                 </button>
                 <button
                   onMouseDown={(e) => e.preventDefault()}
@@ -1369,7 +1443,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors w-6 h-6 flex items-center justify-center"
                   title="Insert Table"
                 >
-                  <span className="material-symbols-outlined text-[16px]">table_chart</span>
+                  <Table size={18} />
                 </button>
                 <button
                   onMouseDown={(e) => e.preventDefault()}
@@ -1377,7 +1451,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors w-6 h-6 flex items-center justify-center"
                   title="Horizontal Line"
                 >
-                  <span className="material-symbols-outlined text-[16px]">horizontal_rule</span>
+                  <Minus size={18} />
                 </button>
                 <button
                   onMouseDown={(e) => e.preventDefault()}
@@ -1385,11 +1459,11 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   className="p-1 text-slate-500 hover:bg-slate-100 rounded transition-colors w-6 h-6 flex items-center justify-center"
                   title="Clear Formatting"
                 >
-                  <span className="material-symbols-outlined text-[16px]">format_clear</span>
+                  <Ban size={18} />
                 </button>
                 <div className="flex flex-wrap items-center gap-2 justify-end ml-auto">
                   <button className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue-600 transition-colors">
-                    <span className="material-symbols-outlined text-[16px]">lock</span> Share
+                    <Lock size={16} /> Share
                   </button>
                   <div className="h-4 w-px bg-slate-300 mx-1"></div>
                   <button
@@ -1397,7 +1471,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                     className={`p-1 rounded transition-colors ${isFullScreen ? 'text-primary bg-primary/10' : 'text-slate-500 hover:bg-slate-100'}`}
                     title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
                   >
-                    <span className="material-symbols-outlined text-[18px]">{isFullScreen ? 'fullscreen_exit' : 'fullscreen'}</span>
+                    {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
                   </button>
                 </div>
               </div>
@@ -1414,9 +1488,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                       className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight mb-4 outline-none"
                       onInput={saveContent}
                       onBlur={saveContent}
-                    >
-                      {activeNote?.title}
-                    </h1>
+                    />
                     <div className="flex items-center gap-4 text-xs text-slate-500">
                       <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium">{activeNote?.category}</span>
                       <span>
@@ -1451,11 +1523,11 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
             className={`absolute top-1/2 -translate-y-1/2 -left-3 z-[99999] flex items-center justify-center w-6 h-6 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-primary hover:border-primary shadow-sm transition-all duration-300 ${!isCommentsOpen ? 'rotate-180' : ''}`}
             title={isCommentsOpen ? "Collapse Comments" : "Expand Comments"}
           >
-            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+            <ChevronRight size={18} />
           </button>
 
           <div className="py-4 pr-4 pl-2 flex items-center justify-end h-[53px] w-full shrink-0 bg-white cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setIsCommentsOpen(!isCommentsOpen)}>
-            <span className="material-symbols-outlined text-lg text-slate-500 ml-auto">comment</span>
+            <MessageSquare size={20} className="text-slate-500 ml-auto" />
           </div>
 
 
@@ -1503,7 +1575,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
 
                 <div className="opacity-60 hover:opacity-100 transition-opacity">
                   <div className="flex items-center gap-2 px-2 mb-1">
-                    <span className="material-symbols-outlined text-sm text-emerald-500">check_circle</span>
+                    <CheckCircle2 size={16} className="text-emerald-500" />
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Resolved</span>
                   </div>
                   <div className="bg-white p-3 rounded-lg border border-slate-200">
@@ -1520,8 +1592,8 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
               <div className="p-4 border-t border-slate-200 bg-white">
                 <div className="relative">
                   <input className="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400 outline-none" placeholder="Add a comment..." type="text" />
-                  <button className="absolute right-2 top-1 text-slate-400 hover:text-primary p-1">
-                    <span className="material-symbols-outlined text-lg">send</span>
+                  <button className="absolute right-2 top-2 text-slate-400 hover:text-primary p-1">
+                    <Send size={18} />
                   </button>
                 </div>
               </div>
@@ -1536,13 +1608,13 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           style={{ top: imageMenuPos.top, left: imageMenuPos.left }}
         >
           <button onClick={() => updateImageStyle({ float: 'left' })} className="p-1 hover:bg-slate-100 rounded text-slate-600" title="Align Left">
-            <span className="material-symbols-outlined text-[16px]">format_align_left</span>
+            <AlignStartVertical size={18} />
           </button>
           <button onClick={() => updateImageStyle({ float: 'none' })} className="p-1 hover:bg-slate-100 rounded text-slate-600" title="Align Center">
-            <span className="material-symbols-outlined text-[16px]">format_align_center</span>
+            <AlignCenterVertical size={18} />
           </button>
           <button onClick={() => updateImageStyle({ float: 'right' })} className="p-1 hover:bg-slate-100 rounded text-slate-600" title="Align Right">
-            <span className="material-symbols-outlined text-[16px]">format_align_right</span>
+            <AlignEndVertical size={18} />
           </button>
           <div className="w-px h-4 bg-slate-200 mx-1"></div>
           <button onClick={() => updateImageStyle({ width: '25%' })} className="px-2 py-1 text-[10px] font-bold hover:bg-slate-100 rounded text-slate-600">S</button>
@@ -1551,7 +1623,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           <button onClick={() => updateImageStyle({ width: '100%' })} className="px-2 py-1 text-[10px] font-bold hover:bg-slate-100 rounded text-slate-600">XL</button>
           <div className="w-px h-4 bg-slate-200 mx-1"></div>
           <button onClick={deleteImage} className="p-1 hover:bg-red-50 rounded text-red-500" title="Delete Image">
-            <span className="material-symbols-outlined text-[16px]">delete</span>
+            <Trash2 size={18} />
           </button>
         </div>
       )}
@@ -1566,7 +1638,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                 onClick={() => setShowImageModal(false)}
                 className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
               >
-                <span className="material-symbols-outlined">close</span>
+                <X size={20} />
               </button>
             </div>
             <div className="p-8">
@@ -1575,7 +1647,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                 className="border-2 border-dashed border-slate-200 rounded-xl p-10 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-blue-50/30 transition-all group"
               >
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
-                  <span className="material-symbols-outlined text-3xl text-slate-400 group-hover:text-primary">cloud_upload</span>
+                  <CloudUpload size={36} className="text-slate-400 group-hover:text-primary" />
                 </div>
                 <p className="text-sm font-semibold text-slate-700 mb-1">Click to upload or drag and drop</p>
                 <p className="text-xs text-slate-400 text-center">PNG, JPG, GIF up to 10MB</p>

@@ -32,8 +32,8 @@
             'fade-out': 'fadeOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
             'scale-in': 'scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
             'scale-out': 'scaleOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            'toast-in': 'toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            'toast-out': 'toastOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'toast-in': 'toastInTop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'toast-out': 'toastOutBottom 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
             'progress': 'progress linear forwards'
           }
         }
@@ -98,7 +98,7 @@
     @keyframes toastIn {
       from {
         opacity: 0;
-        transform: translateY(8px) scale(0.98);
+        transform: translateY(12px) scale(0.96);
       }
 
       to {
@@ -107,7 +107,19 @@
       }
     }
 
-    @keyframes toastOut {
+    @keyframes toastInTop {
+      from {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.96);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes toastOutBottom {
       from {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -115,7 +127,7 @@
 
       to {
         opacity: 0;
-        transform: translateY(-4px) scale(0.98);
+        transform: translateY(16px) scale(0.94);
       }
     }
 
@@ -207,11 +219,7 @@
           <i data-lucide="sliders" class="size-3.5"></i> Buttons &amp; Form Fields
         </button>
 
-        <button id="nav-grids" onclick="switchPage('grids')"
-          class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all select-none">
-          <i data-lucide="table" class="size-3.5"></i> Custom Sort &amp; Filters
-        </button>
-      </nav>
+        </nav>
 
       <div
         class="mt-auto p-3 bg-slate-50 rounded-2xl border border-slate-200/50 text-[10px] text-slate-400 leading-relaxed font-bold">
@@ -244,19 +252,19 @@
               <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Toast Notifications</h3>
               <div class="grid grid-cols-2 gap-3">
                 <button onclick="triggerToast('success')"
-                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
                   <span class="size-1.5 rounded-full bg-emerald-500"></span> Success Toast
                 </button>
                 <button onclick="triggerToast('error')"
-                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
                   <span class="size-1.5 rounded-full bg-rose-500"></span> Error Toast
                 </button>
                 <button onclick="triggerToast('info')"
-                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
                   <span class="size-1.5 rounded-full bg-blue-500"></span> Info Toast
                 </button>
                 <button onclick="triggerToast('warning')"
-                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
+                  class="flex items-center gap-2 justify-center p-3 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] rounded-xl text-xs font-bold transition-all">
                   <span class="size-1.5 rounded-full bg-amber-500"></span> Warning Toast
                 </button>
               </div>
@@ -413,7 +421,7 @@ if (confirm) {
         <div class="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-minimal-sm max-w-2xl">
           <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Component Mockup Preview</h3>
 
-          <div class="flex items-center gap-4 p-4 border border-slate-150 rounded-2xl bg-slate-50/50">
+          <div class="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
             <img id="mockup-avatar-img"
               src="/C:/Users/labib_n4/.gemini/antigravity/brain/ee712868-0896-4d42-b7aa-2b4ad75e1733/empty_avatar_abstract_3d_1783784802880.png"
               class="size-12 rounded-xl object-cover shadow-sm border border-white" alt="Mockup Avatar" />
@@ -469,7 +477,7 @@ if (confirm) {
                   Primary Button
                 </button>
                 <button
-                  class="px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 active:scale-[0.98] text-slate-700 rounded-xl text-xs font-extrabold transition-all shadow-sm">
+                  class="px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] text-slate-700 rounded-xl text-xs font-extrabold transition-all shadow-sm">
                   Secondary Action
                 </button>
               </div>
@@ -492,67 +500,13 @@ if (confirm) {
         </div>
       </section>
 
-      <!-- ================= PAGE 4: TABLE SORT & FILTERS ================= -->
-      <section id="page-grids" data-line="380" data-component="GridsPage" class="hidden flex flex-col gap-8 max-w-5xl">
-        <div>
-          <h2 class="text-lg font-black text-slate-900 tracking-tight">Custom Sort &amp; Filters</h2>
-          <p class="text-xs text-slate-400 mt-1 font-bold uppercase tracking-wider">Minimal table headers and query
-            filters built for Flow Studio</p>
-        </div>
+      
 
-        <!-- Custom Filter Controls Mockup -->
-        <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-minimal-sm flex flex-col gap-4">
-          <div class="flex items-center justify-between flex-wrap gap-4">
-            <!-- Filter Pills -->
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-2">Filter Email:</span>
-              <button id="filter-all" onclick="setFilter('all')"
-                class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-900 bg-slate-900 text-white transition-all select-none">
-                All Leads
-              </button>
-              <button id="filter-has" onclick="setFilter('has')"
-                class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-950 transition-all select-none">
-                With Email
-              </button>
-              <button id="filter-nohas" onclick="setFilter('nohas')"
-                class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-950 transition-all select-none">
-                Without Email
-              </button>
-            </div>
+      
 
-            <!-- Sort Toggle Button -->
-            <button onclick="toggleSort()"
-              class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold rounded-lg text-slate-650 transition-all">
-              <i data-lucide="arrow-up-down" class="size-3.5"></i>
-              Sort: <span id="sort-order-text" class="text-slate-950">Name (A-Z)</span>
-            </button>
-          </div>
-
-          <!-- Sample Table Grid -->
-          <div class="border border-slate-200 rounded-2xl overflow-hidden mt-2 bg-white">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr
-                  class="bg-slate-50 border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-widest text-[9px] select-none">
-                  <th class="p-4">Name</th>
-                  <th class="p-4">Company</th>
-                  <th class="p-4">Email Status</th>
-                </tr>
-              </thead>
-              <tbody id="table-grid-body">
-                <!-- Dynamic Rows injected via javascript -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-    </div>
-  </div>
-
-  <!-- TOAST NOTIFICATIONS WRAPPER CONTAINER -->
+      <!-- TOAST NOTIFICATIONS WRAPPER CONTAINER -->
   <div id="toasts-container"
-    class="fixed bottom-6 right-6 flex flex-col gap-3 z-50 w-full max-w-[380px] pointer-events-none"></div>
+    class="fixed bottom-6 right-6 flex flex-col z-50 w-full max-w-[380px] pointer-events-none overflow-visible"></div>
 
   <!-- CUSTOM CONFIRM DIALOG OVERLAY CONTAINER -->
   <div id="confirm-overlay-container" class="fixed inset-0 z-50 pointer-events-none"></div>
@@ -562,20 +516,21 @@ if (confirm) {
 
     // Page switching
     function switchPage(pageId) {
-      const pages = ['dialogs', 'avatars', 'inputs', 'grids'];
+      const pages = ['dialogs', 'avatars', 'inputs'];
       pages.forEach(p => {
         const el = document.getElementById('page-' + p);
         const nav = document.getElementById('nav-' + p);
         if (p === pageId) {
           el.classList.remove('hidden');
-          nav.classList.add('bg-slate-50', 'text-slate-900', 'border-slate-200/40');
-          nav.classList.remove('text-slate-500');
+          nav.classList.add('bg-slate-50', 'text-slate-900', 'border-slate-200/40', 'border');
+          nav.classList.remove('text-slate-500', 'border-transparent');
         } else {
           el.classList.add('hidden');
-          nav.classList.remove('bg-slate-50', 'text-slate-900', 'border-slate-200/40');
-          nav.classList.add('text-slate-500');
+          nav.classList.remove('bg-slate-50', 'text-slate-900', 'border-slate-200/40', 'border');
+          nav.classList.add('text-slate-500', 'border-transparent');
         }
       });
+      lucide.createIcons();
     }
 
     // Avatar Selection Mockup helper
@@ -585,75 +540,129 @@ if (confirm) {
     }
 
     // ----------------------------------------------------
-    // Minimal High-End Toast Notification System
+    // Flow Studio App Theme Toast Notification System
     // ----------------------------------------------------
-    const Toast = {
+        const Toast = {
       container: document.getElementById('toasts-container'),
+      maxToasts: 4, // Maximum on-screen notifications
 
       show(type, title, message, options = {}) {
-        const id = 'toast-' + Date.now();
+        const id = 'toast-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
         const duration = options.duration || 4000;
 
-        const toast = document.createElement('div');
-        toast.id = id;
+        // Outer wrapper for exact 60fps height expansion & push-down
+        const wrapper = document.createElement('div');
+        wrapper.id = id;
+        wrapper.className = 'toast-wrapper w-full pointer-events-auto transition-all duration-300 ease-out overflow-hidden [will-change:transform,max-height,opacity] [transform:translateZ(0)]';
+        wrapper.style.maxHeight = '0px';
+        wrapper.style.opacity = '0';
+        wrapper.style.transform = 'translateY(-10px)';
 
-        // High-end minimalist design: crisp white, left accent border, tiny clean icon
-        toast.className = 'bg-white border border-slate-200/90 rounded-2xl shadow-minimal overflow-hidden flex flex-col w-full pointer-events-auto select-none animate-toast-in relative';
-
-        let borderAccent = '';
+        let badgeStyle = '';
         let iconHtml = '';
+        let progressBg = '';
 
         switch (type) {
           case 'success':
-            borderAccent = 'border-l-2 border-l-emerald-500';
-            iconHtml = '<i data-lucide="check" class="size-4 text-emerald-500"></i>';
+            badgeStyle = 'bg-emerald-50 text-emerald-600 border-emerald-200/60';
+            iconHtml = '<i data-lucide="check-circle-2" class="size-4"></i>';
+            progressBg = 'bg-emerald-500';
             break;
           case 'error':
-            borderAccent = 'border-l-2 border-l-rose-500';
-            iconHtml = '<i data-lucide="alert-circle" class="size-4 text-rose-500"></i>';
+            badgeStyle = 'bg-rose-50 text-rose-600 border-rose-200/60';
+            iconHtml = '<i data-lucide="alert-circle" class="size-4"></i>';
+            progressBg = 'bg-rose-500';
             break;
           case 'warning':
-            borderAccent = 'border-l-2 border-l-amber-500';
-            iconHtml = '<i data-lucide="alert-triangle" class="size-4 text-amber-500"></i>';
+            badgeStyle = 'bg-amber-50 text-amber-600 border-amber-200/60';
+            iconHtml = '<i data-lucide="alert-triangle" class="size-4"></i>';
+            progressBg = 'bg-amber-500';
             break;
           case 'info':
-            borderAccent = 'border-l-2 border-l-blue-500';
-            iconHtml = '<i data-lucide="info" class="size-4 text-blue-500"></i>';
+            badgeStyle = 'bg-sky-50 text-sky-600 border-sky-200/60';
+            iconHtml = '<i data-lucide="info" class="size-4"></i>';
+            progressBg = 'bg-sky-500';
             break;
           case 'sync':
-            borderAccent = 'border-l-2 border-l-indigo-500';
-            iconHtml = '<i data-lucide="refresh-cw" class="size-4 text-indigo-500 animate-spin"></i>';
+            badgeStyle = 'bg-indigo-50 text-indigo-600 border-indigo-200/60';
+            iconHtml = '<i data-lucide="refresh-cw" class="size-4 animate-spin"></i>';
+            progressBg = 'bg-indigo-500';
             break;
         }
 
-        toast.className += ' ' + borderAccent;
-
-        toast.innerHTML = `
-          <div class="flex items-start p-4 gap-3">
-            <div class="shrink-0 mt-0.5">${iconHtml}</div>
-            <div class="flex-1 min-w-0 pr-2">
-              <h4 class="text-xs font-extrabold text-slate-900 leading-tight">${title}</h4>
-              <p class="text-[10px] text-slate-400 mt-0.5 leading-relaxed font-semibold">${message}</p>
-              ${options.actionText ? `
-                <button id="${id}-action" class="mt-2.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none">
-                  ${options.actionText}
-                </button>
-              ` : ''}
+        wrapper.innerHTML = `
+          <div class="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-lg shadow-slate-900/5 p-3.5 flex flex-col w-full select-none relative overflow-hidden group my-1">
+            <div class="flex items-start gap-3">
+              <div class="shrink-0 p-2 rounded-xl border ${badgeStyle} flex items-center justify-center">
+                ${iconHtml}
+              </div>
+              <div class="flex-1 min-w-0 pt-0.5">
+                <h4 class="text-xs font-bold text-slate-900 leading-snug tracking-tight">${title}</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed font-medium">${message}</p>
+                ${options.actionText ? `
+                  <button id="${id}-action" class="mt-2.5 px-3 py-1 bg-slate-950 hover:bg-slate-900 text-white rounded-lg text-[10px] font-semibold transition-colors focus:outline-none shadow-sm">
+                    ${options.actionText}
+                  </button>
+                ` : ''}
+              </div>
+              <button onclick="Toast.dismiss('${id}')" class="shrink-0 p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all focus:outline-none">
+                <i data-lucide="x" class="size-3.5"></i>
+              </button>
             </div>
-            <button onclick="Toast.dismiss('${id}')" class="shrink-0 text-slate-350 hover:text-slate-650 transition-colors p-0.5 rounded-lg focus:outline-none">
-              <i data-lucide="x" class="size-3.5"></i>
-            </button>
+            <!-- Auto-dismiss progress bar -->
+            <div id="${id}-progress" class="absolute bottom-0 left-0 h-0.5 ${progressBg} w-full transition-all ease-linear rounded-b-2xl" style="transition-duration: ${duration}ms;"></div>
           </div>
         `;
 
-        this.container.appendChild(toast);
-        lucide.createIcons({ scope: toast });
+        // Prepend newest notification at top of container
+        this.container.prepend(wrapper);
+        lucide.createIcons({ scope: wrapper });
+
+        // Measure exact content height
+        const targetHeight = wrapper.scrollHeight;
+
+        // Smoothly expand exact height & slide down existing toasts
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            wrapper.style.maxHeight = targetHeight + 'px';
+            wrapper.style.opacity = '1';
+            wrapper.style.transform = 'translateY(0)';
+          });
+        });
+
+        // After expansion completes (300ms), unlock overflow & remove hard maxHeight
+        setTimeout(() => {
+          if (wrapper && !wrapper.classList.contains('dismissing')) {
+            wrapper.style.overflow = 'visible';
+            wrapper.style.maxHeight = 'none';
+          }
+        }, 300);
+
+        // Enforce maxToasts limit (evict oldest at bottom)
+        const activeToasts = Array.from(this.container.children).filter(el => !el.classList.contains('dismissing'));
+        if (activeToasts.length > this.maxToasts) {
+          const oldestAtBottom = activeToasts[activeToasts.length - 1];
+          if (oldestAtBottom && oldestAtBottom.id) {
+            setTimeout(() => {
+              this.dismiss(oldestAtBottom.id);
+            }, 100);
+          }
+        }
+
+        // Trigger progress bar animation
+        setTimeout(() => {
+          const progressBar = document.getElementById(`${id}-progress`);
+          if (progressBar) progressBar.style.width = '0%';
+        }, 40);
 
         if (options.actionText && options.onAction) {
-          document.getElementById(`${id}-action`).addEventListener('click', () => {
-            options.onAction();
-            this.dismiss(id);
-          });
+          const actionBtn = document.getElementById(`${id}-action`);
+          if (actionBtn) {
+            actionBtn.addEventListener('click', () => {
+              options.onAction();
+              this.dismiss(id);
+            });
+          }
         }
 
         // Auto Dismiss Timers
@@ -661,25 +670,37 @@ if (confirm) {
           this.dismiss(id);
         }, duration);
 
-        toast.dataset.timerId = timer;
+        wrapper.dataset.timerId = timer;
       },
 
       dismiss(id) {
-        const toast = document.getElementById(id);
-        if (!toast) return;
+        const wrapper = document.getElementById(id);
+        if (!wrapper || wrapper.classList.contains('dismissing')) return;
 
-        if (toast.dataset.timerId) {
-          clearTimeout(parseInt(toast.dataset.timerId));
+        wrapper.classList.add('dismissing');
+        wrapper.style.overflow = 'hidden';
+        wrapper.style.maxHeight = wrapper.offsetHeight + 'px';
+
+        if (wrapper.dataset.timerId) {
+          clearTimeout(parseInt(wrapper.dataset.timerId));
         }
 
-        toast.classList.remove('animate-toast-in');
-        toast.classList.add('animate-toast-out');
-
-        toast.addEventListener('animationend', (e) => {
-          if (e.animationName === 'toastOut') {
-            toast.remove();
-          }
+        // Smooth collapse & fade out at bottom
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            wrapper.style.maxHeight = '0px';
+            wrapper.style.opacity = '0';
+            wrapper.style.transform = 'translateY(12px)';
+            wrapper.style.paddingTop = '0px';
+            wrapper.style.paddingBottom = '0px';
+          });
         });
+
+        setTimeout(() => {
+          if (wrapper && wrapper.parentNode) {
+            wrapper.remove();
+          }
+        }, 320);
       }
     };
 
@@ -691,6 +712,9 @@ if (confirm) {
 
       createDialog({ title, message, type, placeholder = '', delay = false }) {
         return new Promise((resolve) => {
+          let keyHandler;
+          let timer;
+
           const originalOverflow = document.body.style.overflow;
           document.body.style.overflow = 'hidden';
 
@@ -739,7 +763,7 @@ if (confirm) {
               ` : ''}
 
               <div class="flex items-center justify-end gap-2.5 mt-1">
-                <button id="dialog-cancel-btn" class="px-4 py-2 border border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-500 rounded-xl text-xs font-bold transition-all outline-none">
+                <button id="dialog-cancel-btn" class="px-4 py-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-500 rounded-xl text-xs font-bold transition-all outline-none">
                   Cancel
                 </button>
                 <button id="dialog-confirm-btn" class="px-4 py-2 rounded-xl text-xs font-bold transition-all outline-none flex items-center gap-1.5 ${primaryBtnClass}">
@@ -768,7 +792,7 @@ if (confirm) {
             let countdown = 2;
             confirmBtn.innerText = `Confirm (${countdown}s)`;
 
-            const timer = setInterval(() => {
+            timer = setInterval(() => {
               countdown--;
               if (countdown <= 0) {
                 clearInterval(timer);
@@ -782,6 +806,9 @@ if (confirm) {
           }
 
           const cleanUp = (result) => {
+            if (keyHandler) window.removeEventListener('keydown', keyHandler);
+            if (timer) clearInterval(timer);
+
             document.body.style.overflow = originalOverflow;
             overlay.classList.remove('animate-fade-in');
             overlay.classList.add('animate-fade-out');
@@ -812,17 +839,14 @@ if (confirm) {
             cleanUp(hasInput ? null : false);
           };
 
-          const keyHandler = (e) => {
+          keyHandler = (e) => {
             if (e.key === 'Escape') {
-              window.removeEventListener('keydown', keyHandler);
               cleanUp(hasInput ? null : false);
             }
             if (e.key === 'Enter' && !hasInput) {
-              window.removeEventListener('keydown', keyHandler);
               cleanUp(true);
             }
             if (e.key === 'Enter' && hasInput && document.activeElement === inputEl) {
-              window.removeEventListener('keydown', keyHandler);
               cleanUp(inputEl.value || '');
             }
           };
@@ -998,150 +1022,10 @@ if (confirm) {
       lucide.createIcons({ scope: body });
     }
 
-    function setFilter(filterType) {
-      currentFilter = filterType;
-
-      // Update pills styles
-      const filters = ['all', 'has', 'nohas'];
-      filters.forEach(f => {
-        const btn = document.getElementById('filter-' + f);
-        if (f === filterType) {
-          btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-900 bg-slate-900 text-white transition-all select-none';
-        } else {
-          btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-950 transition-all select-none';
-        }
-      });
-
-      renderTable();
-      Toast.show('info', 'Filter Applied', `Filtered by: ${filterType === 'all' ? 'All Leads' : filterType === 'has' ? 'With Email' : 'Without Email'}`);
-    }
-
-    function toggleSort() {
-      currentSort = currentSort === 'asc' ? 'desc' : 'asc';
-      document.getElementById('sort-order-text').innerText = currentSort === 'asc' ? 'Name (A-Z)' : 'Name (Z-A)';
-      renderTable();
-      Toast.show('info', 'Sort Applied', `Sorted: ${currentSort === 'asc' ? 'A-Z' : 'Z-A'}`);
-    }
-
-    // Initialize Page
-    renderTable();
+    // Initial boot rendering
+    switchPage('dialogs');
     lucide.createIcons();
-
-    // ----------------------------------------------------
-    // Click to Open Code in IDE (Alt + Shift + Click) with Hover Overlay
-    // ----------------------------------------------------
-    let inspectorOverlay = null;
-    let hoveredEl = null;
-
-    function createInspectorOverlay() {
-      if (inspectorOverlay) return;
-      inspectorOverlay = document.createElement('div');
-      inspectorOverlay.id = 'inspector-overlay';
-      inspectorOverlay.className = 'fixed pointer-events-none z-50 border border-[#10b981] bg-[#10b981]/5 transition-all duration-75 flex items-start';
-      inspectorOverlay.innerHTML = `
-        <span id="inspector-tag" class="absolute -top-6 left-0 bg-[#10b981] text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow-md tracking-wide font-sans flex items-center whitespace-nowrap">
-          Element
-        </span>
-      `;
-      document.body.appendChild(inspectorOverlay);
-    }
-
-    function removeInspectorOverlay() {
-      if (inspectorOverlay) {
-        inspectorOverlay.remove();
-        inspectorOverlay = null;
-      }
-      hoveredEl = null;
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if (e.altKey && e.shiftKey) {
-        createInspectorOverlay();
-      }
-    });
-
-    window.addEventListener('keyup', (e) => {
-      if (!e.altKey || !e.shiftKey) {
-        removeInspectorOverlay();
-      }
-    });
-
-    window.addEventListener('blur', () => {
-      removeInspectorOverlay();
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!inspectorOverlay) return;
-
-      const target = e.target;
-      if (!target || target === document.documentElement || target === document.body ||
-        target.closest('#inspector-overlay') || target.closest('#toasts-container') ||
-        target.closest('#confirm-overlay-container')) {
-        return;
-      }
-
-      if (hoveredEl !== target) {
-        hoveredEl = target;
-
-        let el = hoveredEl;
-        let line = null;
-        let componentName = null;
-        while (el && el !== document.documentElement) {
-          if (!line && el.hasAttribute('data-line')) {
-            line = el.getAttribute('data-line');
-          }
-          if (!componentName && el.hasAttribute('data-component')) {
-            componentName = el.getAttribute('data-component');
-          }
-          el = el.parentElement;
-        }
-
-        const rect = hoveredEl.getBoundingClientRect();
-
-        inspectorOverlay.style.top = rect.top + 'px';
-        inspectorOverlay.style.left = rect.left + 'px';
-        inspectorOverlay.style.width = rect.width + 'px';
-        inspectorOverlay.style.height = rect.height + 'px';
-
-        const tag = document.getElementById('inspector-tag');
-        const finalCompName = componentName || hoveredEl.tagName.toLowerCase();
-        tag.innerHTML = `<span class="font-bold text-white">&lt;${finalCompName}&gt;</span><span class="text-zinc-100/80 font-mono text-[9px] ml-1.5">index.html:${line || '1'}</span>`;
-      }
-    });
-
-    window.addEventListener('click', (e) => {
-      if (e.altKey && e.shiftKey) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        let el = e.target;
-        let line = null;
-        while (el && el !== document.documentElement) {
-          if (el.hasAttribute('data-line')) {
-            line = el.getAttribute('data-line');
-            break;
-          }
-          el = el.parentElement;
-        }
-
-        if (!line) line = '1';
-
-        console.log('Requesting IDE to open file at line:', line);
-        fetch(`http://localhost:35730/open-code?line=${line}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              removeInspectorOverlay();
-              Toast.show('success', 'Editor Focused', `Opened index.html at line ${line} in Antigravity IDE.`);
-            } else {
-              Toast.show('error', 'IDE Action Failed', data.error || 'Check server console.');
-            }
-          })
-          .catch(err => {
-            Toast.show('error', 'IDE Action Failed', 'Could not communicate with hot-reload server.');
-          });
-      }
-    });
+  
   </script>
 </body>
 

@@ -5,13 +5,13 @@ import { FileText, LayoutGrid, ImageIcon, Video, Folder, Plus } from 'lucide-rea
 interface EmptyFileStateProps {
   searchQuery?: string;
   onClearSearch?: () => void;
-  onNewDocument?: () => void;
+  onNewDocument?: (e: React.MouseEvent) => void;
 }
 
-export const EmptyFileState: React.FC<EmptyFileStateProps> = ({ 
-  searchQuery, 
-  onClearSearch, 
-  onNewDocument 
+export const EmptyFileState: React.FC<EmptyFileStateProps> = ({
+  searchQuery,
+  onClearSearch,
+  onNewDocument
 }) => {
   return (
     <motion.div
@@ -28,7 +28,7 @@ export const EmptyFileState: React.FC<EmptyFileStateProps> = ({
         <div className="absolute inset-10 border border-slate-100 rounded-full" />
         {/* Inner solid ring */}
         <div className="absolute inset-[84px] border border-slate-50 bg-slate-50/50 rounded-full" />
-        
+
         {/* Center Icon Background */}
         <div className="relative size-16 bg-white border border-slate-100 shadow-sm rounded-2xl flex items-center justify-center z-20">
           <FileText className="size-8 text-slate-900" fill="currentColor" />
@@ -63,22 +63,22 @@ export const EmptyFileState: React.FC<EmptyFileStateProps> = ({
           No files found
         </h3>
         <p className="text-slate-500 text-sm max-w-[280px] mx-auto leading-relaxed font-medium">
-          {searchQuery 
-            ? `Your search "${searchQuery}" did not match any projects. Please try again.`
-            : "This folder is empty. Upload a file or create a new document to get started."}
+          {searchQuery
+            ? `Your search "${searchQuery}" did not match any files or folders. Please try again.`
+            : "This folder is empty. Create a new document to get started."}
         </p>
       </div>
 
       <div className="flex items-center justify-center gap-3">
         {searchQuery && (
-          <button 
+          <button
             onClick={onClearSearch}
             className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-xl shadow-sm hover:bg-slate-50 transition-colors"
           >
             Clear search
           </button>
         )}
-        <button 
+        <button
           onClick={onNewDocument}
           className="px-4 py-2.5 bg-[#1a1a1a] text-white font-bold text-sm rounded-xl shadow-sm hover:bg-black transition-colors flex items-center gap-2"
         >
