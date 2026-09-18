@@ -1,6 +1,5 @@
 import React from 'react';
 import { ProjectHeader } from './GlobalComponents/ProjectHeader';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface ProjectDetailsLayoutProps {
   onBack: () => void;
@@ -19,20 +18,9 @@ export const ProjectDetailsLayout: React.FC<ProjectDetailsLayoutProps> = ({ onBa
           {/* Global Header */}
           <ProjectHeader currentTab={currentTab} onTabChange={onTabChange} onBack={onBack} />
 
-          {/* Tab Content gets injected here */}
+          {/* Tab Content gets injected here - Instantaneous */}
           <div id="project-tab-content" className="flex-1 overflow-hidden flex flex-col">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentTab}
-                initial={{ opacity: 0, y: 3 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.05, ease: [0.16, 1, 0.3, 1] }}
-                className="flex-1 flex flex-col overflow-hidden h-full min-w-0"
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+            {children}
           </div>
 
         </div>
