@@ -1,4 +1,5 @@
-﻿// Lightweight canvas micro-burst confetti / spark particle system (Zero external dependencies)
+// Lightweight canvas micro-spark / haptic particle system (Zero external dependencies)
+// Apple-grade subtle micro-sparkle for clean, elegant task completion feedback
 interface Particle {
   x: number;
   y: number;
@@ -10,17 +11,17 @@ interface Particle {
   vRot: number;
   alpha: number;
   decay: number;
-  shape: 'rect' | 'circle';
+  shape: 'circle' | 'rect';
 }
 
+// Elegant, cohesive emerald, soft champagne gold & white micro-spark palette
 const COLORS = [
-  '#10b981', // emerald
-  '#3b82f6', // electric blue
-  '#8b5cf6', // purple
-  '#f59e0b', // amber
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#6366f1', // indigo
+  '#10b981', // emerald 500
+  '#34d399', // emerald 400
+  '#6ee7b7', // soft mint
+  '#fbbf24', // champagne gold
+  '#fef08a', // delicate gold shimmer
+  '#ffffff', // crisp white glint
 ];
 
 let canvas: HTMLCanvasElement | null = null;
@@ -70,8 +71,9 @@ function loop() {
     const p = particles[i];
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += 0.28; // gravity
-    p.vx *= 0.96; // drag
+    p.vy += 0.08; // very gentle downward float
+    p.vx *= 0.92; // rapid, smooth deceleration
+    p.vy *= 0.92;
     p.rotation += p.vRot;
     p.alpha -= p.decay;
 
@@ -86,16 +88,19 @@ function loop() {
     ctx.rotate(p.rotation);
     ctx.fillStyle = p.color;
 
+    // Shrink gracefully as alpha decays for an elegant twinkling disappearance
+    const renderSize = Math.max(0.5, p.size * (0.4 + 0.6 * p.alpha)) * dpr;
+
     if (p.shape === 'circle') {
       ctx.beginPath();
-      ctx.arc(0, 0, p.size * dpr, 0, Math.PI * 2);
+      ctx.arc(0, 0, renderSize, 0, Math.PI * 2);
       ctx.fill();
     } else {
       ctx.fillRect(
-        (-p.size / 2) * dpr,
-        (-p.size / 2) * dpr,
-        p.size * dpr,
-        p.size * 1.4 * dpr
+        -renderSize / 2,
+        -renderSize / 2,
+        renderSize,
+        renderSize
       );
     }
 
@@ -112,28 +117,35 @@ function loop() {
   }
 }
 
-export function triggerConfettiBurst(x?: number, y?: number, count = 28) {
+/**
+ * Trigger subtle, Apple-grade micro-sparkles tightly centered around an element or click coordinate.
+ * Clamped to max 8-10 tiny particles within a gentle ~25px bloom.
+ */
+export function triggerConfettiBurst(x?: number, y?: number, count = 7) {
   const c = ensureCanvas();
   if (!c) return;
 
   const originX = x !== undefined ? x : window.innerWidth / 2;
   const originY = y !== undefined ? y : window.innerHeight / 2;
 
-  for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * (Math.random() * 360)) / 180;
-    const speed = 2.5 + Math.random() * 6.5;
+  // Cap particle count strictly so bursts remain restrained and elegant
+  const effectiveCount = Math.min(count, 8);
+
+  for (let i = 0; i < effectiveCount; i++) {
+    const angle = (Math.PI * 2 * i) / effectiveCount + ((Math.random() - 0.5) * 0.5);
+    const speed = 1.3 + Math.random() * 2.2;
     particles.push({
       x: originX,
       y: originY,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 2.5, // upward arc bias
-      size: 3 + Math.random() * 4,
+      vy: Math.sin(angle) * speed - 0.6, // subtle upward preference
+      size: 2.0 + Math.random() * 1.8,   // tiny, crisp 2-3.8px micro-sparks
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       rotation: Math.random() * Math.PI * 2,
-      vRot: (Math.random() - 0.5) * 0.25,
+      vRot: (Math.random() - 0.5) * 0.15,
       alpha: 1,
-      decay: 0.02 + Math.random() * 0.02,
-      shape: Math.random() > 0.4 ? 'rect' : 'circle',
+      decay: 0.045 + Math.random() * 0.025, // quick, crisp ~250-320ms dissipation
+      shape: Math.random() > 0.3 ? 'circle' : 'rect',
     });
   }
 
@@ -141,3 +153,4 @@ export function triggerConfettiBurst(x?: number, y?: number, count = 28) {
     animId = requestAnimationFrame(loop);
   }
 }
+

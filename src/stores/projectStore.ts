@@ -180,6 +180,10 @@ export const useProjectStore = create<ProjectState>()(
     {
       name: 'project-storage',
       storage: createFileStorage('projects'),
+      partialize: (state) => ({
+        projects: state.projects,
+        currentProject: state.currentProject,
+      }),
       onRehydrateStorage: () => () => { useProjectStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
         const merged = { ...currentState, ...persistedState };

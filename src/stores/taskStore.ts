@@ -170,7 +170,8 @@ export const useTaskStore = create<TaskState>()(
       }),
 
       addTask: (task) => set((state) => {
-        const newTask = { ...task, id: Math.random().toString(36).substr(2, 9) } as Task;
+        const id = 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+        const newTask = { ...task, id } as Task;
         useActivityStore.getState().logActivity('task', `Added task: ${task.title}`, { category: 'task_created', targetId: newTask.id, targetName: newTask.title });
         return {
           tasks: [...state.tasks, newTask]
@@ -424,10 +425,98 @@ export const useTaskStore = create<TaskState>()(
     {
       name: 'task-storage',
       storage: createFileStorage('tasks'),
+      partialize: (state) => ({
+        tasks: state.tasks,
+        projectColumns: state.projectColumns,
+        projectColumnOrders: state.projectColumnOrders,
+        projectColumnNames: state.projectColumnNames,
+        projectStatusConfigs: state.projectStatusConfigs,
+        projectHiddenColumns: state.projectHiddenColumns,
+      }),
       onRehydrateStorage: () => () => { useTaskStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
-        const merged = { ...currentState, ...persistedState };
-        
+        // Protect active UI state: never overwrite currentProjectId or UI ephemeral state from disk
+        const currentProjectId = currentState.currentProjectId;
+        const merged: TaskState = {
+          ...currentState,
+          ...persistedState,
+          currentProjectId,
+          sortBy: currentState.sortBy,
+          isFieldsSidebarOpen: currentState.isFieldsSidebarOpen,
+          _hasHydrated: true,
+        };
+
+        if (persistedState?.tasks && Array.isArray(persistedState.tasks)) {
+          const currentTaskMap = new Map<string, Task>();
+          for (const ct of currentState.tasks) {
+            if (ct && ct.id) currentTaskMap.set(ct.id, ct);
+          }
+
+          const persistedList = persistedState.tasks.map((t: any) => {
+            const id = t.id || ('task-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7));
+            const inMemory = currentTaskMap.get(id);
+
+            let title = t.title || t.name;
+            if (!title) {
+              title = inMemory?.title || "Untitled Task";
+            }
+
+            return {
+              projectId: t.projectId || inMemory?.projectId || 'rebrand-2024',
+              details: t.details !== undefined ? t.details : (inMemory?.details || ''),
+              dueDate: t.dueDate !== undefined ? t.dueDate : (inMemory?.dueDate || ''),
+              priority: t.priority !== undefined ? t.priority : (inMemory?.priority || 'medium'),
+              phase: t.phase || inMemory?.phase || 'todo',
+              status: t.status || inMemory?.status || (t.phase === 'done' ? 'Complete' : 'Incomplete'),
+              taskType: t.taskType || inMemory?.taskType || 'task',
+              ...t,
+              id,
+              title,
+              assignees: Array.isArray(t.assignees) ? t.assignees : (inMemory?.assignees || [])
+            };
+          });
+
+          // Retain any tasks created in memory that have not yet been written to disk
+          const persistedIds = new Set(persistedList.map((t: Task) => t.id));
+          const memoryOnlyTasks = currentState.tasks.filter((t) => t && t.id && !persistedIds.has(t.id));
+
+          merged.tasks = [...persistedList, ...memoryOnlyTasks];
+        } else {
+          merged.tasks = currentState.tasks;
+        }
+
+        // Guarantee that field tasks are preserved
+        if (merged.tasks && Array.isArray(merged.tasks)) {
+          const hasFieldTasks = merged.tasks.some((t: any) => t.id && t.id.startsWith('field-task-'));
+          if (!hasFieldTasks) {
+            merged.tasks = [
+              ...merged.tasks,
+              ...currentState.tasks.filter((t: any) => t.id && t.id.startsWith('field-task-'))
+            ];
+          }
+        }
+
+        // Sync columns for active project
+        merged.projectColumns = merged.projectColumns || {};
+        merged.projectColumnOrders = merged.projectColumnOrders || {};
+        merged.projectColumnNames = merged.projectColumnNames || {};
+        merged.projectStatusConfigs = merged.projectStatusConfigs || {};
+        merged.projectHiddenColumns = merged.projectHiddenColumns || {};
+
+        if (currentProjectId) {
+          merged.columns = merged.projectColumns[currentProjectId] || currentState.columns || [];
+          merged.columnOrder = merged.projectColumnOrders[currentProjectId] || currentState.columnOrder || ['title', 'assignee', 'dueDate', 'priority', 'status', 'comments', 'customField', 'pics'];
+          merged.columnNames = merged.projectColumnNames[currentProjectId] || currentState.columnNames || {};
+          merged.statusConfigs = merged.projectStatusConfigs[currentProjectId] || currentState.statusConfigs || {};
+          merged.hiddenColumns = merged.projectHiddenColumns[currentProjectId] || currentState.hiddenColumns || [];
+        } else {
+          merged.columns = currentState.columns;
+          merged.columnOrder = currentState.columnOrder;
+          merged.columnNames = currentState.columnNames;
+          merged.statusConfigs = currentState.statusConfigs;
+          merged.hiddenColumns = currentState.hiddenColumns;
+        }
+
         // Ensure columnOrder is never empty, null, or corrupted and contains 'title'
         if (!merged.columnOrder || !Array.isArray(merged.columnOrder) || merged.columnOrder.length === 0) {
           merged.columnOrder = ['title', 'assignee', 'dueDate', 'priority', 'status', 'comments', 'customField', 'pics'];
@@ -441,58 +530,7 @@ export const useTaskStore = create<TaskState>()(
         } else {
           merged.hiddenColumns = [];
         }
-        
-        if (merged.tasks && Array.isArray(merged.tasks)) {
-          merged.tasks = merged.tasks.map((t: any) => {
-            // Guarantee ID
-            const id = t.id || Math.random().toString(36).substr(2, 9);
-            
-            // Guarantee property check fallback
-            let title = t.title || t.name;
-            if (!title) {
-              // Try to find if there was any task in currentState with same ID to recover title, or fallback
-              const originalTask = currentState.tasks.find((orig: any) => orig.id === id);
-              title = originalTask?.title || (originalTask as any)?.name || "Untitled Task";
-            }
-            
-            return {
-              projectId: t.projectId || 'rebrand-2024',
-              details: t.details || '',
-              dueDate: t.dueDate || '',
-              priority: t.priority !== undefined ? t.priority : 'medium',
-              phase: t.phase || 'todo',
-              status: t.status || (t.phase === 'done' ? 'Complete' : 'Incomplete'),
-              taskType: t.taskType || 'task',
-              ...t,
-              // Overwrite with guaranteed healed values
-              id,
-              title,
-              assignees: Array.isArray(t.assignees) ? t.assignees : []
-            };
-          });
-        } else {
-          merged.tasks = currentState.tasks;
-        }
 
-        // Guarantee that the new field tasks are present in the persisted tasks list
-        if (merged.tasks && Array.isArray(merged.tasks)) {
-          const hasFieldTasks = merged.tasks.some((t: any) => t.id && t.id.startsWith('field-task-'));
-          if (!hasFieldTasks) {
-            merged.tasks = [
-              ...merged.tasks,
-              ...currentState.tasks.filter((t: any) => t.id && t.id.startsWith('field-task-'))
-            ];
-          }
-        }
-
-        merged.statusConfigs = merged.statusConfigs || {};
-        merged.columnNames = merged.columnNames || {};
-        merged.projectColumns = merged.projectColumns || {};
-        merged.projectColumnOrders = merged.projectColumnOrders || {};
-        merged.projectColumnNames = merged.projectColumnNames || {};
-        merged.projectStatusConfigs = merged.projectStatusConfigs || {};
-        merged.projectHiddenColumns = merged.projectHiddenColumns || {};
-        
         return merged;
       }
     }

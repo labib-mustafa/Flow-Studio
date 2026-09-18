@@ -771,6 +771,7 @@ function bootstrap(): void {
 
 // Real-Time Event Sync via Server-Sent Events (SSE)
 const sseClients: express.Response[] = [];
+const lastApiWriteTimestamps = new Map<string, number>();
 
 function broadcastStoreChange(storeName: string, source: 'api' | 'fs' = 'api') {
   const payload = JSON.stringify({ type: 'store_updated', store: storeName, source, timestamp: Date.now() });
@@ -799,8 +800,13 @@ function setupDataWatcher(dirPath: string) {
 
       const timer = setTimeout(() => {
         fsWatchDebounceTimers.delete(storeName);
+        const lastApiTime = lastApiWriteTimestamps.get(storeName) || 0;
+        if (Date.now() - lastApiTime < 2000) {
+          // Skip broadcast: this file change was triggered by our own internal API write
+          return;
+        }
         broadcastStoreChange(storeName, 'fs');
-      }, 100);
+      }, 120);
 
       fsWatchDebounceTimers.set(storeName, timer);
     });
@@ -922,6 +928,7 @@ app.put('/api/store/:name', (req, res) => {
     fs.writeFileSync(tmpPath, content, 'utf-8');
     fs.renameSync(tmpPath, filePath);
 
+    lastApiWriteTimestamps.set(name, Date.now());
     broadcastStoreChange(name, 'api');
 
     res.json({ success: true });

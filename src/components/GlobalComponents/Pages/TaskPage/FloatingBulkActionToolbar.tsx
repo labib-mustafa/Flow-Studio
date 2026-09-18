@@ -76,7 +76,7 @@ export const FloatingBulkActionToolbar: React.FC<FloatingBulkActionToolbarProps>
     selectedTaskIds.forEach((id) => updateTask(id, { status }));
     if (status === 'Complete') {
       sound.success();
-      triggerConfettiBurst(undefined, undefined, 36);
+      triggerConfettiBurst(undefined, undefined, 8);
     } else {
       sound.tick();
     }

@@ -13,9 +13,16 @@ import { AnimatePresence, motion } from 'motion/react';
 
 export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) => {
   const { tasks, addTask, updateTask, isFieldsSidebarOpen, setFieldsSidebarOpen, setProject } = useTaskStore();
-  const { currentProject } = useProjectStore();
+  const { currentProject, projects, setCurrentProject } = useProjectStore();
 
-  const effectiveProjectId = projectId || currentProject?.id || 'default-project';
+  const fallbackProjectId = projects[0]?.id || 'rebrand-2024';
+  const effectiveProjectId = projectId || currentProject?.id || fallbackProjectId;
+
+  React.useEffect(() => {
+    if (!currentProject && projects.length > 0) {
+      setCurrentProject(projects[0]);
+    }
+  }, [currentProject, projects, setCurrentProject]);
 
   React.useEffect(() => {
     if (effectiveProjectId) {

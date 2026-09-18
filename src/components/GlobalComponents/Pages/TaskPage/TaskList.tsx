@@ -548,7 +548,7 @@ const TaskRow: React.FC<{
     if (!completed) {
       updateTask(id, { phase: 'done', status: 'Complete' });
       sound.success();
-      triggerConfettiBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 28);
+      triggerConfettiBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 7);
       toast.success('Task completed', `"${title}" marked as complete`, {
         actionText: 'Undo',
         duration: 4500,
@@ -1716,9 +1716,9 @@ export const TaskList: React.FC<TaskListProps> = ({
               const rowEl = document.getElementById(`task-row-${targetTask.id}`);
               if (rowEl) {
                 const rect = rowEl.getBoundingClientRect();
-                triggerConfettiBurst(rect.left + 80, rect.top + rect.height / 2, 28);
+                triggerConfettiBurst(rect.left + 80, rect.top + rect.height / 2, 7);
               } else {
-                triggerConfettiBurst(undefined, undefined, 28);
+                triggerConfettiBurst(undefined, undefined, 7);
               }
               toast.success('Task completed', `"${targetTask.title}" marked as complete`, {
                 actionText: 'Undo',
