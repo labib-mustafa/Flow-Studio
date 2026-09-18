@@ -48,36 +48,24 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
 
     set((state) => {
       // Prepend newest toast at top of list
-      const updated = [newToast, ...state.toasts];
-      const activeToasts = updated.filter((t) => !t.dismissing);
-
-      // If active toasts exceed maxToasts (4), mark the oldest (last active item) for dismissal
-      if (activeToasts.length > state.maxToasts) {
-        const oldest = activeToasts[activeToasts.length - 1];
-        if (oldest) {
-          setTimeout(() => {
-            get().dismissToast(oldest.id);
-          }, 80);
-        }
-      }
-
-      return { toasts: updated };
+      const updated = [newToast, ...state.toasts.filter((t) => t.id !== id)];
+      // If toasts exceed maxToasts, gracefully evict the oldest
+      const trimmed = updated.slice(0, state.maxToasts);
+      return { toasts: trimmed };
     });
+
+    // Fallback store-level auto-dismiss timer (duration + 600ms) to ensure toasts never get orphaned
+    setTimeout(() => {
+      get().dismissToast(id);
+    }, duration + 600);
 
     return id;
   },
 
   dismissToast: (id) => {
     set((state) => ({
-      toasts: state.toasts.map((t) =>
-        t.id === id ? { ...t, dismissing: true } : t
-      ),
+      toasts: state.toasts.filter((t) => t.id !== id),
     }));
-
-    // Remove from store array after exit animation completes
-    setTimeout(() => {
-      get().removeToast(id);
-    }, 320);
   },
 
   removeToast: (id) => {
