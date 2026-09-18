@@ -17,9 +17,11 @@ import {
   Server,
   FolderKanban,
   CornerDownLeft,
-  X
+  X,
+  Keyboard,
 } from 'lucide-react';
 import { useProjectStore } from '../../../stores/projectStore';
+import { useShortcutsStore } from '../../../stores/shortcutsStore';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -178,6 +180,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         icon: Plus,
         action: () => onNewProject(),
         shortcut: '⌘N',
+      },
+      {
+        id: 'action-shortcuts',
+        title: 'Keyboard Shortcuts Cheat Sheet',
+        subtitle: 'View all keyboard shortcuts and pro power flows',
+        category: 'Actions',
+        icon: Keyboard,
+        action: () => {
+          onClose();
+          useShortcutsStore.getState().openShortcuts();
+        },
+        shortcut: '?',
       },
       {
         id: 'action-new-invoice',

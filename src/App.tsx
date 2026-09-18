@@ -48,6 +48,7 @@ import { ToastContainer } from './components/GlobalComponents/ToastContainer';
 import { ConfirmDialogModal } from './components/GlobalComponents/ConfirmDialogModal';
 import { PromptModal } from './components/GlobalComponents/PromptModal';
 import { CommandPalette } from './components/GlobalComponents/CommandPalette/CommandPalette';
+import { ShortcutsModal } from './components/GlobalComponents/ShortcutsModal';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -484,6 +485,7 @@ function AppContent() {
       <ToastContainer />
       <ConfirmDialogModal />
       <PromptModal />
+      <ShortcutsModal />
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}

@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Task, useTaskStore } from '../../../../stores/taskStore';
+import { sound } from '../../../../stores/soundStore';
+import { toast } from '../../../../stores/toastStore';
+import { useTrashStore } from '../../../../stores/trashStore';
+import { triggerConfettiBurst } from '../../../../lib/confetti';
 import { confirm } from '../../../../stores/confirmStore';
 import { prompt } from '../../../../stores/promptStore';
 import { PriorityDropdown } from './PriorityDropdown';
@@ -33,6 +37,13 @@ const RadioCircle = ({ size = 13 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="7" cy="7" r="5.25" stroke="currentColor" strokeWidth="1.5" />
     <circle cx="7" cy="7" r="2.5" fill="currentColor" />
+  </svg>
+);
+
+const CheckedCircleIcon = ({ size = 15, className = "" }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className={`text-emerald-500 transition-all duration-200 scale-100 active:scale-90 ${className}`}>
+    <circle cx="8" cy="8" r="7" fill="currentColor" />
+    <path d="M4.8 8.2L7 10.4L11.5 5.8" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -417,6 +428,7 @@ const TaskRow: React.FC<{
   draggedOverTaskId: string | null;
   draggedTaskId: string | null;
   isSelected: boolean;
+  isActive?: boolean;
   onToggleSelect: (id: string, isShift?: boolean) => void;
   onContextMenu?: (e: React.MouseEvent, columnId: string, value: any) => void;
   columnOrder: string[];
@@ -437,6 +449,7 @@ const TaskRow: React.FC<{
   draggedOverTaskId,
   draggedTaskId,
   isSelected,
+  isActive,
   onToggleSelect,
   onContextMenu,
   columnOrder = ['title', 'assignee', 'dueDate', 'priority', 'status', 'comments', 'customField', 'pics'],
@@ -528,13 +541,37 @@ const TaskRow: React.FC<{
     updateTask(id, { phase: newPhase });
   };
 
+  const handleToggleComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (!completed) {
+      updateTask(id, { phase: 'done', status: 'Complete' });
+      sound.success();
+      triggerConfettiBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 28);
+      toast.success('Task completed', `"${title}" marked as complete`, {
+        actionText: 'Undo',
+        duration: 4500,
+        onAction: () => {
+          updateTask(id, { phase: 'todo', status: 'Incomplete' });
+          sound.tick();
+        },
+      });
+    } else {
+      updateTask(id, { phase: 'todo', status: 'Incomplete' });
+      sound.tick();
+    }
+  };
+
   const isDraggedOver = draggedOverTaskId === id;
   const isBeingDragged = draggedTaskId === id;
 
   return (
     <>
       <div
-        className={`group/row grid items-stretch border-t border-slate-100 hover:bg-[#f6f7f9] text-[13px] transition-all duration-150 ${completed ? 'opacity-50' : ''} ${isDraggedOver ? 'border-t-2 border-t-[#7b68ee] bg-[#7b68ee]/5' : ''} ${isBeingDragged ? 'opacity-30 bg-slate-50' : ''} ${isSelected ? 'bg-blue-50/40' : ''}`}
+        id={`task-row-${id}`}
+        data-task-id={id}
+        className={`group/row grid items-stretch border-t border-slate-100 hover:bg-[#f6f7f9] text-[13px] transition-all duration-150 ${completed ? 'opacity-55' : ''} ${isDraggedOver ? 'border-t-2 border-t-[#7b68ee] bg-[#7b68ee]/5' : ''} ${isBeingDragged ? 'opacity-30 bg-slate-50' : ''} ${isSelected ? 'bg-blue-50/40' : ''} ${isActive ? 'ring-1 ring-inset ring-blue-500/80 bg-blue-50/50 shadow-xs' : ''}`}
         draggable={isDraggable}
         onDragStart={(e) => {
           setIsDraggingThis(true);
@@ -600,21 +637,41 @@ const TaskRow: React.FC<{
                     </button>
                   </div>
                 </div>
-                <StatusDropdown task={task} triggerClassName="flex-shrink-0 flex items-center justify-center">
-                  <div
-                    className="mr-2 w-[18px] h-[18px] flex items-center justify-center cursor-pointer hover:opacity-70 transition-opacity flex-shrink-0"
-                    style={getGroupTextColor(phaseName, phaseConfig)}
-                  >
-                    {task.taskType === 'milestone' && <Flag size={15} className="flex-shrink-0" strokeWidth={2.2} />}
-                    {task.taskType === 'form' && <ClipboardType size={15} className="flex-shrink-0" strokeWidth={2.2} />}
-                    {task.taskType === 'meeting' && (
-                      <MessagesSquare size={15} className="flex-shrink-0" strokeWidth={2.2} />
-                    )}
-                    {(!task.taskType || task.taskType === 'task') && (
-                      phaseValue === 'todo' ? <DottedCircle size={14} /> : <RadioCircle size={14} />
-                    )}
-                  </div>
-                </StatusDropdown>
+                <div
+                  onClick={handleToggleComplete}
+                  className="mr-2 w-[18px] h-[18px] flex items-center justify-center cursor-pointer active:scale-90 transition-transform flex-shrink-0 group/circle select-none"
+                  style={completed ? { color: '#10b981' } : getGroupTextColor(phaseName, phaseConfig)}
+                  title={completed ? "Mark incomplete (Space)" : "Mark complete (Space)"}
+                >
+                  {completed ? (
+                    <CheckedCircleIcon size={15} />
+                  ) : (
+                    <>
+                      {task.taskType === 'milestone' && <Flag size={15} className="flex-shrink-0 group-hover/circle:text-emerald-500 transition-colors" strokeWidth={2.2} />}
+                      {task.taskType === 'form' && <ClipboardType size={15} className="flex-shrink-0 group-hover/circle:text-emerald-500 transition-colors" strokeWidth={2.2} />}
+                      {task.taskType === 'meeting' && (
+                        <MessagesSquare size={15} className="flex-shrink-0 group-hover/circle:text-emerald-500 transition-colors" strokeWidth={2.2} />
+                      )}
+                      {(!task.taskType || task.taskType === 'task') && (
+                        phaseValue === 'todo' ? (
+                          <div className="relative flex items-center justify-center">
+                            <DottedCircle size={14} />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/circle:opacity-100 transition-opacity">
+                              <CheckedCircleIcon size={14} className="text-emerald-500/70" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative flex items-center justify-center">
+                            <RadioCircle size={14} />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/circle:opacity-100 transition-opacity">
+                              <CheckedCircleIcon size={14} className="text-emerald-500/70" />
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </>
+                  )}
+                </div>
 
                 {isEditingTitle ? (
                   <input
@@ -1050,9 +1107,12 @@ const TaskGroup: React.FC<{
   sortBy: { column: string; direction: 'asc' | 'desc' } | null;
   toggleSort: (columnId: string) => void;
   selectedTaskIds: string[];
+  activeTaskId?: string | null;
   onToggleSelect: (id: string, isShift?: boolean) => void;
   onSelectAll?: () => void;
   onCollapseAll?: () => void;
+  onHeaderContextMenu?: (e: React.MouseEvent, columnId: string, value: string) => void;
+  onCellContextMenu?: (e: React.MouseEvent, taskId: string, columnId: string, value: any) => void;
 }> = React.memo(({
   phaseId,
   name,
@@ -1072,6 +1132,7 @@ const TaskGroup: React.FC<{
   sortBy,
   toggleSort,
   selectedTaskIds,
+  activeTaskId,
   onToggleSelect,
   onSelectAll,
   onCollapseAll,
@@ -1333,6 +1394,7 @@ const TaskGroup: React.FC<{
                 draggedOverTaskId={draggedOverTaskId}
                 draggedTaskId={draggedTaskId}
                 isSelected={selectedTaskIds.includes(task.id)}
+                isActive={activeTaskId === task.id}
                 onToggleSelect={onToggleSelect}
                 onContextMenu={(e, colId, val) => onCellContextMenu?.(e, task.id, colId, val)}
                 columnOrder={columnOrder}
@@ -1374,12 +1436,7 @@ export const TaskList: React.FC<TaskListProps> = ({
   const [localSelectedTaskIds, setLocalSelectedTaskIds] = useState<string[]>([]);
   const selectedTaskIds = propSelectedTaskIds !== undefined ? propSelectedTaskIds : localSelectedTaskIds;
   const setSelectedTaskIds = propSetSelectedTaskIds !== undefined ? propSetSelectedTaskIds : setLocalSelectedTaskIds;
-  const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
-
-  const showToast = (message: string) => {
-    setToast({ message, visible: true });
-    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
-  };
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   const [lastSelectedTaskId, setLastSelectedTaskId] = useState<string | null>(null);
   const handleSelectAllGroup = (groupTasks: Task[]) => {
@@ -1591,8 +1648,140 @@ export const TaskList: React.FC<TaskListProps> = ({
     }
 
     setSelectedTaskIds(prev => prev.includes(id) ? prev.filter(taskId => taskId !== id) : [...prev, id]);
+    setActiveTaskId(id);
     setLastSelectedTaskId(id);
   };
+
+  // Sync activeTaskId with selectedTaskIds
+  useEffect(() => {
+    if (selectedTaskIds.length > 0 && (!activeTaskId || !selectedTaskIds.includes(activeTaskId))) {
+      setActiveTaskId(selectedTaskIds[selectedTaskIds.length - 1]);
+    }
+  }, [selectedTaskIds, activeTaskId]);
+
+  // Superhuman & Linear Keyboard Navigation (J / K / Space / Backspace / Delete / Enter / X)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isTyping =
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        (activeEl as HTMLElement)?.isContentEditable;
+
+      if (isTyping) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const flat = flatVisualTasks;
+      if (flat.length === 0) return;
+
+      const currentIndex = activeTaskId
+        ? flat.findIndex((t) => t.id === activeTaskId)
+        : -1;
+
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIndex = currentIndex < flat.length - 1 ? currentIndex + 1 : 0;
+        const nextTask = flat[nextIndex];
+        if (nextTask) {
+          setActiveTaskId(nextTask.id);
+          setSelectedTaskIds([nextTask.id]);
+          sound.tick();
+          const rowEl = document.getElementById(`task-row-${nextTask.id}`);
+          rowEl?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : flat.length - 1;
+        const prevTask = flat[prevIndex];
+        if (prevTask) {
+          setActiveTaskId(prevTask.id);
+          setSelectedTaskIds([prevTask.id]);
+          sound.tick();
+          const rowEl = document.getElementById(`task-row-${prevTask.id}`);
+          rowEl?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      } else if (e.key === ' ') {
+        const targetId = activeTaskId || selectedTaskIds[0];
+        if (targetId) {
+          const targetTask = tasks.find((t) => t.id === targetId);
+          if (targetTask) {
+            e.preventDefault();
+            const isNowDone = !(targetTask.phase === 'done' || targetTask.status === 'Complete');
+            useTaskStore.getState().updateTask(targetTask.id, {
+              phase: isNowDone ? 'done' : 'todo',
+              status: isNowDone ? 'Complete' : 'Incomplete',
+            });
+            if (isNowDone) {
+              sound.success();
+              const rowEl = document.getElementById(`task-row-${targetTask.id}`);
+              if (rowEl) {
+                const rect = rowEl.getBoundingClientRect();
+                triggerConfettiBurst(rect.left + 80, rect.top + rect.height / 2, 28);
+              } else {
+                triggerConfettiBurst(undefined, undefined, 28);
+              }
+              toast.success('Task completed', `"${targetTask.title}" marked as complete`, {
+                actionText: 'Undo',
+                duration: 4500,
+                onAction: () => {
+                  useTaskStore.getState().updateTask(targetTask.id, { phase: 'todo', status: 'Incomplete' });
+                  sound.tick();
+                },
+              });
+            } else {
+              sound.tick();
+            }
+          }
+        }
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        const toDeleteIds = selectedTaskIds.length > 0 ? selectedTaskIds : (activeTaskId ? [activeTaskId] : []);
+        if (toDeleteIds.length > 0) {
+          e.preventDefault();
+          const tasksToDelete = tasks.filter((t) => toDeleteIds.includes(t.id));
+          const count = tasksToDelete.length;
+          toDeleteIds.forEach((id) => useTaskStore.getState().deleteTask(id));
+          setSelectedTaskIds([]);
+          setActiveTaskId(null);
+          sound.delete();
+          toast.info(
+            count === 1 ? 'Task deleted' : `${count} tasks deleted`,
+            count === 1 ? `"${tasksToDelete[0].title}" moved to trash` : `${count} tasks moved to trash`,
+            {
+              actionText: 'Undo',
+              duration: 5000,
+              onAction: () => {
+                useTaskStore.setState((s) => ({ tasks: [...tasksToDelete, ...s.tasks] }));
+                useTrashStore.setState((s) => ({
+                  trashItems: s.trashItems.filter((i) => !toDeleteIds.includes(i.originalId)),
+                }));
+                sound.tick();
+                toast.success('Restored', `${count} task${count > 1 ? 's' : ''} restored.`);
+              },
+            }
+          );
+        }
+      } else if (e.key === 'x') {
+        const targetId = activeTaskId || selectedTaskIds[0];
+        if (targetId) {
+          e.preventDefault();
+          toggleTaskSelection(targetId);
+          sound.tick();
+        }
+      } else if (e.key === 'Enter') {
+        const targetId = activeTaskId || selectedTaskIds[0];
+        if (targetId) {
+          const targetTask = tasks.find((t) => t.id === targetId);
+          if (targetTask) {
+            e.preventDefault();
+            onTaskClick(targetTask);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTaskId, selectedTaskIds, flatVisualTasks, tasks, onTaskClick, toggleTaskSelection, setSelectedTaskIds]);
 
   // Kept for backward compatibility references or specific helpers if needed
   const todoTasks = getPhaseTasks('todo');
@@ -1802,6 +1991,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             sortBy={sortBy}
             toggleSort={toggleSort}
             selectedTaskIds={selectedTaskIds}
+            activeTaskId={activeTaskId}
             onToggleSelect={toggleTaskSelection}
             onSelectAll={() => handleSelectAllGroup(phaseTasks)}
             onCollapseAll={() => window.dispatchEvent(new Event('collapseAllGroups'))}
@@ -1881,12 +2071,6 @@ export const TaskList: React.FC<TaskListProps> = ({
       )}
 
 
-      {toast.visible && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-950 text-white border border-zinc-800 text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xl z-[1000] animate-fade-in select-none">
-          {toast.message}
-        </div>
-      )}
-
       {selectedTaskIds.length > 0 && typeof document !== 'undefined' && createPortal(
         <FloatingBulkActionToolbar
           selectedTaskIds={selectedTaskIds}
@@ -1900,7 +2084,8 @@ export const TaskList: React.FC<TaskListProps> = ({
               .map((t) => `- [ ] ${t.title} (Due: ${t.dueDate || 'No date'}, Priority: ${t.priority || 'None'})`)
               .join('\n');
             navigator.clipboard.writeText(copiedText);
-            showToast(`Copied ${selectedTaskIds.length} tasks to clipboard.`);
+            sound.tick();
+            toast.info('Copied to clipboard', `Copied ${selectedTaskIds.length} task(s) markdown.`);
           }}
           onDuplicateClick={() => {
             const { addTask } = useTaskStore.getState();
@@ -1914,29 +2099,66 @@ export const TaskList: React.FC<TaskListProps> = ({
                 });
               });
             setSelectedTaskIds([]);
-            showToast(`Duplicated ${selectedTaskIds.length} tasks.`);
+            sound.pop();
+            toast.success('Tasks duplicated', `Duplicated ${selectedTaskIds.length} tasks.`);
           }}
           onArchiveClick={() => {
             const { deleteTask } = useTaskStore.getState();
+            const tasksToDelete = tasks.filter((t) => selectedTaskIds.includes(t.id));
+            const count = tasksToDelete.length;
             selectedTaskIds.forEach(id => deleteTask(id));
             setSelectedTaskIds([]);
-            showToast(`Archived ${selectedTaskIds.length} tasks (moved to trash).`);
+            sound.delete();
+            toast.info(
+              count === 1 ? 'Task archived' : `${count} tasks archived`,
+              count === 1 ? `"${tasksToDelete[0].title}" moved to trash.` : `${count} tasks moved to trash.`,
+              {
+                actionText: 'Undo',
+                duration: 5000,
+                onAction: () => {
+                  useTaskStore.setState((s) => ({ tasks: [...tasksToDelete, ...s.tasks] }));
+                  useTrashStore.setState((s) => ({
+                    trashItems: s.trashItems.filter((i) => !tasksToDelete.some((t) => t.id === i.originalId)),
+                  }));
+                  sound.tick();
+                  toast.success('Restored', `${count} task(s) restored.`);
+                },
+              }
+            );
           }}
           onDeleteClick={async () => {
             const ok = await confirm.danger(
-              `Delete ${selectedTaskIds.length} tasks?`,
+              `Delete ${selectedTaskIds.length} task${selectedTaskIds.length > 1 ? 's' : ''}?`,
               'These tasks will be moved to the Trash directory.'
             );
             if (ok) {
               const { deleteTask } = useTaskStore.getState();
+              const tasksToDelete = tasks.filter((t) => selectedTaskIds.includes(t.id));
+              const count = tasksToDelete.length;
               selectedTaskIds.forEach(id => deleteTask(id));
               setSelectedTaskIds([]);
-              showToast(`Deleted ${selectedTaskIds.length} tasks successfully.`);
+              sound.delete();
+              toast.info(
+                count === 1 ? 'Task deleted' : `${count} tasks deleted`,
+                count === 1 ? `"${tasksToDelete[0].title}" moved to trash.` : `${count} tasks moved to trash.`,
+                {
+                  actionText: 'Undo',
+                  duration: 5000,
+                  onAction: () => {
+                    useTaskStore.setState((s) => ({ tasks: [...tasksToDelete, ...s.tasks] }));
+                    useTrashStore.setState((s) => ({
+                      trashItems: s.trashItems.filter((i) => !tasksToDelete.some((t) => t.id === i.originalId)),
+                    }));
+                    sound.tick();
+                    toast.success('Restored', `${count} task(s) restored.`);
+                  },
+                }
+              );
             }
           }}
         />,
-          document.body
-        )}
+        document.body
+      )}
 
       {/* Context Menu Popup */}
       {contextMenu.isOpen && (
@@ -1952,7 +2174,8 @@ export const TaskList: React.FC<TaskListProps> = ({
                 className="flex items-center text-[13px] text-slate-700 hover:bg-slate-50 hover:text-blue-600 px-3 py-1.5 transition-colors cursor-pointer w-full text-left"
                 onClick={() => {
                   navigator.clipboard.writeText(String(contextMenu.value || ''));
-                  showToast('Copied to clipboard');
+                  sound.tick();
+                  toast.info('Copied to clipboard', 'Cell value copied.');
                   setContextMenu(prev => ({ ...prev, isOpen: false }));
                 }}
               >
@@ -1965,6 +2188,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 onClick={() => {
                   if (contextMenu.taskId && contextMenu.columnId) {
                     useTaskStore.getState().updateTask(contextMenu.taskId, { [contextMenu.columnId]: '' });
+                    sound.tick();
                   }
                   setContextMenu(prev => ({ ...prev, isOpen: false }));
                 }}
@@ -1985,7 +2209,8 @@ export const TaskList: React.FC<TaskListProps> = ({
                         ...duplicatedTask,
                         title: `${duplicatedTask.title} (Copy)`
                       });
-                      showToast('Task duplicated');
+                      sound.pop();
+                      toast.success('Task duplicated', `Created copy of "${t.title}".`);
                     }
                   }
                   setContextMenu(prev => ({ ...prev, isOpen: false }));
@@ -1999,8 +2224,23 @@ export const TaskList: React.FC<TaskListProps> = ({
                 className="flex items-center text-[13px] text-red-600 hover:bg-red-50 hover:text-red-700 px-3 py-1.5 transition-colors cursor-pointer w-full text-left"
                 onClick={() => {
                   if (contextMenu.taskId) {
-                    useTaskStore.getState().deleteTask(contextMenu.taskId);
-                    showToast('Task deleted');
+                    const taskToDelete = tasks.find(t => t.id === contextMenu.taskId);
+                    if (taskToDelete) {
+                      useTaskStore.getState().deleteTask(taskToDelete.id);
+                      sound.delete();
+                      toast.info('Task deleted', `"${taskToDelete.title}" moved to trash.`, {
+                        actionText: 'Undo',
+                        duration: 5000,
+                        onAction: () => {
+                          useTaskStore.setState(s => ({ tasks: [taskToDelete, ...s.tasks] }));
+                          useTrashStore.setState(s => ({
+                            trashItems: s.trashItems.filter(i => i.originalId !== taskToDelete.id)
+                          }));
+                          sound.tick();
+                          toast.success('Restored', `"${taskToDelete.title}" was restored.`);
+                        }
+                      });
+                    }
                   }
                   setContextMenu(prev => ({ ...prev, isOpen: false }));
                 }}

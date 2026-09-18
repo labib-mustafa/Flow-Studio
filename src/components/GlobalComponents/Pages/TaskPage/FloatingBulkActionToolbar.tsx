@@ -23,6 +23,8 @@ import { AssigneeDropdown } from './AssigneeDropdown';
 import { DueDateDropdown } from './DueDateDropdown';
 import { useTaskStore } from '../../../../stores/taskStore';
 import { toast } from '../../../../stores/toastStore';
+import { sound } from '../../../../stores/soundStore';
+import { triggerConfettiBurst } from '../../../../lib/confetti';
 
 interface FloatingBulkActionToolbarProps {
   selectedTaskIds: string[];
@@ -72,6 +74,12 @@ export const FloatingBulkActionToolbar: React.FC<FloatingBulkActionToolbarProps>
 
   const handleBulkStatus = (status: 'Complete' | 'Incomplete') => {
     selectedTaskIds.forEach((id) => updateTask(id, { status }));
+    if (status === 'Complete') {
+      sound.success();
+      triggerConfettiBurst(undefined, undefined, 36);
+    } else {
+      sound.tick();
+    }
     toast.success('Tasks updated', `Marked ${selectedCount} tasks as ${status}.`);
     setIsMoreOpen(false);
   };

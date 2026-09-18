@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { CellPopover } from '../../../ui/CellPopover';
 import { Task, useTaskStore } from '../../../../stores/taskStore';
+import { sound } from '../../../../stores/soundStore';
 import { MessagesSquare, Flag, ClipboardType } from 'lucide-react';
 
 interface StatusDropdownProps {
@@ -54,6 +55,11 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
       if (phase === 'fawawf') statusId = 'inprogress';
       const status = statusId === 'done' ? 'Complete' : 'Incomplete';
       useTaskStore.getState().updateTask(task.id, { phase: statusId as any, status: status as any });
+      if (statusId === 'done') {
+        sound.success();
+      } else {
+        sound.tick();
+      }
     }
     setOpen(false);
   };
@@ -92,7 +98,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
         id: 'done', 
         label: statusConfigs?.done?.name || 'COMPLETE', 
         category: 'Closed', 
-        icon: <RadioCircleIcon color={statusConfigs?.done?.color || '#00a854'} /> 
+        icon: <CheckedCircleIcon color={statusConfigs?.done?.color || '#00a854'} /> 
       },
     ];
 
