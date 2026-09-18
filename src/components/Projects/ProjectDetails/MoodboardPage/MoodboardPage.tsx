@@ -32,7 +32,8 @@ import {
   Lock,
   Link2,
   Frame,
-  X
+  X,
+  Maximize2
 } from 'lucide-react';
 import Moveable from 'react-moveable';
 import Selecto from 'react-selecto';
@@ -206,6 +207,44 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
     }
   };
 
+  const handleFitToScreen = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (items.length === 0) {
+      setView({ zoom: 1, pan: { x: rect.width / 2 - 5000, y: rect.height / 2 - 5000 } });
+      return;
+    }
+    const xs = items.flatMap(i => [i.x, i.x + (i.width || 200)]);
+    const ys = items.flatMap(i => [i.y, i.y + (i.height || 200)]);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const contentWidth = Math.max(100, maxX - minX);
+    const contentHeight = Math.max(100, maxY - minY);
+    const padding = 100;
+
+    const availableWidth = Math.max(100, rect.width - padding * 2);
+    const availableHeight = Math.max(100, rect.height - padding * 2);
+
+    const fitZoom = Math.min(
+      1.5,
+      Math.max(0.2, Math.min(availableWidth / contentWidth, availableHeight / contentHeight))
+    );
+
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+
+    setView({
+      zoom: fitZoom,
+      pan: {
+        x: rect.width / 2 - cx * fitZoom,
+        y: rect.height / 2 - cy * fitZoom,
+      },
+    });
+  };
+
   useEffect(() => {
     handleCenterMoodboard();
   }, []);
@@ -297,6 +336,9 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
             const rect = containerRef.current.getBoundingClientRect();
             setView({ zoom: 1, pan: { x: rect.width / 2 - 5400, y: rect.height / 2 - 5200 } });
           }
+        } else if (e.key === '1' && e.shiftKey) {
+          e.preventDefault();
+          handleFitToScreen();
         } else if (e.key.toLowerCase() === 'd') {
           e.preventDefault();
           if (selectedIdsRef.current.length > 0) {
@@ -1696,11 +1738,18 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
         </button>
         <div className="w-[1px] h-4 bg-slate-200 mx-1"></div>
         <button 
-          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
           onClick={handleCenterMoodboard}
-          title="Center Moodboard"
+          title="Center Canvas"
         >
           <Crosshair size={18} />
+        </button>
+        <button 
+          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+          onClick={handleFitToScreen}
+          title="Fit to Screen (Shift + 1)"
+        >
+          <Maximize2 size={16} />
         </button>
 
         {/* R9: Grid Settings Button & Popover */}

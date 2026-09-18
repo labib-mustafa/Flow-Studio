@@ -46,6 +46,9 @@ import { useAppReady } from './hooks/useAppReady';
 import { toast } from './stores/toastStore';
 import { ToastContainer } from './components/GlobalComponents/ToastContainer';
 import { ConfirmDialogModal } from './components/GlobalComponents/ConfirmDialogModal';
+import { PromptModal } from './components/GlobalComponents/PromptModal';
+import { CommandPalette } from './components/GlobalComponents/CommandPalette/CommandPalette';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const { user, loading, initialize } = useAuthStore();
@@ -84,6 +87,7 @@ function AppContent() {
   const [hasAutoCollapsedNotes, setHasAutoCollapsedNotes] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [selectedMemberIdForDetails, setSelectedMemberIdForDetails] = useState<string | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   // Sync currentView to localStorage whenever it changes
   useEffect(() => {
@@ -95,6 +99,39 @@ function AppContent() {
   const cleanupExpiredItems = useTrashStore(state => state.cleanupExpiredItems);
   const isTrashHydrated = useTrashStore(state => state._hasHydrated);
 
+  // Dynamic Apple Document Title
+  useEffect(() => {
+    let title = 'Flow Studio';
+    if (currentView.startsWith('project-') && currentProject) {
+      const projName = currentProject.title || currentProject.name || 'Project';
+      const sub = currentView.replace('project-', '');
+      const subTitle = sub.charAt(0).toUpperCase() + sub.slice(1);
+      title = `${projName} • ${subTitle} — Flow Studio`;
+    } else {
+      const viewNames: Record<string, string> = {
+        dashboard: 'Dashboard',
+        projects: 'Projects',
+        'new-project': 'New Project',
+        clients: 'Clients',
+        leads: 'Leads CRM',
+        'lead-generator': 'Lead Scraper',
+        team: 'Team Directory',
+        'member-details': 'Team Member',
+        files: 'File Explorer',
+        calendar: 'Calendar',
+        time: 'Time Tracking',
+        billing: 'Billing & Invoices',
+        'new-invoice': 'New Invoice',
+        data: 'Data & Trash',
+        settings: 'Settings',
+        'dev-settings': 'Developer Settings',
+      };
+      const name = viewNames[currentView] || 'Studio';
+      title = `${name} — Flow Studio`;
+    }
+    document.title = title;
+  }, [currentView, currentProject]);
+
   // Auto-cleanup expired trash items on load, but ONLY after hydration completes
   useEffect(() => {
     if (isTrashHydrated && settings.trashSettings?.retentionDays !== undefined) {
@@ -105,6 +142,12 @@ function AppContent() {
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K / Ctrl+K -> Spotlight Command Palette
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+
       // Cmd+N / Ctrl+N -> New Project (only if not in an input/textarea)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
         const activeTag = document.activeElement?.tagName.toLowerCase();
@@ -428,17 +471,39 @@ function AppContent() {
         <Sidebar
           activeTab={currentView.startsWith('project-') || currentView === 'new-project' ? 'projects' : currentView === 'member-details' ? 'team' : currentView}
           onTabChange={setCurrentView}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
       </div>
 
-      {/* Main Content Area */}
-      <main className="flex-1 h-full overflow-hidden">
-        {renderContent()}
+      {/* Main Content Area with Apple Easing */}
+      <main className="flex-1 h-full overflow-hidden relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full h-full"
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
-      {/* Global Toast & Confirm Overlays */}
+      {/* Global Toast, Confirm, Prompt & Spotlight Overlays */}
       <ToastContainer />
       <ConfirmDialogModal />
+      <PromptModal />
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(view) => setCurrentView(view)}
+        onNewProject={() => {
+          setEditingProject(null);
+          setCurrentView('new-project');
+        }}
+      />
     </div>
   );
 }

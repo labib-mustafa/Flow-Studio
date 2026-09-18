@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from '
 import { createPortal } from 'react-dom';
 import { Task, useTaskStore } from '../../../../stores/taskStore';
 import { confirm } from '../../../../stores/confirmStore';
+import { prompt } from '../../../../stores/promptStore';
 import { PriorityDropdown } from './PriorityDropdown';
 import { StatusDropdown } from './StatusDropdown';
 import { AssigneeDropdown } from './AssigneeDropdown';
@@ -627,7 +628,12 @@ const TaskRow: React.FC<{
                   />
                 ) : (
                   <div
-                    className="relative flex-1 min-w-0 flex items-center h-full group/title cursor-default"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditingTitle(true);
+                    }}
+                    className="relative flex-1 min-w-0 flex items-center h-full group/title cursor-text select-none"
+                    title="Double click to edit title"
                   >
                     <span
                       className={`block font-medium truncate ${completed ? 'text-slate-500 line-through' : 'text-slate-800'}`}
@@ -659,9 +665,9 @@ const TaskRow: React.FC<{
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsEditingTitle(true);
-                        onEdit();
                       }}
-                      className="flex items-center justify-center size-[26px] rounded-[5px] border border-[#e2e4e9] bg-white text-[#87909e] hover:bg-slate-50 transition-colors shadow-sm outline-none"
+                      className="flex items-center justify-center size-[26px] rounded-[5px] border border-[#e2e4e9] bg-white text-[#87909e] hover:bg-slate-50 transition-colors shadow-sm outline-none cursor-pointer"
+                      title="Edit task title"
                     >
                       <span className="material-symbols-outlined text-[13px]">edit</span>
                     </button>
@@ -1883,82 +1889,52 @@ export const TaskList: React.FC<TaskListProps> = ({
 
       {selectedTaskIds.length > 0 && typeof document !== 'undefined' && createPortal(
         <FloatingBulkActionToolbar
-            selectedTaskIds={selectedTaskIds}
-            onClose={() => setSelectedTaskIds([])}
-            onCustomFieldsClick={() => {
-              useTaskStore.getState().setFieldsSidebarOpen(true);
-            }}
-            onTagsClick={() => {
-              const newTags = window.prompt("Enter tags separated by commas (e.g. Design, Frontend):");
-              if (newTags) {
-                const tagsList = newTags.split(',').map(t => t.trim()).filter(Boolean);
-                if (tagsList.length > 0) {
-                  const { updateTask } = useTaskStore.getState();
-                  selectedTaskIds.forEach(id => {
-                    const task = tasks.find(t => t.id === id);
-                    const currentTags = task?.tags || [];
-                    const updatedTags = Array.from(new Set([...currentTags, ...tagsList]));
-                    updateTask(id, { tags: updatedTags });
-                  });
-                  showToast(`Added tags to ${selectedTaskIds.length} tasks.`);
-                }
-              }
-            }}
-            onCopyClick={() => {
-              const copiedText = tasks
-                .filter((t) => selectedTaskIds.includes(t.id))
-                .map((t) => `- [ ] ${t.title} (Due: ${t.dueDate || 'No date'}, Priority: ${t.priority || 'None'})`)
-                .join('\n');
-              navigator.clipboard.writeText(copiedText);
-              showToast(`Copied ${selectedTaskIds.length} tasks to clipboard.`);
-            }}
-            onDuplicateClick={() => {
-              const { addTask } = useTaskStore.getState();
-              tasks
-                .filter((t) => selectedTaskIds.includes(t.id))
-                .forEach((t) => {
-                  const { id, comments, ...duplicatedTask } = t;
-                  addTask({
-                    ...duplicatedTask,
-                    title: `${duplicatedTask.title} (Copy)`,
-                  });
+          selectedTaskIds={selectedTaskIds}
+          onClose={() => setSelectedTaskIds([])}
+          onCustomFieldsClick={() => {
+            useTaskStore.getState().setFieldsSidebarOpen(true);
+          }}
+          onCopyClick={() => {
+            const copiedText = tasks
+              .filter((t) => selectedTaskIds.includes(t.id))
+              .map((t) => `- [ ] ${t.title} (Due: ${t.dueDate || 'No date'}, Priority: ${t.priority || 'None'})`)
+              .join('\n');
+            navigator.clipboard.writeText(copiedText);
+            showToast(`Copied ${selectedTaskIds.length} tasks to clipboard.`);
+          }}
+          onDuplicateClick={() => {
+            const { addTask } = useTaskStore.getState();
+            tasks
+              .filter((t) => selectedTaskIds.includes(t.id))
+              .forEach((t) => {
+                const { id, comments, ...duplicatedTask } = t;
+                addTask({
+                  ...duplicatedTask,
+                  title: `${duplicatedTask.title} (Copy)`,
                 });
-              setSelectedTaskIds([]);
-              showToast(`Duplicated ${selectedTaskIds.length} tasks.`);
-            }}
-            onArchiveClick={() => {
+              });
+            setSelectedTaskIds([]);
+            showToast(`Duplicated ${selectedTaskIds.length} tasks.`);
+          }}
+          onArchiveClick={() => {
+            const { deleteTask } = useTaskStore.getState();
+            selectedTaskIds.forEach(id => deleteTask(id));
+            setSelectedTaskIds([]);
+            showToast(`Archived ${selectedTaskIds.length} tasks (moved to trash).`);
+          }}
+          onDeleteClick={async () => {
+            const ok = await confirm.danger(
+              `Delete ${selectedTaskIds.length} tasks?`,
+              'These tasks will be moved to the Trash directory.'
+            );
+            if (ok) {
               const { deleteTask } = useTaskStore.getState();
               selectedTaskIds.forEach(id => deleteTask(id));
               setSelectedTaskIds([]);
-              showToast(`Archived ${selectedTaskIds.length} tasks (moved to trash).`);
-            }}
-            onDeleteClick={async () => {
-              const ok = await confirm.danger(
-                `Delete ${selectedTaskIds.length} tasks?`,
-                'These tasks will be moved to the Trash directory.'
-              );
-              if (ok) {
-                const { deleteTask } = useTaskStore.getState();
-                selectedTaskIds.forEach(id => deleteTask(id));
-                setSelectedTaskIds([]);
-                showToast(`Deleted ${selectedTaskIds.length} tasks successfully.`);
-              }
-            }}
-            onMoreClick={() => {
-              const action = window.prompt("Choose bulk action: \n1 - Mark all as Complete\n2 - Mark all as Incomplete");
-              if (action === '1') {
-                const { updateTask } = useTaskStore.getState();
-                selectedTaskIds.forEach(id => updateTask(id, { status: 'Complete' }));
-                setSelectedTaskIds([]);
-                showToast(`Marked ${selectedTaskIds.length} tasks as Complete.`);
-              } else if (action === '2') {
-                const { updateTask } = useTaskStore.getState();
-                selectedTaskIds.forEach(id => updateTask(id, { status: 'Incomplete' }));
-                setSelectedTaskIds([]);
-                showToast(`Marked ${selectedTaskIds.length} tasks as Incomplete.`);
-              }
-            }}
-          />,
+              showToast(`Deleted ${selectedTaskIds.length} tasks successfully.`);
+            }
+          }}
+        />,
           document.body
         )}
 
@@ -2040,14 +2016,23 @@ export const TaskList: React.FC<TaskListProps> = ({
               <button
                 type="button"
                 className="flex items-center text-[13px] text-slate-700 hover:bg-slate-50 px-3 py-1.5 transition-colors cursor-pointer w-full text-left"
-                onClick={() => {
+                onClick={async () => {
                   if (contextMenu.columnId) {
-                    const newName = window.prompt("Enter new column name:", getColumnDisplayName(contextMenu.columnId));
-                    if (newName) {
+                    const currentName = getColumnDisplayName(contextMenu.columnId);
+                    setContextMenu(prev => ({ ...prev, isOpen: false }));
+                    const newName = await prompt.show({
+                      title: 'Rename Column',
+                      description: 'Enter a custom label for this column view',
+                      defaultValue: currentName,
+                      placeholder: 'Column name',
+                      confirmText: 'Rename'
+                    });
+                    if (newName && newName.trim()) {
                       useTaskStore.getState().updateColumnName(contextMenu.columnId, newName.trim());
                     }
+                  } else {
+                    setContextMenu(prev => ({ ...prev, isOpen: false }));
                   }
-                  setContextMenu(prev => ({ ...prev, isOpen: false }));
                 }}
               >
                 <span className="material-symbols-outlined text-[16px] mr-2 opacity-60">edit</span>

@@ -3,6 +3,7 @@ import { TabbedFileExplorer } from '../../GlobalComponents/FileExplorer/TabbedFi
 import { useClientStore, Client, ClientNote, ProjectHistoryItem } from '../../../stores/clientStore';
 import { useClientDetailsStore } from '../../../stores/clientDetailsStore';
 import { confirm } from '../../../stores/confirmStore';
+import { toast } from '../../../stores/toastStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { AssignedExpertsSidebar, Expert } from '../../GlobalComponents/Sidebars/AssignedExpertsSidebar';
 import { ManageTagsSidebar } from '../Sidebars/ManageTagsSidebar';
@@ -1162,10 +1163,9 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                           <h3 className="text-lg font-black tracking-tight text-slate-900">Latest Activity</h3>
                           <button
                             onClick={() => {
-                              const alertMsg = "Full operational audit is persistent. State synchronization synced successfully.";
-                              alert(alertMsg);
+                              toast.info("Activity Log Audit", "Full operational audit is persistent. State synchronization synced successfully.");
                             }}
-                            className="text-xs font-bold text-slate-900 hover:text-blue-600 transition-colors"
+                            className="text-xs font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer"
                           >
                             View Log
                           </button>

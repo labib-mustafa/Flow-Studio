@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from '../../../../stores/toastStore';
 import { 
   TextCursorInput, 
   Check, 
@@ -787,7 +788,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
   const handleLink = () => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
-      alert('Please place the cursor inside the editor to create a link.');
+      toast.info('Link Editor', 'Please place the cursor inside the editor to create a link.');
       return;
     }
 
@@ -802,7 +803,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
     }
 
     if (!isInsideEditor) {
-      alert('Please place the cursor inside the editor to create a link.');
+      toast.info('Link Editor', 'Please place the cursor inside the editor to create a link.');
       return;
     }
 

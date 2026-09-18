@@ -47,12 +47,7 @@ export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) =>
       <div className="flex-1 overflow-y-auto relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex flex-col h-full min-w-0 px-8 py-6">
         <TaskList
           onAddTask={handleAddTask}
-          onTaskClick={(task) => {
-            const newTitle = prompt("Edit Task Title:", task.title);
-            if (newTitle && newTitle.trim() !== "") {
-              updateTask(task.id, { title: newTitle.trim() });
-            }
-          }}
+          onTaskClick={() => {}}
           tasks={projectTasks}
         />
       </div>

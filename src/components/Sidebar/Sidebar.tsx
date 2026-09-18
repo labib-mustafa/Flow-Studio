@@ -6,6 +6,8 @@ import { useSettings } from '../../hooks/useSettings';
 import { useDevStore } from '../../stores/devStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useEventStore } from '../../stores/eventStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { useLeadStore } from '../../stores/leadStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -21,15 +23,17 @@ import {
   Server,
   Bug,
   Settings,
-  Bot
+  Bot,
+  Search
 } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onOpenCommandPalette?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onOpenCommandPalette }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { settings } = useSettings();
   const { user } = useAuthStore();
@@ -37,6 +41,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const toggleDeveloperMode = useDevStore(state => state.toggleDeveloperMode);
   const isEventModalOpen = useEventStore(state => state.isEventModalOpen);
   const setEventModalOpen = useEventStore(state => state.setEventModalOpen);
+  const projectsCount = useProjectStore(state => state.projects.length);
+  const leadsCount = useLeadStore(state => state.leads.length);
 
   React.useEffect(() => {
     document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '80px' : '280px');
@@ -65,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       </button>
 
       <div className="flex flex-col h-full w-full overflow-hidden">
-        <div className={`px-6 pt-8 pb-4 transition-[padding] duration-200 ease-linear ${isCollapsed ? 'px-4' : ''}`}>
+        <div className={`px-6 pt-8 pb-3 transition-[padding] duration-200 ease-linear ${isCollapsed ? 'px-4' : ''}`}>
           <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
             <img
               src="/logo.png"
@@ -78,6 +84,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               <h1 className="text-slate-900 text-lg font-bold tracking-tight leading-none">Flow Studio</h1>
             </div>
           </div>
+
+          {!isCollapsed && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenCommandPalette) onOpenCommandPalette();
+                else window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
+              }}
+              className="mt-3.5 w-full flex items-center justify-between px-3 py-1.5 bg-slate-100/70 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-600 transition-all cursor-pointer shadow-2xs group"
+            >
+              <div className="flex items-center gap-2">
+                <Search size={13} className="text-slate-400 group-hover:text-slate-600" />
+                <span className="text-[12px] tracking-tight">Quick Search...</span>
+              </div>
+              <kbd className="text-[10.5px] px-1.5 py-0.5 bg-white rounded-md border border-slate-200 text-slate-400 font-bold shadow-2xs">
+                ⌘K
+              </kbd>
+            </button>
+          )}
         </div>
 
         <div className={`flex-1 overflow-y-auto py-2 space-y-8 custom-scrollbar transition-[padding] duration-200 ease-linear ${isCollapsed ? 'px-2' : 'px-4'}`}>
@@ -85,7 +110,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             <SidebarItem
               icon={LayoutDashboard}
               label="Dashboard"
-              count={12}
               active={activeTab === 'dashboard'}
               onClick={() => onTabChange('dashboard')}
               isCollapsed={isCollapsed}
@@ -93,6 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             <SidebarItem
               icon={FolderBookmark}
               label="Projects"
+              count={projectsCount > 0 ? projectsCount : undefined}
               active={activeTab === 'projects'}
               onClick={() => onTabChange('projects')}
               isCollapsed={isCollapsed}
@@ -107,6 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             <SidebarItem
               icon={BookUser}
               label="Leads"
+              count={leadsCount > 0 ? leadsCount : undefined}
               active={activeTab === 'leads'}
               onClick={() => onTabChange('leads')}
               isCollapsed={isCollapsed}
@@ -190,6 +216,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             isCollapsed={isCollapsed}
             onClick={() => onTabChange('settings')}
           />
+
+          {/* Apple Local Persistence Badge */}
+          {!isCollapsed && (
+            <div className="mt-2.5 pt-2 border-t border-slate-100/80 flex items-center justify-between px-2 text-[10.5px] text-slate-400 font-medium select-none">
+              <div className="flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-slate-500">Saved to disk</span>
+              </div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400/80">Local</span>
+            </div>
+          )}
         </div>
       </div>
     </aside>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from '../../../stores/toastStore';
 
 export interface Expert {
   id: string;
@@ -285,9 +286,9 @@ export const AssignedExpertsSidebar: React.FC<AssignedExpertsSidebarProps> = ({
                               <p className="text-xs text-slate-400 truncate">Invited on {expert.inviteDate || 'May 15'}</p>
                               <button 
                                 onClick={() => {
-                                  alert(`Resent invite to ${expert.email}`);
+                                  toast.success('Invitation Resent', `Successfully resent invitation to ${expert.email}`);
                                 }}
-                                className="text-[10px] font-bold text-primary hover:text-blue-700 hover:underline"
+                                className="text-[10px] font-bold text-primary hover:text-blue-700 hover:underline cursor-pointer"
                               >
                                 Resend invite?
                               </button>

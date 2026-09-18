@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { X, Upload, Check, AlertCircle, FileText, ArrowRight, Plus } from 'lucide-react';
 import { Lead } from '../../stores/leadStore';
+import { toast } from '../../stores/toastStore';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -106,7 +107,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
           }
         },
         error: (err) => {
-          alert('Error parsing CSV file: ' + err.message);
+          toast.error('CSV Parsing Error', err.message);
         }
       });
     } else if (ext === 'xlsx' || ext === 'xls') {
@@ -126,15 +127,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
             autoGuessMappings(detectedHeaders);
             setStep(2);
           } else {
-            alert('The Excel file appears to be empty.');
+            toast.error('Empty File', 'The Excel spreadsheet contains no rows.');
           }
         } catch (err: any) {
-          alert('Error parsing Excel file: ' + err.message);
+          toast.error('Excel Parsing Error', err.message);
         }
       };
       reader.readAsArrayBuffer(selectedFile);
     } else {
-      alert('Unsupported file format. Please upload a CSV or Excel file.');
+      toast.error('Unsupported Format', 'Please upload a valid .csv or .xlsx Excel file.');
       setFile(null);
     }
   };

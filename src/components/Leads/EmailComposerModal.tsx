@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useTeamStore } from '../../stores/teamStore';
 import { useSettings } from '../../hooks/useSettings';
 import { ChevronRight, Plus, X } from 'lucide-react';
+import { prompt } from '../../stores/promptStore';
 
 interface EmailComposerModalProps {
   onClose: () => void;
@@ -407,11 +408,16 @@ export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({ onClose,
               <span className="material-symbols-outlined text-[17px]">format_align_right</span>
             </button>
             <div className="h-[1px] w-5 bg-slate-200 my-1" />
-            <button onMouseDown={e => {
+            <button onMouseDown={async (e) => {
               e.preventDefault();
-              const url = prompt('Enter link URL:');
-              if (url) handleFormat('createLink', url);
-            }} className="text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-md p-1.5 outline-none flex items-center justify-center transition-colors" title="Insert link">
+              const url = await prompt.show({
+                title: 'Insert Hyperlink',
+                description: 'Enter the destination URL for the selected text',
+                placeholder: 'https://...',
+                confirmText: 'Insert Link'
+              });
+              if (url && url.trim()) handleFormat('createLink', url.trim());
+            }} className="text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-md p-1.5 outline-none flex items-center justify-center transition-colors cursor-pointer" title="Insert link">
               <span className="material-symbols-outlined text-[17px]">link</span>
             </button>
           </div>

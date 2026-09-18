@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useProjectStore } from '../../../../stores/projectStore';
 import { useTaskStore } from '../../../../stores/taskStore';
 import { useClientStore } from '../../../../stores/clientStore';
+import { prompt } from '../../../../stores/promptStore';
 import { DatePickerInput } from '../../../ui/DatePickerInput';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -468,11 +469,19 @@ export const OverviewPage: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => {
-                      const url = (currentProject as any).figmaUrl || prompt("Enter Figma file URL:", "https://figma.com/file/...");
-                      if (url && url !== "https://figma.com/file/...") {
-                        updateProject(currentProject.id, { figmaUrl: url } as any);
-                        window.open(url, '_blank');
+                    onClick={async () => {
+                      let url = (currentProject as any).figmaUrl;
+                      if (!url) {
+                        url = await prompt.show({
+                          title: 'Link Figma Master File',
+                          description: 'Enter the Figma canvas or document URL',
+                          placeholder: 'https://figma.com/file/...',
+                          confirmText: 'Link File'
+                        });
+                      }
+                      if (url && url.trim()) {
+                        updateProject(currentProject.id, { figmaUrl: url.trim() } as any);
+                        window.open(url.trim(), '_blank');
                       }
                     }}
                     className="flex items-center gap-2.5 p-3 rounded-xl bg-purple-50/60 hover:bg-purple-100/60 border border-purple-200/60 text-purple-900 text-xs font-semibold transition-colors group text-left w-full cursor-pointer"
@@ -482,11 +491,19 @@ export const OverviewPage: React.FC = () => {
                     <ExternalLink className="size-3 text-purple-400 ml-auto shrink-0" />
                   </button>
                   <button
-                    onClick={() => {
-                      const url = (currentProject as any).briefUrl || prompt("Enter Client Brief URL:", "https://docs.google.com/document/d/...");
-                      if (url && url !== "https://docs.google.com/document/d/...") {
-                        updateProject(currentProject.id, { briefUrl: url } as any);
-                        window.open(url, '_blank');
+                    onClick={async () => {
+                      let url = (currentProject as any).briefUrl;
+                      if (!url) {
+                        url = await prompt.show({
+                          title: 'Link Client Brief Document',
+                          description: 'Enter the URL for Google Docs, Notion, or Brief file',
+                          placeholder: 'https://docs.google.com/document/d/...',
+                          confirmText: 'Link Document'
+                        });
+                      }
+                      if (url && url.trim()) {
+                        updateProject(currentProject.id, { briefUrl: url.trim() } as any);
+                        window.open(url.trim(), '_blank');
                       }
                     }}
                     className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50/60 hover:bg-blue-100/60 border border-blue-200/60 text-blue-900 text-xs font-semibold transition-colors group text-left w-full cursor-pointer"

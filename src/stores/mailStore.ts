@@ -4,6 +4,7 @@ import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
 import { useLeadStore } from './leadStore';
 import { useAuthStore } from './authStore';
 import { useActivityStore } from './activityStore';
+import { toast } from './toastStore';
 
 export interface EmailTemplate {
   id: string;
@@ -683,16 +684,16 @@ export const useMailStore = create<MailState>()(
               set((state) => ({
                 replies: [...state.replies, ...newReplies]
               }));
-              if (!isAuto) alert(`Synced ${newReplies.length} new replies.`);
+              if (!isAuto) toast.success('Sync Complete', `Synced ${newReplies.length} new replies.`);
             } else {
-              if (!isAuto) alert('Inbox synced. No new replies from known leads.');
+              if (!isAuto) toast.info('Inbox Synced', 'No new replies from known leads.');
             }
           } else {
-            if (!isAuto) alert('Inbox synced. No new unread messages.');
+            if (!isAuto) toast.info('Inbox Synced', 'No new unread messages.');
           }
         } catch (e) {
           console.error('Failed to sync replies', e);
-          if (!isAuto) alert('Failed to sync replies. Check console for details.');
+          if (!isAuto) toast.error('Sync Error', 'Failed to sync replies. Check console for details.');
         }
       },
       
@@ -789,7 +790,7 @@ export const useMailTemplateStore = create<MailTemplateState>()(
         const emailPass = settings.emailPass;
 
         if (!emailUser || (!emailPass && !accessToken)) {
-          if (!isAuto) alert('Email credentials or Google Login not configured.');
+          if (!isAuto) toast.error('Configuration Missing', 'Email credentials or Google Login not configured.');
           return;
         }
 
@@ -822,16 +823,16 @@ export const useMailTemplateStore = create<MailTemplateState>()(
                 const uniqueNew = newTemplates.filter(t => !existing.has(t.subject + t.body));
                 return { templates: [...uniqueNew, ...state.templates] };
               });
-              if (!isAuto) alert(`Successfully synced ${newTemplates.length} drafts from Gmail.`);
+              if (!isAuto) toast.success('Drafts Synced', `Successfully synced ${newTemplates.length} drafts from Gmail.`);
             } else {
-              if (!isAuto) alert('No drafts found in Gmail.');
+              if (!isAuto) toast.info('Inbox Synced', 'No drafts found in Gmail.');
             }
           } else {
-            if (!isAuto) alert('Failed to fetch drafts: ' + data.error);
+            if (!isAuto) toast.error('Draft Sync Error', data.error || 'Failed to fetch drafts.');
           }
         } catch (e) {
           console.error('Error fetching remote drafts:', e);
-          if (!isAuto) alert('Error fetching drafts from server.');
+          if (!isAuto) toast.error('Sync Error', 'Error fetching drafts from server.');
         }
       }
     }),

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import { confirm } from '../../../stores/confirmStore';
+import { toast } from '../../../stores/toastStore';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Folder, File as FileIcon, Image as ImageIcon, FileText,
@@ -375,7 +376,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
         }
       }
     } catch {
-      alert(`Failed to ${isCreating ? 'create' : 'rename'}`);
+      toast.error('Operation Failed', `Failed to ${isCreating ? 'create' : 'rename'} file item.`);
     }
     
     fetchFiles();
@@ -588,7 +589,9 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
         }
       }
       fetchFiles();
-    } catch { alert('Failed to delete some items'); }
+    } catch {
+      toast.error('Delete Failed', 'Failed to delete some selected items.');
+    }
   };
 
   const handleRename = () => {
@@ -660,7 +663,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     } catch {
       clearInterval(progressInterval);
       setFileOpProgress(null);
-      alert('Failed to paste');
+      toast.error('Paste Failed', 'Failed to paste items to the current directory.');
     }
   };
 
@@ -702,9 +705,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
       if (isDesktop) {
         await (window as any).electronAPI.fs.openDefault(targetPath, isGlobal ? 'global' : undefined);
       } else {
-        alert('Opening native apps is only supported in Desktop mode.');
+        toast.info('Desktop Feature', 'Opening native apps is only supported in Desktop mode.');
       }
-    } catch { alert('Failed to open native application'); }
+    } catch {
+      toast.error('Open Failed', 'Failed to open native application.');
+    }
   };
 
   const handleShowProperties = async () => {
@@ -715,11 +720,13 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
       const isDesktop = (window as any).electronAPI?.isDesktop;
       if (isDesktop) {
         const props = await (window as any).electronAPI.fs.getProperties(targetPath, isGlobal ? 'global' : undefined);
-        alert(`Properties for ${itemName}:\n\nType: ${props.isDirectory ? 'Folder' : 'File'}\nSize: ${(props.size / 1024).toFixed(2)} KB\nCreated: ${new Date(props.created).toLocaleString()}\nModified: ${new Date(props.modified).toLocaleString()}`);
+        toast.info(`Properties: ${itemName}`, `Type: ${props.isDirectory ? 'Folder' : 'File'} • Size: ${(props.size / 1024).toFixed(2)} KB • Modified: ${new Date(props.modified).toLocaleDateString()}`);
       } else {
-        alert('Properties viewing is only supported in Desktop mode.');
+        toast.info('Desktop Feature', 'Properties viewing is only supported in Desktop mode.');
       }
-    } catch { alert('Failed to get properties'); }
+    } catch {
+      toast.error('Properties Error', 'Failed to get file properties.');
+    }
   };
 
   const toggleSelection = (e: React.MouseEvent, itemName: string) => {

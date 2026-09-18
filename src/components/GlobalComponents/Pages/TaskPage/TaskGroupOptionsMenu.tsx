@@ -10,6 +10,8 @@ import {
   ChevronsUp, 
   Zap
 } from 'lucide-react';
+import { prompt } from '../../../../stores/promptStore';
+import { toast } from '../../../../stores/toastStore';
 
 interface TaskGroupOptionsMenuProps {
   onCollapseGroup?: () => void;
@@ -36,14 +38,18 @@ export const TaskGroupOptionsMenu: React.FC<TaskGroupOptionsMenuProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
 
-  // Mock handlers
-  const handleRename = () => {
+  // Handlers
+  const handleRename = async () => {
+    setOpen(false);
     if (onRename) onRename();
     else {
-      const newName = window.prompt("Enter new status name:");
+      const newName = await prompt.show({
+        title: 'Rename Status Group',
+        placeholder: 'Enter status name',
+        confirmText: 'Rename'
+      });
       if (newName) console.log(`Renamed status to: ${newName}`);
     }
-    setOpen(false);
   };
 
   const handleNewStatus = () => {
@@ -54,7 +60,7 @@ export const TaskGroupOptionsMenu: React.FC<TaskGroupOptionsMenuProps> = ({
 
   const handleEditStatuses = () => {
     if (onEditStatuses) onEditStatuses();
-    else alert("Opening statuses configuration panel...");
+    else toast.info('Status Configuration', 'Opening status configuration panel...');
     setOpen(false);
   };
 

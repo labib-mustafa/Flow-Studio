@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMailTemplateStore, useMailStore } from '../../stores/mailStore';
 import { confirm } from '../../stores/confirmStore';
+import { toast } from '../../stores/toastStore';
 import { useLeadStore } from '../../stores/leadStore';
 import { Plus, Edit2, Trash2, Save, ArrowLeft, HelpCircle, Mail, Clock, Reply, Square, Star, CornerUpLeft, ChevronDown, Type, Paperclip, Link2, Smile, Image as ImageIcon, Lock, PenTool, MoreVertical, X, Wand2, Triangle, Maximize2, CloudDownload, Settings } from 'lucide-react';
 import { PillTab } from '../GlobalComponents/PillTab';
@@ -93,7 +94,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
 
   const handleSaveSettings = () => {
     updateFollowUpSettings(settingsForm);
-    alert('Follow-up settings saved successfully.');
+    toast.success('Settings Saved', 'Follow-up engine settings saved successfully.');
   };
 
   const handleSaveQueueItemEdit = () => {
@@ -131,7 +132,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
       }
     });
 
-    alert(`Follow-up Engine Run Complete.\nSent ${followUpCount} follow-ups.\nMarked ${lostCount} leads as Lost/Archived.`);
+    toast.info('Engine Complete', `Sent ${followUpCount} automated follow-ups. Marked ${lostCount} leads as Lost.`);
   };
 
   const threads = React.useMemo(() => {
@@ -673,7 +674,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
               <button
                 onClick={async () => {
                   await processQueue();
-                  alert('Queue processed successfully.');
+                  toast.success('Queue Processed', 'Due scheduled emails processed successfully.');
                 }}
                 className="bg-[#1069ff] hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
               >
@@ -738,9 +739,9 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                                     onClick={async () => {
                                       const res = await sendQueueItemNow(item.id);
                                       if (res.success) {
-                                        alert('Email sent successfully!');
+                                        toast.success('Email Sent', 'Email sent successfully!');
                                       } else {
-                                        alert(`Failed to send: ${res.error}`);
+                                        toast.error('Send Failed', `Failed to send: ${res.error}`);
                                       }
                                     }}
                                     className="px-2 py-1 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg transition-all"
