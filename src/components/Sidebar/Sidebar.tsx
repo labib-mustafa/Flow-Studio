@@ -70,7 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onOpen
         <span className={`material-symbols-outlined text-[16px] transition-transform duration-200 ease-linear ${isCollapsed ? 'rotate-180' : ''}`}>chevron_left</span>
       </button>
 
-      <div className="flex flex-col h-full w-full overflow-hidden">
+      <div className={`flex flex-col h-full w-full overflow-hidden transition-all duration-200 ease-linear ${isEventModalOpen ? 'filter blur-[2px] opacity-60 pointer-events-none select-none' : ''}`}>
         <div className={`px-6 pt-8 pb-3 transition-[padding] duration-200 ease-linear ${isCollapsed ? 'px-4' : ''}`}>
           <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
             <img

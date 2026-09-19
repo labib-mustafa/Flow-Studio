@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useEventStore, CalendarEvent } from '../../stores/eventStore';
 import { EventModal } from './EventModal';
-import { AnimatePresence } from 'framer-motion';
 
 interface RightPanelProps {
   onNavigate?: (view: string) => void;
@@ -135,15 +134,11 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
         </button>
       </div>
 
-      <AnimatePresence>
-        {isEventModalOpen && (
-          <EventModal 
-            isOpen={isEventModalOpen} 
-            onClose={() => setEventModalOpen(false)} 
-            defaultDate={selectedDateStr}
-          />
-        )}
-      </AnimatePresence>
+      <EventModal 
+        isOpen={isEventModalOpen} 
+        onClose={() => setEventModalOpen(false)} 
+        defaultDate={selectedDateStr}
+      />
     </aside>
   );
 };

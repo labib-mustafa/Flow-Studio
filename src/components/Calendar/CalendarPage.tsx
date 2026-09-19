@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { addMonths, subMonths, format } from 'date-fns';
 import { CalendarGrid } from './CalendarGrid';
 import { DayDetailPanel } from './DayDetailPanel';
@@ -10,8 +10,15 @@ import { CalendarSkeleton } from '../GlobalComponents/Skeletons/CalendarSkeleton
 export const CalendarPage: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const isEventModalOpen = useEventStore((s) => s.isEventModalOpen);
+  const setEventModalOpen = useEventStore((s) => s.setEventModalOpen);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    return () => {
+      setEventModalOpen(false);
+    };
+  }, [setEventModalOpen]);
 
   const goToPrevMonth = () => setCurrentMonth((prev) => subMonths(prev, 1));
   const goToNextMonth = () => setCurrentMonth((prev) => addMonths(prev, 1));
@@ -21,7 +28,7 @@ export const CalendarPage: React.FC = () => {
   };
 
   const handleAddEvent = () => {
-    setIsEventModalOpen(true);
+    setEventModalOpen(true);
   };
 
   const _hasHydrated = useEventStore((s) => s._hasHydrated);
@@ -31,7 +38,7 @@ export const CalendarPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#f5f5f7] overflow-hidden relative">
+    <div className={`flex flex-col h-full bg-[#f5f5f7] overflow-hidden relative transition-all duration-200 ease-linear ${isEventModalOpen ? 'filter blur-[2px] pointer-events-none select-none' : ''}`}>
       {/* Header */}
       <header className="px-6 py-4 border-b border-slate-200/80 bg-white shrink-0 flex items-center justify-between gap-4 z-10 relative">
         {/* Left: Icon + Title */}
@@ -113,13 +120,11 @@ export const CalendarPage: React.FC = () => {
       </div>
 
       {/* Event Modal */}
-      {isEventModalOpen && (
-        <EventModal
-          isOpen={isEventModalOpen}
-          onClose={() => setIsEventModalOpen(false)}
-          defaultDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined}
-        />
-      )}
+      <EventModal
+        isOpen={isEventModalOpen}
+        onClose={() => setEventModalOpen(false)}
+        defaultDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined}
+      />
     </div>
   );
 };

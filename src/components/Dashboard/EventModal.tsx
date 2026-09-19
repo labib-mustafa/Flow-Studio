@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar as CalendarIcon, Clock, Users, Tag, AlignLeft, Type } from 'lucide-react';
 import { useEventStore } from '../../stores/eventStore';
@@ -30,6 +31,19 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, default
     }
   }, [isOpen, defaultDate]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,25 +63,32 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, default
 
   const eventTypes: Array<'Call' | 'Design' | 'Team Sync' | 'Other'> = ['Call', 'Design', 'Team Sync', 'Other'];
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+      {isOpen && (
         <motion.div
+          key="event-modal-backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="absolute inset-0"
-          onClick={onClose}
-        />
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          transition={{ type: 'spring', duration: 0.4, bounce: 0.1 }}
-          className="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden border border-slate-200/80 flex flex-col"
+          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-md"
         >
+          <div
+            className="absolute inset-0 cursor-pointer"
+            onClick={onClose}
+          />
+          
+          <motion.div
+            key="event-modal-content"
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: 'spring', duration: 0.35, bounce: 0.1 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden border border-slate-200/80 flex flex-col"
+          >
           <div className="flex justify-between items-center px-8 py-6 border-b border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-3.5">
               <div className="size-10 rounded-2xl bg-zinc-950 text-white flex items-center justify-center shadow-md shadow-zinc-950/20">
@@ -209,7 +230,10 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, default
             </div>
           </form>
         </motion.div>
-      </div>
-    </AnimatePresence>
-  );
+      </motion.div>
+    )}
+  </AnimatePresence>,
+  document.body
+);
 };
+
