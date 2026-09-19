@@ -39,6 +39,7 @@ export interface BillingAddressInfo {
 }
 
 interface BillingState {
+  _hasHydrated: boolean;
   balance: number;
   nextPaymentAmount: number;
   nextPaymentDate: string;
@@ -58,6 +59,7 @@ interface BillingState {
 export const useBillingStore = create<BillingState>()(
   persist(
     (set) => ({
+      _hasHydrated: false,
       balance: 0,
       nextPaymentAmount: 0,
       nextPaymentDate: '',
@@ -123,6 +125,7 @@ export const useBillingStore = create<BillingState>()(
     {
       name: 'billing-storage-v1',
       storage: createFileStorage('billing'),
+      onRehydrateStorage: () => () => { useBillingStore.setState({ _hasHydrated: true }); },
       merge: (persistedState: any, currentState) => {
         return { ...currentState, ...persistedState };
       }

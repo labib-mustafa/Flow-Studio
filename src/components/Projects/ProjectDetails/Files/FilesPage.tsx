@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../../../../stores/projectStore';
 import { TabbedFileExplorer } from '../../../GlobalComponents/FileExplorer/TabbedFileExplorer';
+import { FilesSkeleton } from '../../../GlobalComponents/Skeletons/FilesSkeleton';
 
 interface FilesPageProps {
   onTabChange: (tab: 'tasks' | 'files' | 'notes') => void;
@@ -59,12 +60,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ onTabChange }) => {
   if (!currentProject) return null;
 
   if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-slate-400 gap-2">
-        <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
-        <span className="text-sm font-medium">Loading project folder…</span>
-      </div>
-    );
+    return <FilesSkeleton />;
   }
 
   const handleCreateFolder = () => {

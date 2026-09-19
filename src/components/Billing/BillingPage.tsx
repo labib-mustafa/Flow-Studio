@@ -4,6 +4,7 @@ import { useBillingStore } from '../../stores/billingStore';
 import { Receipt, Download, Plus, Search } from 'lucide-react';
 import { useSettingsContext } from '../../context/SettingsContext';
 import { useAuthStore } from '../../stores/authStore';
+import { BillingSkeleton } from '../GlobalComponents/Skeletons/BillingSkeleton';
 
 interface BillingPageProps {
   onNewInvoice?: () => void;
@@ -21,7 +22,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
     paymentHistory,
     updateSavedCard,
     updateBillingAddress,
-    updateInvoiceStatus
+    updateInvoiceStatus,
+    _hasHydrated
   } = useBillingStore();
 
   const [activeTab, setActiveTab] = useState<'All' | 'Pending' | 'Completed' | 'Draft'>('All');
@@ -135,6 +137,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
     setIsEditAddressOpen(false);
     showToast('Billing address updated successfully.');
   };
+
+  if (!_hasHydrated) {
+    return <BillingSkeleton />;
+  }
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[#f5f5f7] text-slate-900 relative font-sans flex-col">

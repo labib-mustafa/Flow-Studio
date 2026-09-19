@@ -7,6 +7,7 @@ import { Plus, Mail, BookUser, Filter, Search, UserPlus, Settings, Bot } from 'l
 import { ImportModal } from './ImportModal';
 import { EmailComposerModal } from './EmailComposerModal';
 import { AddLeadModal } from './AddLeadModal';
+import { LeadsSkeleton } from '../GlobalComponents/Skeletons/LeadsSkeleton';
 
 interface LeadsPageProps {
   onNavigate?: (view: string) => void;
@@ -24,7 +25,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
     bulkUpdateLeads,
     bulkPromoteLeads,
     bulkDeleteLeads,
-    deselectAllLeads
+    deselectAllLeads,
+    _hasHydrated
   } = useLeadStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -72,6 +74,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
     { value: 'Proposal Sent', label: 'Proposal Sent', count: proposalCount },
     { value: 'Archived', label: 'Archived', count: archivedCount }
   ];
+
+  if (!_hasHydrated) {
+    return <LeadsSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#fcfdfd] overflow-hidden relative">

@@ -7,6 +7,7 @@ import { useProjectStore } from '../../../stores/projectStore';
 import { useTaskStore } from '../../../stores/taskStore';
 import { PillTab } from '../../GlobalComponents/PillTab';
 import { confirm } from '../../../stores/confirmStore';
+import { ProjectsSkeleton } from '../../GlobalComponents/Skeletons/ProjectsSkeleton';
 
 interface ProjectsProps {
   onNewProject: () => void;
@@ -18,7 +19,7 @@ export type SearchField = 'title' | 'client' | 'deadline' | 'category' | 'status
 export type ProjectTab = 'All' | 'Active' | 'On Hold' | 'Completed' | 'Archived';
 
 export const Projects: React.FC<ProjectsProps> = ({ onNewProject, onProjectClick, onEditProject }) => {
-  const { projects, setCurrentProject, deleteProject, togglePinProject, duplicateProject, updateProject } = useProjectStore();
+  const { projects, setCurrentProject, deleteProject, togglePinProject, duplicateProject, updateProject, _hasHydrated } = useProjectStore();
   const { tasks } = useTaskStore();
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -219,6 +220,10 @@ export const Projects: React.FC<ProjectsProps> = ({ onNewProject, onProjectClick
 
   const posX = contextMenu ? Math.min(contextMenu.x, window.innerWidth - 230) : 0;
   const posY = contextMenu ? Math.min(contextMenu.y, window.innerHeight - 300) : 0;
+
+  if (!_hasHydrated) {
+    return <ProjectsSkeleton />;
+  }
 
   return (
     <div 

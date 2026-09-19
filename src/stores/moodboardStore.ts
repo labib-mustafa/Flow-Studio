@@ -21,6 +21,7 @@ const defaultGridConfig: GridConfig = {
 };
 
 export interface MoodboardState {
+  _hasHydrated: boolean;
   projectItems: Record<string, MoodboardItemData[]>;
   projectViews: Record<string, { zoom: number; pan: { x: number; y: number } }>;
   currentProjectId: string | null;
@@ -68,6 +69,7 @@ export interface MoodboardState {
 export const useMoodboardStore = create<MoodboardState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       projectItems: {},
       projectViews: {},
       currentProjectId: null,
@@ -645,6 +647,7 @@ export const useMoodboardStore = create<MoodboardState>()(
     {
       name: 'moodboard-storage',
       storage: createFileStorage('moodboard', 2000),
+      onRehydrateStorage: () => () => { useMoodboardStore.setState({ _hasHydrated: true }); },
       partialize: (state) => ({ 
         projectItems: state.projectItems, 
         projectViews: state.projectViews,

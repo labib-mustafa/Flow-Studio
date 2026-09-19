@@ -12,9 +12,10 @@ import {
   ArrowUpRight, ExternalLink, FileText, Palette, TrendingUp, AlertCircle,
   ChevronDown, Upload, Trash2
 } from 'lucide-react';
+import { ProjectsSkeleton } from '../../../GlobalComponents/Skeletons/ProjectsSkeleton';
 
 export const OverviewPage: React.FC = () => {
-  const { currentProject, updateProject } = useProjectStore();
+  const { currentProject, updateProject, _hasHydrated } = useProjectStore();
   const { tasks } = useTaskStore();
   const [isEditing, setIsEditing] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
@@ -242,6 +243,10 @@ export const OverviewPage: React.FC = () => {
     }
     return { bg: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' };
   };
+
+  if (!_hasHydrated || !currentProject) {
+    return <ProjectsSkeleton />;
+  }
 
   const statusStyle = getStatusBadgeStyle(currentProject.status);
 

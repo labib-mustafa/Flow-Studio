@@ -38,6 +38,7 @@ import {
 
 import { PillTab } from '../GlobalComponents/PillTab';
 import { EmptySearchState } from './EmptySearchState';
+import { ClientsSkeleton } from '../GlobalComponents/Skeletons/ClientsSkeleton';
 
 interface ClientsPageProps {
   onNewProject?: (clientName: string) => void;
@@ -64,7 +65,8 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
     setStatusFilter,
     addNote,
     deleteNote,
-    createInvoice
+    createInvoice,
+    _hasHydrated
   } = useClientStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -329,6 +331,10 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
     if (windowWidth < 1280) return 400;
     return 480;
   }, [windowWidth]);
+
+  if (!_hasHydrated) {
+    return <ClientsSkeleton />;
+  }
 
   if (isDetailViewOpen) {
     return (

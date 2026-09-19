@@ -7,6 +7,7 @@ import { InviteMemberModal } from './InviteMemberModal';
 import { EditMemberModal } from './EditMemberModal';
 import { IdCardLanyard, Plus, UserPlus, Pencil, Trash2, Folder, Image, Search, X } from 'lucide-react';
 import { PillTab } from '../GlobalComponents/PillTab';
+import { TeamSkeleton } from '../GlobalComponents/Skeletons/TeamSkeleton';
 
 interface TeamPageProps {
   onSelectMember?: (memberId: string) => void;
@@ -19,6 +20,7 @@ export const TeamPage: React.FC<TeamPageProps> = ({ onSelectMember }) => {
   const revokeInvite = useTeamStore((state) => state.revokeInvite);
   const resendInvite = useTeamStore((state) => state.resendInvite);
   const updateMember = useTeamStore((state) => state.updateMember);
+  const _hasHydrated = useTeamStore((state) => state._hasHydrated);
   const projects = useProjectStore((state) => state.projects);
 
   const [activeTab, setActiveTab] = useState<'directory' | 'invites'>('directory');
@@ -81,6 +83,10 @@ export const TeamPage: React.FC<TeamPageProps> = ({ onSelectMember }) => {
         return 'bg-slate-50 text-slate-700 border-slate-200';
     }
   };
+
+  if (!_hasHydrated) {
+    return <TeamSkeleton />;
+  }
 
   return (
     <div className="flex-1 h-screen relative bg-[#f5f5f7] flex flex-col overflow-hidden text-left z-10">

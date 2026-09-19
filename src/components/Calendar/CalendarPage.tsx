@@ -4,6 +4,8 @@ import { CalendarGrid } from './CalendarGrid';
 import { DayDetailPanel } from './DayDetailPanel';
 import { EventModal } from '../Dashboard/EventModal';
 import { Search, Plus, ChevronLeft, ChevronRight, Calendar1 } from 'lucide-react';
+import { useEventStore } from '../../stores/eventStore';
+import { CalendarSkeleton } from '../GlobalComponents/Skeletons/CalendarSkeleton';
 
 export const CalendarPage: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -21,6 +23,12 @@ export const CalendarPage: React.FC = () => {
   const handleAddEvent = () => {
     setIsEventModalOpen(true);
   };
+
+  const _hasHydrated = useEventStore((s) => s._hasHydrated);
+
+  if (!_hasHydrated) {
+    return <CalendarSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#f5f5f7] overflow-hidden relative">

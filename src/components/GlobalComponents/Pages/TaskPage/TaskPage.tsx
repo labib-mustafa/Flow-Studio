@@ -10,9 +10,10 @@ interface TaskPageProps {
 }
 
 import { AnimatePresence, motion } from 'motion/react';
+import { TaskPageSkeleton } from '../../Skeletons/TaskPageSkeleton';
 
 export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) => {
-  const { tasks, addTask, updateTask, isFieldsSidebarOpen, setFieldsSidebarOpen, setProject } = useTaskStore();
+  const { tasks, addTask, updateTask, isFieldsSidebarOpen, setFieldsSidebarOpen, setProject, _hasHydrated } = useTaskStore();
   const { currentProject, projects, setCurrentProject } = useProjectStore();
 
   const fallbackProjectId = projects[0]?.id || 'rebrand-2024';
@@ -34,6 +35,10 @@ export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) =>
     if (!effectiveProjectId) return [];
     return tasks.filter(t => t.projectId === effectiveProjectId);
   }, [tasks, effectiveProjectId]);
+
+  if (!_hasHydrated) {
+    return <TaskPageSkeleton />;
+  }
 
   const handleAddTask = (phase?: string) => {
     if (!effectiveProjectId) return;

@@ -14,6 +14,7 @@ export interface CalendarEvent {
 }
 
 interface EventState {
+  _hasHydrated: boolean;
   events: CalendarEvent[];
   isEventModalOpen: boolean;
   setEventModalOpen: (open: boolean) => void;
@@ -26,6 +27,7 @@ interface EventState {
 export const useEventStore = create<EventState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       events: [],
       isEventModalOpen: false,
       setEventModalOpen: (open) => set({ isEventModalOpen: open }),
@@ -67,6 +69,7 @@ export const useEventStore = create<EventState>()(
     {
       name: 'event-storage',
       storage: createFileStorage('events'),
+      onRehydrateStorage: () => () => { useEventStore.setState({ _hasHydrated: true }); },
       partialize: (state) => ({ events: state.events }),
     }
   )

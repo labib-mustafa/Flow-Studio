@@ -50,6 +50,7 @@ import { PromptModal } from './components/GlobalComponents/PromptModal';
 import { CommandPalette } from './components/GlobalComponents/CommandPalette/CommandPalette';
 import { ShortcutsModal } from './components/GlobalComponents/ShortcutsModal';
 import { NavigationHud } from './components/GlobalComponents/NavigationHud';
+import { PageSkeletonRouter } from './components/GlobalComponents/Skeletons/PageSkeletonRouter';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -187,14 +188,16 @@ function AppContent() {
     }
   }, [currentView, hasAutoCollapsedNotes]);
 
-  // Block rendering until all critical stores are hydrated from disk
+  // Native launch experience: show live App frame with shimmering page skeleton instead of a dark spinner
   if (!appReady) {
     return (
-      <div className="h-screen w-screen bg-[#0a0a0b] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-          <span className="text-white/40 text-sm font-medium tracking-wide">Loading workspace…</span>
+      <div className="bg-[#f5f5f7] min-h-screen flex font-sans overflow-hidden h-screen select-none">
+        <div className="h-full flex-shrink-0">
+          <Sidebar activeTab={currentView} onTabChange={() => {}} />
         </div>
+        <main className="flex-1 h-full overflow-hidden relative">
+          <PageSkeletonRouter view={currentView} />
+        </main>
       </div>
     );
   }

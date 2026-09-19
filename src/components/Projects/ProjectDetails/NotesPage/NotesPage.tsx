@@ -45,6 +45,7 @@ import { ColorPicker } from '../../../BlockEditor/ColorPicker/ColorPicker';
 import { createHighlightColor, getReadableTextColor, ensureContrast, rgbToHexStr, getLuminance } from '../../../../utils/colorUtils';
 import { useProjectStore } from '../../../../stores/projectStore';
 import { onStoreExternalUpdate } from '../../../../lib/fileStorage';
+import { NotesSkeleton } from '../../../GlobalComponents/Skeletons/NotesSkeleton';
 
 interface NotesPageProps {
   onTabChange: (tab: 'tasks' | 'files' | 'notes') => void;
@@ -61,11 +62,12 @@ interface Note {
 }
 
 export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenToggle }) => {
-  const { currentProject } = useProjectStore();
+  const { currentProject, _hasHydrated } = useProjectStore();
   const notesKey = currentProject?.id ? `notes-list-${currentProject.id}` : 'notes-list';
   const activeNoteIdKey = currentProject?.id ? `active-note-id-${currentProject.id}` : 'active-note-id';
 
   const [notes, setNotes] = useState<Note[]>([]);
+  const [notesLoaded, setNotesLoaded] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [isNotesListOpen, setIsNotesListOpen] = useState(true);
@@ -163,6 +165,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
         localStorage.removeItem(activeNoteIdKey);
       }
     }
+    setNotesLoaded(true);
   }, [notesKey, activeNoteIdKey]);
 
   useEffect(() => {
@@ -898,6 +901,10 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
   }, [activeColorPicker, activeDropdown]);
 
   const [isHoveringEditor, setIsHoveringEditor] = useState(false);
+
+  if (!_hasHydrated || !notesLoaded) {
+    return <NotesSkeleton />;
+  }
 
   return (
     <div id="notes-page-container" className="flex-1 flex flex-col h-full">

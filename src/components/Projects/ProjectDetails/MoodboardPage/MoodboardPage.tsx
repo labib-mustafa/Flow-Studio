@@ -50,6 +50,7 @@ import { DrawingOverlay } from './DrawingOverlay';
 import { useMoodboardStore } from '../../../../stores/moodboardStore';
 import { confirm } from '../../../../stores/confirmStore';
 import { useProjectStore } from '../../../../stores/projectStore';
+import { MoodboardSkeleton } from '../../../GlobalComponents/Skeletons/MoodboardSkeleton';
 
 interface MoodboardPageProps {
   onTabChange: (tab: 'tasks' | 'files' | 'notes' | 'moodboard') => void;
@@ -63,6 +64,7 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
     selectedIds, setSelectedIds, 
     view, setView, 
     history, historyIndex, 
+    _hasHydrated, 
     saveToHistory, 
     undo: handleUndo, redo: handleRedo,
     setProject,
@@ -1086,6 +1088,10 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
 
     return updatedItems;
   };
+
+  if (!_hasHydrated) {
+    return <MoodboardSkeleton />;
+  }
 
   return (
     <div 

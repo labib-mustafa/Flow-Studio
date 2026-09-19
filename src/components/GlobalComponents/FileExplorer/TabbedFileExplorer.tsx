@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useExplorerTabStore } from '../../../stores/explorerTabStore';
 import { FileExplorer } from './FileExplorer';
 import { Plus, X, Folder, Home, Monitor, Download, FileText, Image, Video, HardDrive } from 'lucide-react';
+import { FilesSkeleton } from '../Skeletons/FilesSkeleton';
 
 interface TabbedFileExplorerProps {
   sessionId: string;
@@ -51,7 +52,7 @@ export const TabbedFileExplorer: React.FC<TabbedFileExplorerProps> = ({ sessionI
   const session = sessions[sessionId];
 
   if (!session || session.tabs.length === 0) {
-    return null;
+    return <FilesSkeleton />;
   }
 
   return (

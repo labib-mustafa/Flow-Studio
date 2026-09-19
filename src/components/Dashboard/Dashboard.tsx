@@ -6,6 +6,8 @@ import { OngoingProjects } from './OngoingProjects';
 import { Renewals } from './Renewals';
 import { TimeActivity } from './TimeActivity';
 import { RightPanel } from './RightPanel';
+import { useProjectStore } from '../../stores/projectStore';
+import { DashboardSkeleton } from '../GlobalComponents/Skeletons/DashboardSkeleton';
 
 export interface DashboardProps {
   onNavigate?: (view: string) => void;
@@ -39,6 +41,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onProjectClick,
   onNewProject
 }) => {
+  const hasHydrated = useProjectStore((s) => s._hasHydrated);
+
+  if (!hasHydrated) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="flex h-full overflow-hidden bg-[#f5f5f7]">
       <div className="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar bg-white">
