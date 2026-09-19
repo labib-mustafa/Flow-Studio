@@ -366,48 +366,12 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
       </header>
 
       {/* Main Multi-Column Split */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative px-8 py-6">
         {/* Left Side: Client Stack & Summary */}
-        <div className="flex-1 flex flex-col pt-5 h-full min-h-0 bg-[#f5f5f7]">
-          {/* Top Metric Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 px-6 mb-4 shrink-0">
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Directory</span>
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className="text-2xl font-black text-slate-900">{clientCounts.All}</span>
-                <span className="text-xs text-slate-500 font-medium">{clientCounts.Active} active</span>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Retainers</span>
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className="text-2xl font-black text-emerald-600">{clientCounts.Active}</span>
-                <span className="text-xs text-emerald-600 font-medium">In production</span>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Volume</span>
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className="text-2xl font-black text-slate-900">{formatCurrency(totalVolumeSum)}</span>
-                <span className="text-xs text-slate-500 font-medium">All accounts</span>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Pending Invoices</span>
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className={`text-2xl font-black ${totalPendingSum > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
-                  {formatCurrency(totalPendingSum)}
-                </span>
-                <span className="text-xs text-amber-600 font-medium">{totalPendingCount} pending</span>
-              </div>
-            </div>
-          </div>
+        <div className="flex-1 flex flex-col h-full min-h-0 bg-[#f5f5f7]">
 
           {/* Status Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0 px-6 mb-3">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 mb-3">
             {(['All', 'Active', 'Prospect', 'Inactive'] as const).map(tab => (
               <PillTab
                 key={tab}
@@ -423,7 +387,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
           </div>
 
           {/* Scrollable Clients Grid */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar relative pb-24 px-6 pt-1">
+          <div className="flex-1 overflow-y-auto custom-scrollbar relative">
             <AnimatePresence mode="popLayout">
               {filteredClients.length === 0 ? (
                 <EmptySearchState
@@ -432,7 +396,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                   onAddClient={() => setIsAddModalOpen(true)}
                 />
               ) : (
-                <motion.div 
+                <motion.div
                   layout
                   className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
                 >

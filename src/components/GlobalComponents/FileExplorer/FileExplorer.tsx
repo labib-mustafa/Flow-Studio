@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import { confirm } from '../../../stores/confirmStore';
 import { toast } from '../../../stores/toastStore';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -14,46 +14,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { EmptyFileState } from '../EmptyFileState';
 import { useClipboardStore } from '../../../stores/clipboardStore';
 
-const AsyncThumbnail: React.FC<{ path: string, mode?: string, className?: string, alt?: string }> = ({ path, mode, className, alt }) => {
-  const [src, setSrc] = useState<string | null>(null);
-  const imgRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setIsVisible(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: '100px' });
-
-    if (imgRef.current) observer.observe(imgRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    let active = true;
-    const isDesktop = (window as any).electronAPI?.isDesktop;
-    if (isDesktop) {
-      (window as any).electronAPI.fs.readFileBase64(path, mode, { thumb: true })
-        .then((base64: string) => {
-          if (active) setSrc(`data:image/png;base64,${base64}`);
-        })
-        .catch(() => {
-          if (active) setSrc(null);
-        });
-    } else {
-      setSrc(`/api/fs/file?path=${encodeURIComponent(path)}&mode=${mode || ''}&thumb=true`);
-    }
-    return () => { active = false; };
-  }, [path, mode, isVisible]);
-
-  if (!src) return <div ref={imgRef} className={`bg-slate-100 animate-pulse ${className}`} />;
-  return <img src={src} alt={alt} className={className} loading="lazy" />;
-};
-
-interface FileExplorerProps {
+export interface FileExplorerProps {
   initialPath?: string;
   rootPath?: 'GLOBAL' | string;
   onFileSelect?: (path: string) => void;
@@ -61,7 +22,7 @@ interface FileExplorerProps {
   className?: string;
 }
 
-interface FSEntry {
+export interface FSEntry {
   name: string;
   isDir: boolean;
   size: number;
@@ -69,24 +30,42 @@ interface FSEntry {
   modifiedAt: string;
 }
 
-type ViewMode = 'details' | 'grid';
+export type ViewMode = 'details' | 'grid';
 
-const formatBytes = (bytes: number, decimals = 2) => {
-  if (bytes === 0) return '0 Bytes';
+export interface TreeNode {
+  label: string;
+  icon: React.ReactNode;
+  path: string;
+  children?: TreeNode[];
+  expanded?: boolean;
+}
+
+// ── FAST FORMATTERS WITH CACHING ────────────────────────────
+export const formatBytes = (bytes: number, decimals = 2) => {
+  if (bytes === 0 || !bytes) return '0 Bytes';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
+  if (i < 0 || i >= sizes.length) return `${bytes} Bytes`;
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
-const formatDate = (dateString: string) => {
+const dateFormatCache = new Map<string, string>();
+export const formatDate = (dateString?: string) => {
   if (!dateString) return '';
+  const cached = dateFormatCache.get(dateString);
+  if (cached) return cached;
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) +
+  if (isNaN(date.getTime())) return '';
+  const formatted = date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) +
     ' ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (dateFormatCache.size > 1500) dateFormatCache.clear();
+  dateFormatCache.set(dateString, formatted);
+  return formatted;
 };
 
+// ── FILE ICONS & TYPES ──────────────────────────────────────
 const AdobeFileDocumentIcon = ({ letter, bgColor, fgColor, borderColor, size = 16 }: { letter: string; bgColor: string; fgColor: string; borderColor?: string; size?: number }) => {
   const w = size;
   const h = Math.round(size * 1.18);
@@ -124,7 +103,7 @@ const AdobeFileDocumentIcon = ({ letter, bgColor, fgColor, borderColor, size = 1
   );
 };
 
-const getFileType = (name: string) => {
+export const getFileType = (name: string) => {
   const ext = name.split('.').pop()?.toLowerCase();
   switch (ext) {
     case 'psd': case 'psb': return 'Adobe Photoshop Document';
@@ -152,8 +131,7 @@ const getFileType = (name: string) => {
   }
 };
 
-// Folder icon matching Windows 11 yellow style
-const FolderIcon = ({ size = 16, className = '' }: { size?: number; className?: string }) => (
+export const FolderIcon = ({ size = 16, className = '' }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 20 16" fill="none" className={className}>
     <path d="M0 2.5C0 1.12 1.12 0 2.5 0H7.28L9.28 2H17.5C18.88 2 20 3.12 20 4.5V13.5C20 14.88 18.88 16 17.5 16H2.5C1.12 16 0 14.88 0 13.5V2.5Z" fill="#DCB67A" />
     <path d="M0 5C0 3.9 0.9 3 2 3H18C19.1 3 20 3.9 20 5V14C20 15.1 19.1 16 18 16H2C0.9 16 0 15.1 0 14V5Z" fill="#F4C842" />
@@ -161,10 +139,9 @@ const FolderIcon = ({ size = 16, className = '' }: { size?: number; className?: 
   </svg>
 );
 
-const getFileIcon = (name: string, size = 16) => {
+export const getFileIcon = (name: string, size = 16) => {
   const ext = name.split('.').pop()?.toLowerCase();
   switch (ext) {
-    // Adobe Application File Documents
     case 'psd': case 'psb':
       return <AdobeFileDocumentIcon letter="Ps" bgColor="#001e36" fgColor="#31a8ff" borderColor="#005fa3" size={size} />;
     case 'ai': case 'ait': case 'eps':
@@ -189,8 +166,6 @@ const getFileIcon = (name: string, size = 16) => {
       return <AdobeFileDocumentIcon letter="Ch" bgColor="#1d0036" fgColor="#a855f7" borderColor="#9333ea" size={size} />;
     case 'pdf':
       return <AdobeFileDocumentIcon letter="Pdf" bgColor="#360000" fgColor="#ff3b30" borderColor="#e02d22" size={size} />;
-
-    // General Formats
     case 'png': case 'jpg': case 'jpeg': case 'gif': case 'svg': case 'webp':
       return <ImageIcon className="text-blue-500 shrink-0" style={{ width: size, height: size }} />;
     case 'mp4': case 'mov': case 'avi': case 'mkv':
@@ -202,14 +177,425 @@ const getFileIcon = (name: string, size = 16) => {
   }
 };
 
-interface TreeNode {
-  label: string;
-  icon: React.ReactNode;
-  path: string;
-  children?: TreeNode[];
-  expanded?: boolean;
+// ── EXTENSION HELPERS & IMAGE CACHE ────────────────────────
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico']);
+export const isImageFile = (filename?: string): boolean => {
+  if (!filename) return false;
+  const ext = filename.split('.').pop()?.toLowerCase();
+  return ext ? IMAGE_EXTENSIONS.has(ext) : false;
+};
+
+const thumbCache = new Map<string, string>();
+const MAX_THUMB_CACHE = 600;
+
+function setThumbCache(key: string, urlOrBase64: string) {
+  if (thumbCache.size >= MAX_THUMB_CACHE) {
+    const oldestKey = thumbCache.keys().next().value;
+    if (oldestKey) thumbCache.delete(oldestKey);
+  }
+  thumbCache.set(key, urlOrBase64);
 }
 
+// ── DIRECTORY & QUICK ACCESS IN-MEMORY CACHE ───────────────
+export interface DirCacheEntry {
+  files: FSEntry[];
+  timestamp: number;
+}
+export const dirCache = new Map<string, DirCacheEntry>();
+const MAX_DIR_CACHE = 150;
+
+export function getDirCacheKey(root: string | undefined, current: string, isGlob: boolean): string {
+  return `${isGlob ? 'GLOBAL' : (root || '')}:${current || ''}`;
+}
+
+export function setDirCache(key: string, files: FSEntry[]) {
+  if (dirCache.size >= MAX_DIR_CACHE) {
+    const oldest = dirCache.keys().next().value;
+    if (oldest) dirCache.delete(oldest);
+  }
+  dirCache.set(key, { files, timestamp: Date.now() });
+}
+
+export function invalidateDirCache(keyOrPrefix?: string) {
+  if (!keyOrPrefix) {
+    dirCache.clear();
+    return;
+  }
+  for (const k of dirCache.keys()) {
+    if (k === keyOrPrefix || k.startsWith(keyOrPrefix)) {
+      dirCache.delete(k);
+    }
+  }
+}
+
+let cachedQuickAccess: Record<string, string> | null = null;
+let cachedDrives: FSEntry[] | null = null;
+
+// ── MEMOIZED ASYNC THUMBNAIL COMPONENT ──────────────────────
+export const AsyncThumbnail: React.FC<{
+  path: string;
+  name?: string;
+  mode?: string;
+  isGlobal?: boolean;
+  size?: number;
+  className?: string;
+  alt?: string;
+}> = React.memo(({ path, name = '', mode, isGlobal, size = 48, className, alt }) => {
+  // Fast path: Immediately render standard icon for non-image files with 0 IPC overhead
+  if (name && !isImageFile(name)) {
+    return <>{getFileIcon(name, size)}</>;
+  }
+
+  const effectiveMode = mode || (isGlobal ? 'global' : undefined);
+  const cacheKey = `${effectiveMode || 'local'}:${path}`;
+  const initialSrc = thumbCache.get(cacheKey) || null;
+
+  const [src, setSrc] = useState<string | null>(initialSrc);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(Boolean(initialSrc));
+
+  useEffect(() => {
+    if (initialSrc) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '120px' });
+
+    if (imgRef.current) observer.observe(imgRef.current);
+    return () => observer.disconnect();
+  }, [initialSrc, path]);
+
+  useEffect(() => {
+    if (!isVisible || initialSrc || loadFailed) return;
+    let active = true;
+    const isDesktop = (window as any).electronAPI?.isDesktop;
+
+    if (isDesktop) {
+      (window as any).electronAPI.fs.readFileBase64(path, effectiveMode, { thumb: true })
+        .then((base64: string) => {
+          if (!active) return;
+          if (base64) {
+            const dataUrl = `data:image/png;base64,${base64}`;
+            setThumbCache(cacheKey, dataUrl);
+            setSrc(dataUrl);
+          } else {
+            setLoadFailed(true);
+          }
+        })
+        .catch(() => {
+          if (active) setLoadFailed(true);
+        });
+    } else {
+      const url = `/api/fs/file?path=${encodeURIComponent(path)}&mode=${effectiveMode || ''}&thumb=true`;
+      setThumbCache(cacheKey, url);
+      setSrc(url);
+    }
+
+    return () => { active = false; };
+  }, [path, effectiveMode, isVisible, initialSrc, cacheKey, loadFailed]);
+
+  if (loadFailed) {
+    return <>{getFileIcon(name, size)}</>;
+  }
+
+  if (!src) {
+    return (
+      <div
+        ref={imgRef}
+        style={{ width: size, height: size }}
+        className={`bg-slate-100/80 animate-pulse rounded-md flex items-center justify-center shrink-0 ${className || ''}`}
+      >
+        <ImageIcon className="text-slate-300" style={{ width: Math.max(16, size * 0.4), height: Math.max(16, size * 0.4) }} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt || name}
+      style={{ maxWidth: size, maxHeight: size }}
+      className={`object-contain rounded-sm select-none pointer-events-none ${className || ''}`}
+      loading="lazy"
+      onError={() => setLoadFailed(true)}
+    />
+  );
+});
+AsyncThumbnail.displayName = 'AsyncThumbnail';
+
+// ── SHIMMER SKELETON LOADER ─────────────────────────────────
+export const FileContentSkeleton: React.FC<{ viewMode: ViewMode; gridCols: number; gridItemSize: number }> = ({ viewMode, gridCols, gridItemSize }) => {
+  if (viewMode === 'details') {
+    return (
+      <div className="w-full select-none">
+        {/* Shimmer Table Header */}
+        <div className="flex items-center border-b border-slate-200 h-[26px] bg-white px-3">
+          <div className="w-[45%] text-[12px] font-semibold text-slate-400">Name</div>
+          <div className="w-[22%] text-[12px] font-semibold text-slate-400">Date modified</div>
+          <div className="w-[18%] text-[12px] font-semibold text-slate-400">Type</div>
+          <div className="w-[15%] text-[12px] font-semibold text-slate-400 text-right pr-4">Size</div>
+        </div>
+        {/* Shimmer Table Rows */}
+        <div className="flex flex-col">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+            <div key={i} className={`flex items-center h-[28px] px-3 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+              <div className="w-[45%] flex items-center gap-2">
+                <div className="size-4 rounded bg-slate-200/70 animate-pulse shrink-0" />
+                <div
+                  className="h-3 rounded bg-slate-200/70 animate-pulse"
+                  style={{ width: `${Math.floor(28 + (i * 17) % 40)}%` }}
+                />
+              </div>
+              <div className="w-[22%]">
+                <div className="h-2.5 w-24 rounded bg-slate-200/60 animate-pulse" />
+              </div>
+              <div className="w-[18%]">
+                <div className="h-2.5 w-20 rounded bg-slate-200/60 animate-pulse" />
+              </div>
+              <div className="w-[15%] flex justify-end pr-4">
+                <div className="h-2.5 w-12 rounded bg-slate-200/60 animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Grid View Shimmer Skeleton
+  const placeholderCount = Math.max(gridCols * 3, 15);
+  return (
+    <div className="p-3 select-none">
+      <div
+        className="grid gap-1"
+        style={{
+          gridTemplateColumns: `repeat(${gridCols}, minmax(${gridItemSize}px, 1fr))`
+        }}
+      >
+        {Array.from({ length: placeholderCount }).map((_, i) => (
+          <div
+            key={i}
+            className="flex flex-col items-center justify-center p-2 rounded border border-transparent"
+            style={{ height: `${gridItemSize}px` }}
+          >
+            <div
+              className="rounded-lg bg-slate-200/70 animate-pulse mb-2"
+              style={{
+                width: Math.max(28, Math.floor(gridItemSize * 0.45)),
+                height: Math.max(28, Math.floor(gridItemSize * 0.45))
+              }}
+            />
+            <div
+              className="h-2.5 rounded bg-slate-200/60 animate-pulse"
+              style={{ width: `${Math.floor(45 + (i * 13) % 45)}%` }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── MEMOIZED ROW COMPONENTS ─────────────────────────────────
+export const DriveRow = React.memo<{
+  drive: FSEntry;
+  isSelected: boolean;
+  onSelect: (e: React.MouseEvent, name: string) => void;
+  onDoubleClick: (drive: FSEntry) => void;
+}>(({ drive, isSelected, onSelect, onDoubleClick }) => {
+  const usedSpace = drive.size - (drive.freeSpace || 0);
+  const percentUsed = drive.size > 0 ? (usedSpace / drive.size) * 100 : 0;
+  return (
+    <tr
+      onClick={(e) => onSelect(e, drive.name)}
+      onDoubleClick={() => onDoubleClick(drive)}
+      className={`cursor-pointer select-none border-b border-transparent h-[28px] group transition-colors ${
+        isSelected ? 'bg-blue-100 border-blue-200' : 'hover:bg-slate-100/70'
+      }`}
+    >
+      <td className="px-3 py-1">
+        <div className="flex items-center gap-2">
+          <HardDrive className="text-slate-500 shrink-0" size={15} />
+          <span className={`font-medium truncate ${isSelected ? 'text-slate-900' : 'text-slate-800'}`}>
+            Local Disk ({drive.name})
+          </span>
+        </div>
+      </td>
+      <td className="px-3 py-1 text-slate-500 text-[12px]">
+        {formatBytes(drive.freeSpace || 0, 1)} free
+      </td>
+      <td className="px-3 py-1">
+        <div className="w-full h-1.5 bg-slate-200 rounded-sm overflow-hidden">
+          <div
+            className={`h-full ${percentUsed > 85 ? 'bg-red-500' : 'bg-blue-500'}`}
+            style={{ width: `${percentUsed}%` }}
+          />
+        </div>
+      </td>
+      <td className="px-3 py-1 text-slate-500 text-[12px]">{formatBytes(drive.size, 1)}</td>
+    </tr>
+  );
+});
+DriveRow.displayName = 'DriveRow';
+
+export interface FileDetailsRowProps {
+  file: FSEntry;
+  rowIndex: number;
+  isSelected: boolean;
+  inlineEdit: { id: string; originalName: string; isCreating: boolean; type: 'file' | 'folder' } | null;
+  inlineEditInputRef: React.RefObject<HTMLInputElement | null>;
+  onSelect: (e: React.MouseEvent, name: string) => void;
+  onDoubleClick: (item: FSEntry) => void;
+  onContextMenu: (e: React.MouseEvent, type: 'file' | 'folder', item: FSEntry) => void;
+  onInlineEditSubmit: (name: string) => void;
+  onInlineEditCancel: () => void;
+}
+
+export const FileDetailsRow = React.memo<FileDetailsRowProps>(({
+  file,
+  rowIndex,
+  isSelected,
+  inlineEdit,
+  inlineEditInputRef,
+  onSelect,
+  onDoubleClick,
+  onContextMenu,
+  onInlineEditSubmit,
+  onInlineEditCancel,
+}) => {
+  const isEditing = inlineEdit?.id === file.name;
+
+  return (
+    <tr
+      onClick={(e) => onSelect(e, file.name)}
+      onDoubleClick={() => onDoubleClick(file)}
+      onContextMenu={(e) => onContextMenu(e, file.isDir ? 'folder' : 'file', file)}
+      className={`cursor-pointer select-none h-[28px] group transition-colors ${
+        isSelected
+          ? 'bg-[#cce4f7] text-slate-900'
+          : rowIndex % 2 === 0
+            ? 'bg-white hover:bg-[#e8f4fd]'
+            : 'bg-[#f7f9fc] hover:bg-[#e8f4fd]'
+      }`}
+    >
+      <td className="px-3 py-0.5">
+        <div className="flex items-center gap-2 truncate">
+          {file.isDir ? <FolderIcon size={16} /> : getFileIcon(file.name, 16)}
+          {isEditing ? (
+            <input
+              ref={inlineEditInputRef as any}
+              defaultValue={inlineEdit.originalName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onInlineEditSubmit(e.currentTarget.value);
+                if (e.key === 'Escape') onInlineEditCancel();
+              }}
+              onBlur={(e) => onInlineEditSubmit(e.currentTarget.value)}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+              className="w-full text-slate-900 border border-blue-400 px-1 py-0 outline-none text-[12px] bg-white h-[20px]"
+            />
+          ) : (
+            <span className="truncate">{file.name}</span>
+          )}
+        </div>
+      </td>
+      <td className="px-3 py-0.5 text-[12px] text-slate-600 truncate">{formatDate(file.modifiedAt)}</td>
+      <td className="px-3 py-0.5 text-[12px] text-slate-600 truncate">{file.isDir ? 'File folder' : getFileType(file.name)}</td>
+      <td className="px-3 py-0.5 text-[12px] text-slate-600 text-right pr-4">
+        {file.isDir ? '' : formatBytes(file.size, 0)}
+      </td>
+    </tr>
+  );
+});
+FileDetailsRow.displayName = 'FileDetailsRow';
+
+export interface FileGridItemProps {
+  file: FSEntry;
+  isSelected: boolean;
+  gridItemSize: number;
+  iconSize: number;
+  targetPath: string;
+  isGlobal: boolean;
+  inlineEdit: { id: string; originalName: string; isCreating: boolean; type: 'file' | 'folder' } | null;
+  inlineEditInputRef: React.RefObject<HTMLInputElement | null>;
+  onSelect: (e: React.MouseEvent, name: string) => void;
+  onDoubleClick: (item: FSEntry) => void;
+  onContextMenu: (e: React.MouseEvent, type: 'file' | 'folder', item: FSEntry) => void;
+  onInlineEditSubmit: (name: string) => void;
+  onInlineEditCancel: () => void;
+}
+
+export const FileGridItem = React.memo<FileGridItemProps>(({
+  file,
+  isSelected,
+  gridItemSize,
+  iconSize,
+  targetPath,
+  isGlobal,
+  inlineEdit,
+  inlineEditInputRef,
+  onSelect,
+  onDoubleClick,
+  onContextMenu,
+  onInlineEditSubmit,
+  onInlineEditCancel,
+}) => {
+  const isEditing = inlineEdit?.id === file.name;
+
+  return (
+    <div
+      onClick={(e) => onSelect(e, file.name)}
+      onDoubleClick={() => onDoubleClick(file)}
+      onContextMenu={(e) => onContextMenu(e, file.isDir ? 'folder' : 'file', file)}
+      className={`flex flex-col items-center justify-center p-2 cursor-pointer select-none rounded border transition-colors ${
+        isSelected ? 'bg-[#cce4f7] border-[#005fb8]' : 'bg-transparent border-transparent hover:bg-slate-100'
+      }`}
+    >
+      <div
+        className="mb-1 flex items-center justify-center shrink-0"
+        style={{ width: iconSize, height: iconSize }}
+      >
+        {file.isDir ? (
+          <FolderIcon size={iconSize} />
+        ) : (
+          <AsyncThumbnail
+            path={targetPath}
+            name={file.name}
+            isGlobal={isGlobal}
+            size={iconSize}
+          />
+        )}
+      </div>
+      {isEditing ? (
+        <input
+          ref={inlineEditInputRef as any}
+          defaultValue={inlineEdit.originalName}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onInlineEditSubmit(e.currentTarget.value);
+            if (e.key === 'Escape') onInlineEditCancel();
+          }}
+          onBlur={(e) => onInlineEditSubmit(e.currentTarget.value)}
+          onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          className="w-[90%] text-slate-900 border border-blue-400 px-1 py-0 outline-none text-[11px] bg-white text-center rounded-sm h-[20px]"
+        />
+      ) : (
+        <span
+          className="text-[11px] text-slate-800 text-center leading-tight w-full truncate px-1"
+          title={file.name}
+        >
+          {file.name}
+        </span>
+      )}
+    </div>
+  );
+});
+FileGridItem.displayName = 'FileGridItem';
+
+// ── MAIN FILE EXPLORER COMPONENT ────────────────────────────
 export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPath, onFileSelect, onPathChange, className }) => {
   const [currentPath, setCurrentPath] = useState(initialPath || '');
   const isGlobal = rootPath === 'GLOBAL';
@@ -234,8 +620,12 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     }
   }, [currentPath, rootPath, isGlobal]);
 
-  const [files, setFiles] = useState<FSEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Synchronous cache seed on mount to avoid flash
+  const initialCacheKey = getDirCacheKey(rootPath, initialPath || '', isGlobal);
+  const initialCached = dirCache.get(initialCacheKey);
+
+  const [files, setFiles] = useState<FSEntry[]>(() => initialCached ? initialCached.files : []);
+  const [loading, setLoading] = useState<boolean>(() => !initialCached);
   const [searchQuery, setSearchQuery] = useState('');
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -247,9 +637,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     }, 150);
     return () => clearTimeout(timer);
   }, [localSearch]);
+
   const [viewMode, setViewMode] = useState<ViewMode>('details');
   const [gridItemSize, setGridItemSize] = useState(96);
-  const [quickAccess, setQuickAccess] = useState<Record<string, string>>({});
+  const [quickAccess, setQuickAccess] = useState<Record<string, string>>(() => cachedQuickAccess || {});
   
   interface PinnedFolder {
     name: string;
@@ -326,7 +717,77 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     type: 'file' | 'folder';
   } | null>(null);
 
-  const handleInlineEditSubmit = async (newName: string) => {
+  // ── CORE FILE RETRIEVAL WITH SWR CACHING ───────────────────
+  const fetchSeqRef = useRef(0);
+
+  const fetchFiles = useCallback(async (forceRefresh = false) => {
+    const seq = ++fetchSeqRef.current;
+    const cacheKey = getDirCacheKey(rootPath, currentPath, isGlobal);
+    const cached = !forceRefresh ? dirCache.get(cacheKey) : null;
+
+    if (cached) {
+      setFiles(cached.files);
+      setLoading(false);
+      setSelectedItems(new Set());
+      // Fresh hit (< 10s): skip background roundtrip
+      if (Date.now() - cached.timestamp < 10000) {
+        return;
+      }
+    } else {
+      if (!forceRefresh) setFiles([]);
+      setLoading(true);
+      setSelectedItems(new Set());
+    }
+
+    try {
+      const isDesktop = (window as any).electronAPI?.isDesktop;
+
+      if (isGlobal && currentPath === '') {
+        let fetchedDrives: FSEntry[] = [];
+        if (isDesktop) {
+          const data = await (window as any).electronAPI.fs.getDrives();
+          if (data.files) fetchedDrives = data.files;
+        } else {
+          const res = await fetch('/api/fs/drives');
+          const data = await res.json();
+          if (data.files) fetchedDrives = data.files;
+        }
+        if (seq === fetchSeqRef.current) {
+          setDirCache(cacheKey, fetchedDrives);
+          setFiles(fetchedDrives);
+        }
+      } else {
+        const targetPath = isGlobal ? currentPath : `${rootPath}/${currentPath}`.replace(/\/+/g, '/');
+        let fetchedFiles: FSEntry[] = [];
+        if (isDesktop) {
+          const data = await (window as any).electronAPI.fs.listFiles(targetPath, isGlobal ? 'global' : undefined, forceRefresh);
+          if (data.files) fetchedFiles = data.files;
+        } else {
+          const res = await fetch(`/api/fs/list?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}`);
+          const data = await res.json();
+          if (data.files) fetchedFiles = data.files;
+        }
+        if (seq === fetchSeqRef.current) {
+          setDirCache(cacheKey, fetchedFiles);
+          setFiles(fetchedFiles);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch files', e);
+    } finally {
+      if (seq === fetchSeqRef.current) setLoading(false);
+    }
+  }, [rootPath, currentPath, isGlobal]);
+
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
+  const handleInlineEditCancel = useCallback(() => {
+    setInlineEdit(null);
+  }, []);
+
+  const handleInlineEditSubmit = useCallback(async (newName: string) => {
     if (!inlineEdit) return;
     const { id, isCreating, originalName, type } = inlineEdit;
     setInlineEdit(null); // Clear immediately
@@ -379,8 +840,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
       toast.error('Operation Failed', `Failed to ${isCreating ? 'create' : 'rename'} file item.`);
     }
     
-    fetchFiles();
-  };
+    const cacheKey = getDirCacheKey(rootPath, currentPath, isGlobal);
+    invalidateDirCache(cacheKey);
+    fetchFiles(true);
+  }, [inlineEdit, isGlobal, currentPath, rootPath, fetchFiles]);
 
   const inlineEditInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -413,10 +876,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
-  
-
-
-  const [drives, setDrives] = useState<FSEntry[]>([]);
+  const [drives, setDrives] = useState<FSEntry[]>(() => cachedDrives || []);
 
   useEffect(() => {
     const isDesktop = (window as any).electronAPI?.isDesktop;
@@ -424,66 +884,43 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     if (isGlobal) {
       if (isDesktop) {
         (window as any).electronAPI.fs.getQuickAccess()
-          .then((data: any) => setQuickAccess(data))
+          .then((data: any) => {
+            cachedQuickAccess = data;
+            setQuickAccess(data);
+          })
           .catch(console.error);
       } else {
         fetch('/api/fs/quick-access')
           .then(res => res.json())
-          .then(data => setQuickAccess(data))
+          .then(data => {
+            cachedQuickAccess = data;
+            setQuickAccess(data);
+          })
           .catch(console.error);
       }
     }
 
     if (isDesktop) {
       (window as any).electronAPI.fs.getDrives()
-        .then((data: any) => { if (data.files) setDrives(data.files); })
+        .then((data: any) => {
+          if (data.files) {
+            cachedDrives = data.files;
+            setDrives(data.files);
+          }
+        })
         .catch(console.error);
     } else {
       fetch('/api/fs/drives')
         .then(res => res.json())
-        .then(data => { if (data.files) setDrives(data.files); })
+        .then(data => {
+          if (data.files) {
+            cachedDrives = data.files;
+            setDrives(data.files);
+          }
+        })
         .catch(console.error);
     }
   }, [isGlobal]);
-
-  const fetchSeqRef = useRef(0);
-
-  const fetchFiles = async (forceRefresh = false) => {
-    const seq = ++fetchSeqRef.current;
-    if (!forceRefresh) setFiles([]);
-    setLoading(true);
-    setSelectedItems(new Set());
-    try {
-      const isDesktop = (window as any).electronAPI?.isDesktop;
-
-      if (isGlobal && currentPath === '') {
-        if (isDesktop) {
-          const data = await (window as any).electronAPI.fs.getDrives();
-          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
-        } else {
-          const res = await fetch('/api/fs/drives');
-          const data = await res.json();
-          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
-        }
-      } else {
-        const targetPath = isGlobal ? currentPath : `${rootPath}/${currentPath}`.replace(/\/+/g, '/');
-        if (isDesktop) {
-          const data = await (window as any).electronAPI.fs.listFiles(targetPath, isGlobal ? 'global' : undefined, forceRefresh);
-          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
-        } else {
-          const res = await fetch(`/api/fs/list?path=${encodeURIComponent(targetPath)}${isGlobal ? '&mode=global' : ''}`);
-          const data = await res.json();
-          if (seq === fetchSeqRef.current && data.files) setFiles(data.files);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch files', e);
-    } finally {
-      if (seq === fetchSeqRef.current) setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchFiles(); }, [currentPath, rootPath]);
 
   useEffect(() => {
     const handleViewerWheel = (e: WheelEvent) => {
@@ -503,64 +940,93 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     }
   }, [viewingFile]);
 
-  const getAbsolutePath = (itemName: string) =>
+  const getAbsolutePath = useCallback((itemName: string) =>
     isGlobal
       ? `${currentPath}/${itemName}`.replace(/\\/g, '/').replace(/\/+/g, '/')
-      : `${rootPath}/${currentPath}/${itemName}`.replace(/\/+/g, '/');
+      : `${rootPath}/${currentPath}/${itemName}`.replace(/\/+/g, '/'),
+  [isGlobal, currentPath, rootPath]);
 
-  const navigateTo = (newPath: string) => {
+  const navigateTo = useCallback((newPath: string) => {
     if (newPath === currentPath) return;
-    setFiles([]);
-    setLoading(true);
-    const newHistory = history.slice(0, historyIdx + 1);
-    newHistory.push(newPath);
-    setHistory(newHistory);
-    setHistoryIdx(newHistory.length - 1);
+    const targetKey = getDirCacheKey(rootPath, newPath, isGlobal);
+    const cached = dirCache.get(targetKey);
+    if (cached) {
+      setFiles(cached.files);
+      setLoading(false);
+    } else {
+      setFiles([]);
+      setLoading(true);
+    }
+    setSelectedItems(new Set());
+    setHistory(prev => {
+      const next = prev.slice(0, historyIdx + 1);
+      next.push(newPath);
+      return next;
+    });
+    setHistoryIdx(prev => prev + 1);
     setCurrentPath(newPath);
-  };
+  }, [currentPath, rootPath, isGlobal, historyIdx]);
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (historyIdx > 0) {
-      const idx = historyIdx - 1;
-      setFiles([]);
-      setLoading(true);
-      setHistoryIdx(idx);
-      setCurrentPath(history[idx]);
+      const nextIdx = historyIdx - 1;
+      const targetPath = history[nextIdx];
+      const targetKey = getDirCacheKey(rootPath, targetPath, isGlobal);
+      const cached = dirCache.get(targetKey);
+      if (cached) {
+        setFiles(cached.files);
+        setLoading(false);
+      } else {
+        setFiles([]);
+        setLoading(true);
+      }
+      setSelectedItems(new Set());
+      setHistoryIdx(nextIdx);
+      setCurrentPath(targetPath);
     }
-  };
+  }, [historyIdx, history, rootPath, isGlobal]);
 
-  const goForward = () => {
+  const goForward = useCallback(() => {
     if (historyIdx < history.length - 1) {
-      const idx = historyIdx + 1;
-      setFiles([]);
-      setLoading(true);
-      setHistoryIdx(idx);
-      setCurrentPath(history[idx]);
+      const nextIdx = historyIdx + 1;
+      const targetPath = history[nextIdx];
+      const targetKey = getDirCacheKey(rootPath, targetPath, isGlobal);
+      const cached = dirCache.get(targetKey);
+      if (cached) {
+        setFiles(cached.files);
+        setLoading(false);
+      } else {
+        setFiles([]);
+        setLoading(true);
+      }
+      setSelectedItems(new Set());
+      setHistoryIdx(nextIdx);
+      setCurrentPath(targetPath);
     }
-  };
+  }, [historyIdx, history, rootPath, isGlobal]);
 
-  const goUp = () => {
+  const goUp = useCallback(() => {
     const parts = currentPath.split(/[/\\]/).filter(Boolean);
     parts.pop();
     navigateTo(parts.join('/'));
-  };
+  }, [currentPath, navigateTo]);
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = useCallback(() => {
     setInlineEdit({ id: `___temp___${Date.now()}`, originalName: 'New folder', isCreating: true, type: 'folder' });
-  };
+  }, []);
 
-  const handleCreateFile = (defaultName = 'New Text Document.txt') => {
+  const handleCreateFile = useCallback((defaultName = 'New Text Document.txt') => {
     setInlineEdit({ id: `___temp___${Date.now()}`, originalName: defaultName, isCreating: true, type: 'file' });
-  };
+  }, []);
 
-  const handleContextMenu = (e: React.MouseEvent, type: 'file' | 'folder' | 'background', item?: FSEntry) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, type: 'file' | 'folder' | 'background', item?: FSEntry) => {
     e.preventDefault();
     e.stopPropagation();
-    if (item && !selectedItems.has(item.name)) {
-      setSelectedItems(new Set([item.name]));
+    if (item) {
+      setSelectedItems(prev => prev.has(item.name) ? prev : new Set([item.name]));
     }
     setContextMenu({ x: e.clientX, y: e.clientY, item, type });
-  };
+  }, []);
 
   const handleDelete = async (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (selectedItems.size === 0) return;
@@ -588,29 +1054,31 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
           });
         }
       }
-      fetchFiles();
+      const cacheKey = getDirCacheKey(rootPath, currentPath, isGlobal);
+      invalidateDirCache(cacheKey);
+      fetchFiles(true);
     } catch {
       toast.error('Delete Failed', 'Failed to delete some selected items.');
     }
   };
 
-  const handleRename = () => {
+  const handleRename = useCallback(() => {
     if (selectedItems.size !== 1) return;
     const itemName = Array.from(selectedItems)[0] as string;
     const item = files.find(f => f.name === itemName);
     if (!item) return;
     setInlineEdit({ id: itemName, originalName: itemName, isCreating: false, type: item.isDir ? 'folder' : 'file' });
-  };
+  }, [selectedItems, files]);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     if (selectedItems.size !== 1) return;
     setClipboard({ path: getAbsolutePath(Array.from(selectedItems)[0] as string), type: 'copy' });
-  };
+  }, [selectedItems, getAbsolutePath, setClipboard]);
 
-  const handleCut = () => {
+  const handleCut = useCallback(() => {
     if (selectedItems.size !== 1) return;
     setClipboard({ path: getAbsolutePath(Array.from(selectedItems)[0] as string), type: 'cut' });
-  };
+  }, [selectedItems, getAbsolutePath, setClipboard]);
 
   const handlePaste = async () => {
     if (!clipboard) return;
@@ -658,7 +1126,9 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
       setFileOpProgress((prev) => (prev ? { ...prev, progress: 100 } : null));
       setTimeout(() => {
         setFileOpProgress(null);
-        fetchFiles();
+        const cacheKey = getDirCacheKey(rootPath, currentPath, isGlobal);
+        invalidateDirCache(cacheKey);
+        fetchFiles(true);
       }, 350);
     } catch {
       clearInterval(progressInterval);
@@ -667,7 +1137,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     }
   };
 
-  const handleItemDoubleClick = (item: FSEntry) => {
+  const handleItemDoubleClick = useCallback((item: FSEntry) => {
     if (!item.name || item.name.startsWith('___temp___') || inlineEdit?.id === item.name) return;
     if (item.isDir) {
       navigateTo(currentPath ? `${currentPath}/${item.name}` : item.name);
@@ -694,7 +1164,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
         }
       }
     }
-  };
+  }, [inlineEdit, currentPath, navigateTo, getAbsolutePath, isGlobal]);
 
   const handleOpenNative = async () => {
     if (selectedItems.size !== 1) return;
@@ -727,27 +1197,6 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
     } catch {
       toast.error('Properties Error', 'Failed to get file properties.');
     }
-  };
-
-  const toggleSelection = (e: React.MouseEvent, itemName: string) => {
-    e.stopPropagation();
-    const newSet = new Set(selectedItems);
-    if (e.ctrlKey || e.metaKey) {
-      if (newSet.has(itemName)) newSet.delete(itemName);
-      else newSet.add(itemName);
-    } else if (e.shiftKey && newSet.size > 0) {
-      // range selection
-      const allNames = sortedFiles.map(f => f.name);
-      const lastSelected = Array.from(newSet)[newSet.size - 1];
-      const start = allNames.indexOf(lastSelected);
-      const end = allNames.indexOf(itemName);
-      const range = allNames.slice(Math.min(start, end), Math.max(start, end) + 1);
-      range.forEach(n => newSet.add(n));
-    } else {
-      newSet.clear();
-      newSet.add(itemName);
-    }
-    setSelectedItems(newSet);
   };
 
   const breadcrumbs = currentPath.split(/[/\\]/).filter(Boolean);
@@ -793,6 +1242,32 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
       return sortAsc ? cmp : -cmp;
     });
   }, [displayedFiles, sortBy, sortAsc, inlineEdit]);
+
+  const toggleSelection = useCallback((e: React.MouseEvent, itemName: string) => {
+    e.stopPropagation();
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (e.ctrlKey || e.metaKey) {
+        if (newSet.has(itemName)) newSet.delete(itemName);
+        else newSet.add(itemName);
+      } else if (e.shiftKey && prev.size > 0) {
+        const allNames = sortedFiles.map(f => f.name);
+        const lastSelected = Array.from(prev)[prev.size - 1];
+        const start = allNames.indexOf(lastSelected);
+        const end = allNames.indexOf(itemName);
+        if (start !== -1 && end !== -1) {
+          const range = allNames.slice(Math.min(start, end), Math.max(start, end) + 1);
+          range.forEach(n => newSet.add(n));
+        } else {
+          newSet.add(itemName);
+        }
+      } else {
+        newSet.clear();
+        newSet.add(itemName);
+      }
+      return newSet;
+    });
+  }, [sortedFiles]);
 
   // ResizeObserver for dynamic column count in grid view
   const [contentWidth, setContentWidth] = useState(() => {
@@ -885,41 +1360,15 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
         <col style={{ width: '15%' }} />
       </colgroup>
       <tbody>
-        {sortedFiles.map((drive, idx) => {
-          const isSelected = selectedItems.has(drive.name);
-          const usedSpace = drive.size - (drive.freeSpace || 0);
-          const percentUsed = drive.size > 0 ? (usedSpace / drive.size) * 100 : 0;
-          return (
-            <tr
-              key={idx}
-              onClick={(e) => toggleSelection(e, drive.name)}
-              onDoubleClick={() => handleItemDoubleClick(drive)}
-              className={`cursor-pointer select-none border-b border-transparent h-[28px] group ${isSelected ? 'bg-blue-100 border-blue-200' : 'hover:bg-slate-100/70'
-                }`}
-            >
-              <td className="px-3 py-1">
-                <div className="flex items-center gap-2">
-                  <HardDrive className="text-slate-500 shrink-0" size={15} />
-                  <span className={`font-medium truncate ${isSelected ? 'text-slate-900' : 'text-slate-800'}`}>
-                    Local Disk ({drive.name})
-                  </span>
-                </div>
-              </td>
-              <td className="px-3 py-1 text-slate-500 text-[12px]">
-                {formatBytes(drive.freeSpace || 0, 1)} free
-              </td>
-              <td className="px-3 py-1">
-                <div className="w-full h-1.5 bg-slate-200 rounded-sm overflow-hidden">
-                  <div
-                    className={`h-full ${percentUsed > 85 ? 'bg-red-500' : 'bg-blue-500'}`}
-                    style={{ width: `${percentUsed}%` }}
-                  />
-                </div>
-              </td>
-              <td className="px-3 py-1 text-slate-500 text-[12px]">{formatBytes(drive.size, 1)}</td>
-            </tr>
-          );
-        })}
+        {sortedFiles.map((drive, idx) => (
+          <DriveRow
+            key={drive.name || idx}
+            drive={drive}
+            isSelected={selectedItems.has(drive.name)}
+            onSelect={toggleSelection}
+            onDoubleClick={handleItemDoubleClick}
+          />
+        ))}
       </tbody>
     </table>
   );
@@ -970,48 +1419,19 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
           if (!f) return null;
           const isSelected = selectedItems.has(f.name);
           return (
-            <tr
+            <FileDetailsRow
               key={virtualRow.key}
-              onClick={(e) => toggleSelection(e, f.name)}
-              onDoubleClick={() => handleItemDoubleClick(f)}
-              onContextMenu={(e) => handleContextMenu(e, f.isDir ? 'folder' : 'file', f)}
-              className={`cursor-pointer select-none h-[28px] group ${isSelected
-                ? 'bg-[#cce4f7] text-slate-900'
-                : virtualRow.index % 2 === 0
-                  ? 'bg-white hover:bg-[#e8f4fd]'
-                  : 'bg-[#f7f9fc] hover:bg-[#e8f4fd]'
-                }`}
-            >
-              <td className="px-3 py-0.5">
-                <div className="flex items-center gap-2 truncate">
-                  {f.isDir
-                    ? <FolderIcon size={16} />
-                    : getFileIcon(f.name, 16)
-                  }
-                      {inlineEdit?.id === f.name ? (
-                        <input
-                          ref={inlineEditInputRef}
-                          defaultValue={inlineEdit.originalName}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleInlineEditSubmit(e.currentTarget.value);
-                            if (e.key === 'Escape') setInlineEdit(null);
-                          }}
-                          onBlur={(e) => handleInlineEditSubmit(e.currentTarget.value)}
-                          onClick={e => e.stopPropagation()}
-                          onDoubleClick={e => e.stopPropagation()}
-                          className="w-full text-slate-900 border border-blue-400 px-1 py-0 outline-none text-[12px] bg-white h-[20px]"
-                        />
-                  ) : (
-                    <span className="truncate">{f.name}</span>
-                  )}
-                </div>
-              </td>
-              <td className="px-3 py-0.5 text-[12px] text-slate-600 truncate">{formatDate(f.modifiedAt)}</td>
-              <td className="px-3 py-0.5 text-[12px] text-slate-600 truncate">{f.isDir ? 'File folder' : getFileType(f.name)}</td>
-              <td className="px-3 py-0.5 text-[12px] text-slate-600 text-right pr-4">
-                {f.isDir ? '' : formatBytes(f.size, 0)}
-              </td>
-            </tr>
+              file={f}
+              rowIndex={virtualRow.index}
+              isSelected={isSelected}
+              inlineEdit={inlineEdit}
+              inlineEditInputRef={inlineEditInputRef}
+              onSelect={toggleSelection}
+              onDoubleClick={handleItemDoubleClick}
+              onContextMenu={handleContextMenu}
+              onInlineEditSubmit={handleInlineEditSubmit}
+              onInlineEditCancel={handleInlineEditCancel}
+            />
           );
         })}
         {detailsVirtualizer.getVirtualItems().length > 0 && (detailsVirtualizer.getTotalSize() - detailsVirtualizer.getVirtualItems()[detailsVirtualizer.getVirtualItems().length - 1].end) > 0 && (
@@ -1029,6 +1449,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
       )}
       {gridVirtualizer.getVirtualItems().map(virtualRow => {
         const rowItems = chunkedFiles[virtualRow.index] || [];
+        const iconSize = Math.max(24, Math.floor(gridItemSize * 0.45));
         return (
           <div
             key={virtualRow.key}
@@ -1041,38 +1462,23 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
             {rowItems.map(f => {
               const isSelected = selectedItems.has(f.name);
               const targetPath = getAbsolutePath(f.name);
-              const iconSize = Math.max(24, Math.floor(gridItemSize * 0.45));
               return (
-                <div
+                <FileGridItem
                   key={f.name}
-                  onClick={(e) => toggleSelection(e, f.name)}
-                  onDoubleClick={() => handleItemDoubleClick(f)}
-                  onContextMenu={(e) => handleContextMenu(e, f.isDir ? 'folder' : 'file', f)}
-                  className={`flex flex-col items-center justify-center p-2 cursor-pointer select-none rounded border transition-colors ${isSelected ? 'bg-[#cce4f7] border-[#005fb8]' : 'bg-transparent border-transparent hover:bg-slate-100'
-                    }`}
-                >
-                  <div className="mb-1 flex items-center justify-center shrink-0" style={{ width: iconSize, height: iconSize }}>
-                    {f.isDir ? <FolderIcon size={iconSize} /> : <AsyncThumbnail path={targetPath} name={f.name} isGlobal={isGlobal} size={iconSize} />}
-                  </div>
-                  {inlineEdit?.id === f.name ? (
-                    <input
-                      ref={inlineEditInputRef}
-                      defaultValue={inlineEdit.originalName}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleInlineEditSubmit(e.currentTarget.value);
-                        if (e.key === 'Escape') setInlineEdit(null);
-                      }}
-                      onBlur={(e) => handleInlineEditSubmit(e.currentTarget.value)}
-                      onClick={e => e.stopPropagation()}
-                      onDoubleClick={e => e.stopPropagation()}
-                      className="w-[90%] text-slate-900 border border-blue-400 px-1 py-0 outline-none text-[11px] bg-white text-center rounded-sm h-[20px]"
-                    />
-                  ) : (
-                    <span className="text-[11px] text-slate-800 text-center leading-tight w-full truncate px-1" title={f.name}>
-                      {f.name}
-                    </span>
-                  )}
-                </div>
+                  file={f}
+                  isSelected={isSelected}
+                  gridItemSize={gridItemSize}
+                  iconSize={iconSize}
+                  targetPath={targetPath}
+                  isGlobal={isGlobal}
+                  inlineEdit={inlineEdit}
+                  inlineEditInputRef={inlineEditInputRef}
+                  onSelect={toggleSelection}
+                  onDoubleClick={handleItemDoubleClick}
+                  onContextMenu={handleContextMenu}
+                  onInlineEditSubmit={handleInlineEditSubmit}
+                  onInlineEditCancel={handleInlineEditCancel}
+                />
               );
             })}
           </div>
@@ -1468,15 +1874,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
           onContextMenu={(e) => handleContextMenu(e, 'background')}
         >
           {loading && files.length === 0 ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <div className="size-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            </motion.div>
+            <FileContentSkeleton
+              viewMode={viewMode}
+              gridCols={gridCols}
+              gridItemSize={gridItemSize}
+            />
           ) : sortedFiles.length === 0 && (localSearch || debouncedSearch || searchQuery).trim() ? (
             <EmptyFileState
               searchQuery={localSearch || debouncedSearch || searchQuery}

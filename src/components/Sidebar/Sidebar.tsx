@@ -78,9 +78,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onOpen
               alt="Flow Studio Logo"
               className="size-10 shrink-0 object-contain rounded-xl shadow-sm"
             />
-            <div className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-linear ${
-              isCollapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[200px] opacity-100'
-            }`}>
+            <div className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-linear ${isCollapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[200px] opacity-100'
+              }`}>
               <h1 className="text-slate-900 text-lg font-bold tracking-tight leading-none">Flow Studio</h1>
             </div>
           </div>
@@ -217,16 +216,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onOpen
             onClick={() => onTabChange('settings')}
           />
 
-          {/* Apple Local Persistence Badge */}
-          {!isCollapsed && (
-            <div className="mt-2.5 pt-2 border-t border-slate-100/80 flex items-center justify-between px-2 text-[10.5px] text-slate-400 font-medium select-none">
-              <div className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-slate-500">Saved to disk</span>
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400/80">Local</span>
-            </div>
-          )}
         </div>
       </div>
     </aside>

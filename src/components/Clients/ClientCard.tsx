@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Client } from '../../stores/clientStore';
 import { sound } from '../../stores/soundStore';
-import { 
-  CheckCircle2, 
-  Mail, 
-  MapPin, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  ArrowUpRight, 
+import {
+  CheckCircle2,
+  Mail,
+  MapPin,
+  MoreVertical,
+  Edit,
+  Trash2,
+  ArrowUpRight,
   Phone
 } from 'lucide-react';
 
@@ -60,11 +60,10 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
       whileHover={{ y: -3, transition: { duration: 0.15 } }}
       onClick={() => onSelect(client.id)}
       onDoubleClick={() => onOpenDetails(client.id)}
-      className={`relative bg-white rounded-2xl border p-5 flex flex-col justify-between transition-all duration-200 cursor-pointer select-none group w-full ${
-        isSelected
-          ? 'border-blue-600 ring-2 ring-blue-500/20 shadow-md bg-blue-50/10'
-          : 'border-slate-200/80 hover:border-slate-300 hover:shadow-lg shadow-xs'
-      }`}
+      className={`relative bg-white rounded-2xl border p-5 flex flex-col justify-between transition-all duration-200 cursor-pointer select-none group w-full ${isSelected
+        ? 'border-blue-600 ring-2 ring-blue-500/20 shadow-md bg-blue-50/10'
+        : 'border-slate-200/80 hover:border-slate-300 hover:shadow-lg shadow-xs'
+        }`}
     >
       <div>
         {/* Top Row: Avatar, Name & Status */}
@@ -91,13 +90,12 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
 
               {/* Status Ring Dot */}
               <span
-                className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white ${
-                  client.status === 'Active'
-                    ? 'bg-emerald-500'
-                    : client.status === 'Prospect'
+                className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white ${client.status === 'Active'
+                  ? 'bg-emerald-500'
+                  : client.status === 'Prospect'
                     ? 'bg-blue-500'
                     : 'bg-slate-400'
-                }`}
+                  }`}
               />
             </div>
 
@@ -121,13 +119,12 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
           {/* Status Badge & 3-dots Menu */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                client.status === 'Active'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                  : client.status === 'Prospect'
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${client.status === 'Active'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                : client.status === 'Prospect'
                   ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
                   : 'bg-slate-100 text-slate-600 border border-slate-200/60'
-              }`}
+                }`}
             >
               {client.status}
             </span>
@@ -247,7 +244,7 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
             client.brandColors.slice(0, 4).map((col, idx) => (
               <span
                 key={idx}
-                className="size-3 rounded-full border border-slate-200/80 shadow-2xs"
+                className="size-3 rounded-full"
                 style={{ backgroundColor: col.hex }}
                 title={col.name || col.hex}
               />
