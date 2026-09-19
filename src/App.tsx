@@ -49,6 +49,7 @@ import { ConfirmDialogModal } from './components/GlobalComponents/ConfirmDialogM
 import { PromptModal } from './components/GlobalComponents/PromptModal';
 import { CommandPalette } from './components/GlobalComponents/CommandPalette/CommandPalette';
 import { ShortcutsModal } from './components/GlobalComponents/ShortcutsModal';
+import { NavigationHud } from './components/GlobalComponents/NavigationHud';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -486,6 +487,7 @@ function AppContent() {
       <ConfirmDialogModal />
       <PromptModal />
       <ShortcutsModal />
+      <NavigationHud onNavigate={(view) => setCurrentView(view)} />
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
