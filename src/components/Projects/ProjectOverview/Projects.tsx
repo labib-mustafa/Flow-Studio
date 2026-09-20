@@ -20,7 +20,7 @@ export type ProjectTab = 'All' | 'Active' | 'On Hold' | 'Completed' | 'Archived'
 
 export const Projects: React.FC<ProjectsProps> = ({ onNewProject, onProjectClick, onEditProject }) => {
   const { projects, setCurrentProject, deleteProject, togglePinProject, duplicateProject, updateProject, _hasHydrated } = useProjectStore();
-  const { tasks } = useTaskStore();
+  const { tasks, _hasHydrated: isTasksHydrated } = useTaskStore();
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -221,7 +221,7 @@ export const Projects: React.FC<ProjectsProps> = ({ onNewProject, onProjectClick
   const posX = contextMenu ? Math.min(contextMenu.x, window.innerWidth - 230) : 0;
   const posY = contextMenu ? Math.min(contextMenu.y, window.innerHeight - 300) : 0;
 
-  if (!_hasHydrated) {
+  if (!_hasHydrated || !isTasksHydrated) {
     return <ProjectsSkeleton />;
   }
 

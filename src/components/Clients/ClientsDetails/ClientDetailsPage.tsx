@@ -11,6 +11,7 @@ import { TaskPage } from '../../GlobalComponents/Pages/TaskPage/TaskPage';
 import { PillTab } from '../../GlobalComponents/PillTab';
 import { InlineEditCell } from '../../Leads/InlineEditCell';
 import { ProjectsPage } from '../ProjectsPage/ProjectsPage';
+import { ClientsSkeleton } from '../../GlobalComponents/Skeletons/ClientsSkeleton';
 import {
   ArrowLeft,
   Search,
@@ -101,7 +102,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
 
   // Experts Sidebar state
   const [isExpertsSidebarOpen, setIsExpertsSidebarOpen] = useState(false);
-  const { experts: clientExperts, pinnedAssets, activityLogs, setExperts: storeSetExperts, addPinnedAsset, removePinnedAsset, addActivityLog } = useClientDetailsStore();
+  const { experts: clientExperts, pinnedAssets, activityLogs, setExperts: storeSetExperts, addPinnedAsset, removePinnedAsset, addActivityLog, _hasHydrated } = useClientDetailsStore();
   const setClientExperts = (updater: any) => {
     // Compatibility shim: support both function updater and direct value
     const newVal = typeof updater === 'function' ? updater(clientExperts) : updater;
@@ -499,6 +500,10 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
   const portraitUrl = selectedClient.avatarUrl || (selectedClient.id === 'alexander-hamilton'
     ? "https://lh3.googleusercontent.com/aida-public/AB6AXuB-LEbQMHWg-bgTRP93dJLCMtaMD0QmCGBLu14FCPro90t-rkftnpE44Gkt0SSY5QyzLrw6MGVd6ZLufGI1JglRWNAAq2-dyW_CGak9I2DF6DSlq43_WPH402DjKgTxuoAvYQ6jjzmZvLI_ihP9p8gq7swKEBT3mmP8mnRbK990Wy-E63bzjkWwTVrmfJkAUjOsrgHAawMxT78Qo_2NIFle-GLQrh8L5hv-_FewC0cv9bXM3AoVru6XD-lPthKDfqgneqFWmsmtEKQ"
     : null);
+
+  if (!_hasHydrated || !selectedClient) {
+    return <ClientsSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#f5f5f7] overflow-hidden text-slate-900 font-display relative">

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { CellPopover } from '../../../ui/CellPopover';
 import { Task, useTaskStore } from '../../../../stores/taskStore';
 import { sound } from '../../../../stores/soundStore';
-import { MessagesSquare, Flag, ClipboardType } from 'lucide-react';
+import { MessagesSquare, Flag, ClipboardType, MoreHorizontal, Check } from 'lucide-react';
 
 interface StatusDropdownProps {
   task?: Task;
@@ -182,7 +182,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
             <div className="mb-2">
               <div className="px-3 py-1 flex items-center justify-between group cursor-default">
                  <span className="text-[12px] font-semibold text-[#87909e]">Not started</span>
-                 <span className="material-symbols-outlined text-[14px] text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer">more_horiz</span>
+                 <MoreHorizontal className="size-3.5 text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer" />
               </div>
               {notStarted.map(opt => (
                 <button
@@ -194,7 +194,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
                     {opt.icon}
                     <span className="text-[13px] text-slate-700 font-medium tracking-wide">{opt.label}</span>
                   </div>
-                  {currentPhaseValue === opt.id && <span className="material-symbols-outlined text-[16px] text-slate-800">check</span>}
+                  {currentPhaseValue === opt.id && <Check className="size-4 text-slate-800" />}
                 </button>
               ))}
             </div>
@@ -205,7 +205,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
               <div className="h-px w-full bg-slate-100 mb-2"></div>
               <div className="px-3 py-1 flex items-center justify-between group cursor-default">
                  <span className="text-[12px] font-semibold text-[#87909e]">Active</span>
-                 <span className="material-symbols-outlined text-[14px] text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer">more_horiz</span>
+                 <MoreHorizontal className="size-3.5 text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer" />
               </div>
               {active.map(opt => (
                 <button
@@ -217,8 +217,8 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
                     {opt.icon}
                     <span className="text-[13px] text-slate-700 font-medium tracking-wide">{opt.label}</span>
                   </div>
-                  {(currentPhaseValue === opt.id || (opt.id === 'fawawf' && (currentPhaseValue as any) === 'fawawf-never-happens')) && <span className="material-symbols-outlined text-[16px] text-slate-800">check</span>}
-                  {(opt.id === 'inprogress' && currentPhaseValue === 'inprogress') && <span className="material-symbols-outlined text-[16px] text-slate-800">check</span>}
+                  {(currentPhaseValue === opt.id || (opt.id === 'fawawf' && (currentPhaseValue as any) === 'fawawf-never-happens')) && <Check className="size-4 text-slate-800" />}
+                  {(opt.id === 'inprogress' && currentPhaseValue === 'inprogress') && <Check className="size-4 text-slate-800" />}
                 </button>
               ))}
             </div>
@@ -229,7 +229,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
               <div className="h-px w-full bg-slate-100 mb-2"></div>
               <div className="px-3 py-1 flex items-center justify-between group cursor-default">
                  <span className="text-[12px] font-semibold text-[#87909e]">Closed</span>
-                 <span className="material-symbols-outlined text-[14px] text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer">more_horiz</span>
+                 <MoreHorizontal className="size-3.5 text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer" />
               </div>
               {closed.map(opt => (
                 <button
@@ -241,7 +241,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = React.memo(({ task,
                     {opt.icon}
                     <span className="text-[13px] text-slate-700 font-medium tracking-wide">{opt.label}</span>
                   </div>
-                  {currentPhaseValue === opt.id && <span className="material-symbols-outlined text-[16px] text-slate-800">check</span>}
+                  {currentPhaseValue === opt.id && <Check className="size-4 text-slate-800" />}
                 </button>
               ))}
             </div>

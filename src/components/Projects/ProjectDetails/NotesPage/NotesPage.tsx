@@ -97,102 +97,135 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
   const titleRef = useRef<HTMLHeadingElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const savedNotes = localStorage.getItem(notesKey);
-    const lastActiveId = localStorage.getItem(activeNoteIdKey);
+  const syncNotesToDisk = (updatedNotes: Note[]) => {
+    fetch('/api/store/notes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: { defaultNotes: updatedNotes }, version: 0 })
+    }).catch(() => {});
+  };
 
-    if (savedNotes) {
-      const parsedNotes = JSON.parse(savedNotes);
-      setNotes(parsedNotes);
-      if (lastActiveId && parsedNotes.find((n: Note) => n.id === lastActiveId)) {
-        setActiveNoteId(lastActiveId);
-      } else if (parsedNotes.length > 0) {
-        setActiveNoteId(parsedNotes[0].id);
-      } else {
-        setActiveNoteId(null);
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadNotes = async () => {
+      const savedNotes = localStorage.getItem(notesKey);
+      const lastActiveId = localStorage.getItem(activeNoteIdKey);
+
+      let initialNotes: Note[] = [];
+      if (savedNotes) {
+        try {
+          initialNotes = JSON.parse(savedNotes);
+        } catch {}
       }
-    } else {
-      // Default notes only for demo project
-      const isDemo = !currentProject || currentProject.id === 'rebrand-2024';
-      const defaultNotes: Note[] = isDemo ? [
-        {
-          id: '1',
-          title: 'Discovery Phase Notes',
-          content: `
-            <h2 class="text-xl font-bold text-slate-900">1. Key Competitors</h2>
-            <p>We've identified three main competitors in the architectural space that Apex needs to differentiate from. The focus is on sustainable urban planning.</p>
-            <ul class="list-disc pl-5 space-y-2 marker:text-slate-400">
-              <li><strong>UrbanForm:</strong> Known for high-density residential projects.</li>
-              <li><strong>EcoBuild:</strong> Strong emphasis on green materials, but their branding feels dated.</li>
-              <li><strong>Structura:</strong> Direct competitor in commercial sector.</li>
-            </ul>
-            <h2 class="text-xl font-bold text-slate-900 mt-8">2. Next Steps</h2>
-            <p>Based on the initial stakeholder interviews, we need to prioritize the moodboard creation. Sarah mentioned she prefers minimalist aesthetics.</p>
-            <div class="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <p class="text-sm font-bold text-slate-900 mb-2">Note: Implementation Reference</p>
-              <p class="text-xs text-slate-600">Add perfect invert styling to the I-beam text selection cursor icon that appears on text hover in your React 19 + Tailwind Notes editor.</p>
-            </div>
-          `,
-          category: 'Research',
-          timestamp: '10:45 AM',
-          time: 'Today'
-        },
-        {
-          id: '2',
-          title: 'Client Kickoff Meeting',
-          content: '<p>Attendees: Sarah (Client), Mark, Julia. Goal: Align on creative direction and project timeline...</p>',
-          category: 'Meeting',
-          timestamp: 'Oct 15',
-          time: 'Oct 15'
-        },
-        {
-          id: '3',
-          title: 'Initial Feedback - Oct 12',
-          content: '<p>Summary of the first draft review. Positive feedback on typography, concerns about the logo mark being too complex...</p>',
-          category: 'Feedback',
-          timestamp: 'Oct 12',
-          time: 'Oct 12'
+
+      // Fetch notes from server disk store
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
+        const res = await fetch('/api/store/notes', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          const apiNotes = data.state?.defaultNotes || data.defaultNotes;
+          if (Array.isArray(apiNotes) && apiNotes.length > 0) {
+            const map = new Map<string, Note>();
+            // Local notes take precedence if edited locally, but server notes are preserved
+            apiNotes.forEach((n: Note) => map.set(n.id, n));
+            initialNotes.forEach(n => map.set(n.id, n));
+            initialNotes = Array.from(map.values());
+          }
         }
-      ] : [];
-      setNotes(defaultNotes);
-      if (defaultNotes.length > 0) {
-        setActiveNoteId('1');
-        localStorage.setItem(notesKey, JSON.stringify(defaultNotes));
-        localStorage.setItem(activeNoteIdKey, '1');
+      } catch (e) {
+        // Network or parse error fallback
+      }
+
+      if (isCancelled) return;
+
+      // Default notes fallback only for demo project if empty
+      if (initialNotes.length === 0) {
+        const isDemo = !currentProject || currentProject.id === 'rebrand-2024';
+        initialNotes = isDemo ? [
+          {
+            id: '1',
+            title: 'Discovery Phase Notes',
+            content: `
+              <h2 class="text-xl font-bold text-slate-900">1. Key Competitors</h2>
+              <p>We've identified three main competitors in the architectural space that Apex needs to differentiate from. The focus is on sustainable urban planning.</p>
+              <ul class="list-disc pl-5 space-y-2 marker:text-slate-400">
+                <li><strong>UrbanForm:</strong> Known for high-density residential projects.</li>
+                <li><strong>EcoBuild:</strong> Strong emphasis on green materials, but their branding feels dated.</li>
+                <li><strong>Structura:</strong> Direct competitor in commercial sector.</li>
+              </ul>
+              <h2 class="text-xl font-bold text-slate-900 mt-8">2. Next Steps</h2>
+              <p>Based on the initial stakeholder interviews, we need to prioritize the moodboard creation. Sarah mentioned she prefers minimalist aesthetics.</p>
+              <div class="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p class="text-sm font-bold text-slate-900 mb-2">Note: Implementation Reference</p>
+                <p class="text-xs text-slate-600">Add perfect invert styling to the I-beam text selection cursor icon that appears on text hover in your React 19 + Tailwind Notes editor.</p>
+              </div>
+            `,
+            category: 'Research',
+            timestamp: '10:45 AM',
+            time: 'Today'
+          },
+          {
+            id: '2',
+            title: 'Client Kickoff Meeting',
+            content: '<p>Attendees: Sarah (Client), Mark, Julia. Goal: Align on creative direction and project timeline...</p>',
+            category: 'Meeting',
+            timestamp: 'Oct 15',
+            time: 'Oct 15'
+          },
+          {
+            id: '3',
+            title: 'Initial Feedback - Oct 12',
+            content: '<p>Summary of the first draft review. Positive feedback on typography, concerns about the logo mark being too complex...</p>',
+            category: 'Feedback',
+            timestamp: 'Oct 12',
+            time: 'Oct 12'
+          }
+        ] : [];
+      }
+
+      setNotes(initialNotes);
+      localStorage.setItem(notesKey, JSON.stringify(initialNotes));
+
+      if (lastActiveId && initialNotes.find((n: Note) => n.id === lastActiveId)) {
+        setActiveNoteId(lastActiveId);
+      } else if (initialNotes.length > 0) {
+        setActiveNoteId(initialNotes[0].id);
+        localStorage.setItem(activeNoteIdKey, initialNotes[0].id);
       } else {
         setActiveNoteId(null);
-        localStorage.setItem(notesKey, JSON.stringify([]));
         localStorage.removeItem(activeNoteIdKey);
       }
-    }
-    setNotesLoaded(true);
-  }, [notesKey, activeNoteIdKey]);
 
-  useEffect(() => {
-    const fetchApiNotes = async () => {
+      // Dismiss skeleton only after data is loaded and unified
+      setNotesLoaded(true);
+    };
+
+    loadNotes();
+
+    const unsub = onStoreExternalUpdate('notes', async () => {
       try {
         const res = await fetch('/api/store/notes');
         if (res.ok) {
           const data = await res.json();
           const apiNotes = data.state?.defaultNotes || data.defaultNotes;
-          if (Array.isArray(apiNotes) && apiNotes.length > 0) {
-            setNotes((prevNotes) => {
-              const map = new Map<string, Note>();
-              prevNotes.forEach(n => map.set(n.id, n));
-              apiNotes.forEach((n: Note) => map.set(n.id, n));
-              const combined = Array.from(map.values());
-              return combined;
-            });
+          if (Array.isArray(apiNotes) && !isCancelled) {
+            setNotes(apiNotes);
+            localStorage.setItem(notesKey, JSON.stringify(apiNotes));
           }
         }
       } catch {}
+    });
+
+    return () => {
+      isCancelled = true;
+      unsub();
     };
-
-    fetchApiNotes();
-    const unsub = onStoreExternalUpdate('notes', fetchApiNotes);
-    return unsub;
-  }, [currentProject?.id]);
-
+  }, [notesKey, activeNoteIdKey, currentProject?.id]);
 
   const activeNote = notes.find(n => n.id === activeNoteId);
 
@@ -232,6 +265,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
     setNotes(updatedNotes);
     localStorage.setItem(notesKey, JSON.stringify(updatedNotes));
     localStorage.setItem(activeNoteIdKey, activeNoteId);
+    syncNotesToDisk(updatedNotes);
   };
 
   const addNewNote = () => {
@@ -248,6 +282,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
     setActiveNoteId(newNote.id);
     localStorage.setItem(notesKey, JSON.stringify(updatedNotes));
     localStorage.setItem(activeNoteIdKey, newNote.id);
+    syncNotesToDisk(updatedNotes);
   };
 
   const selectNote = (id: string) => {
@@ -261,6 +296,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
     const updatedNotes = notes.filter(n => n.id !== id);
     setNotes(updatedNotes);
     localStorage.setItem(notesKey, JSON.stringify(updatedNotes));
+    syncNotesToDisk(updatedNotes);
 
     if (activeNoteId === id) {
       if (updatedNotes.length > 0) {

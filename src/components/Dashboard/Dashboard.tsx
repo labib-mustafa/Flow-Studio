@@ -7,6 +7,9 @@ import { Renewals } from './Renewals';
 import { TimeActivity } from './TimeActivity';
 import { RightPanel } from './RightPanel';
 import { useProjectStore } from '../../stores/projectStore';
+import { useBillingStore } from '../../stores/billingStore';
+import { useEventStore } from '../../stores/eventStore';
+import { useClientStore } from '../../stores/clientStore';
 import { DashboardSkeleton } from '../GlobalComponents/Skeletons/DashboardSkeleton';
 
 export interface DashboardProps {
@@ -41,9 +44,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onProjectClick,
   onNewProject
 }) => {
-  const hasHydrated = useProjectStore((s) => s._hasHydrated);
+  const isProjectHydrated = useProjectStore((s) => s._hasHydrated);
+  const isBillingHydrated = useBillingStore((s) => s._hasHydrated);
+  const isEventHydrated = useEventStore((s) => s._hasHydrated);
+  const isClientHydrated = useClientStore((s) => s._hasHydrated);
 
-  if (!hasHydrated) {
+  if (!isProjectHydrated || !isBillingHydrated || !isEventHydrated || !isClientHydrated) {
     return <DashboardSkeleton />;
   }
 

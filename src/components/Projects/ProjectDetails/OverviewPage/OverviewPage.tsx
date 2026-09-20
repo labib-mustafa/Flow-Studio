@@ -16,7 +16,7 @@ import { ProjectsSkeleton } from '../../../GlobalComponents/Skeletons/ProjectsSk
 
 export const OverviewPage: React.FC = () => {
   const { currentProject, updateProject, _hasHydrated } = useProjectStore();
-  const { tasks } = useTaskStore();
+  const { tasks, _hasHydrated: isTasksHydrated } = useTaskStore();
   const [isEditing, setIsEditing] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [imageError, setImageError] = useState(false);
@@ -244,7 +244,7 @@ export const OverviewPage: React.FC = () => {
     return { bg: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' };
   };
 
-  if (!_hasHydrated || !currentProject) {
+  if (!_hasHydrated || !isTasksHydrated || !currentProject) {
     return <ProjectsSkeleton />;
   }
 

@@ -58,7 +58,7 @@ interface MoodboardPageProps {
 }
 
 export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEditSidebarToggle }) => {
-  const { currentProject } = useProjectStore();
+  const { currentProject, _hasHydrated: isProjectHydrated } = useProjectStore();
   const { 
     items, setItems, 
     selectedIds, setSelectedIds, 
@@ -1089,7 +1089,7 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
     return updatedItems;
   };
 
-  if (!_hasHydrated) {
+  if (!_hasHydrated || !isProjectHydrated) {
     return <MoodboardSkeleton />;
   }
 

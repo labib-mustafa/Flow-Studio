@@ -32,6 +32,7 @@ export interface ActivityEvent {
 
 interface ActivityState {
   activities: ActivityEvent[];
+  _hasHydrated: boolean;
   logActivity: (type: ActivityEvent['type'], description: string, extra?: Partial<Pick<ActivityEvent, 'category' | 'actorName' | 'targetId' | 'targetName' | 'metadata'>>) => void;
   getActivityCounts: () => Record<string, number>; // Maps YYYY-MM-DD -> count
 }
@@ -40,6 +41,7 @@ export const useActivityStore = create<ActivityState>()(
   persist(
     (set, get) => ({
       activities: [],
+      _hasHydrated: false,
       logActivity: (type, description, extra) => set((state) => {
         // Keep only the last 5000 activities to prevent infinite growth
         const newActivities = [
@@ -67,6 +69,9 @@ export const useActivityStore = create<ActivityState>()(
     {
       name: 'activity-storage',
       storage: createFileStorage('activities'),
+      onRehydrateStorage: () => () => {
+        useActivityStore.setState({ _hasHydrated: true });
+      },
     }
   )
 );

@@ -33,6 +33,7 @@ interface ClientDetailsState {
   experts: Record<string, { assigned: Expert[]; available: Expert[] }>;
   pinnedAssets: PinnedAsset[];
   activityLogs: ActivityLog[];
+  _hasHydrated: boolean;
 
   setExperts: (clientId: string, assigned: Expert[]) => void;
   addPinnedAsset: (asset: PinnedAsset) => void;
@@ -46,6 +47,7 @@ export const useClientDetailsStore = create<ClientDetailsState>()(
       experts: {},
       pinnedAssets: [],
       activityLogs: [],
+      _hasHydrated: false,
 
       setExperts: (clientId, assigned) =>
         set((state) => ({
@@ -83,6 +85,9 @@ export const useClientDetailsStore = create<ClientDetailsState>()(
         ...currentState,
         ...persistedState,
       }),
+      onRehydrateStorage: () => () => {
+        useClientDetailsStore.setState({ _hasHydrated: true });
+      },
     }
   )
 );

@@ -14,7 +14,7 @@ import { TaskPageSkeleton } from '../../Skeletons/TaskPageSkeleton';
 
 export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) => {
   const { tasks, addTask, updateTask, isFieldsSidebarOpen, setFieldsSidebarOpen, setProject, _hasHydrated } = useTaskStore();
-  const { currentProject, projects, setCurrentProject } = useProjectStore();
+  const { currentProject, projects, setCurrentProject, _hasHydrated: isProjectHydrated } = useProjectStore();
 
   const fallbackProjectId = projects[0]?.id || 'rebrand-2024';
   const effectiveProjectId = projectId || currentProject?.id || fallbackProjectId;
@@ -36,7 +36,7 @@ export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) =>
     return tasks.filter(t => t.projectId === effectiveProjectId);
   }, [tasks, effectiveProjectId]);
 
-  if (!_hasHydrated) {
+  if (!_hasHydrated || !isProjectHydrated) {
     return <TaskPageSkeleton />;
   }
 

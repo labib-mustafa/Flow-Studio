@@ -8,7 +8,8 @@ import {
   EyeOff, 
   CheckCheck, 
   ChevronsUp, 
-  Zap
+  Zap,
+  MoreHorizontal
 } from 'lucide-react';
 import { prompt } from '../../../../stores/promptStore';
 import { toast } from '../../../../stores/toastStore';
@@ -173,7 +174,7 @@ export const TaskGroupOptionsMenu: React.FC<TaskGroupOptionsMenuProps> = ({
       sideOffset={4}
       triggerClassName=""
     >
-      <span className="material-symbols-outlined text-[16px] text-slate-400 hover:text-slate-600 px-1 cursor-pointer">more_horiz</span>
+      <MoreHorizontal className="size-4 text-slate-400 hover:text-slate-600 cursor-pointer inline-block align-middle mx-1" />
     </CellPopover>
   );
 };
