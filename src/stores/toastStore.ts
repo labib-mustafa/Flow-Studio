@@ -22,7 +22,7 @@ export interface ToastItem {
 interface ToastStoreState {
   toasts: ToastItem[];
   maxToasts: number;
-  addToast: (type: ToastType, title: string, message: string, options?: ToastOptions) => string;
+  addToast: (type: ToastType, title: string, message?: string, options?: ToastOptions) => string;
   dismissToast: (id: string) => void;
   removeToast: (id: string) => void;
 }
@@ -31,7 +31,7 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
   toasts: [],
   maxToasts: 4,
 
-  addToast: (type, title, message, options = {}) => {
+  addToast: (type, title, message = '', options = {}) => {
     const id = 'toast-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
     const duration = options.duration || 4000;
 
@@ -77,17 +77,17 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
 
 // Export convenient global helper methods: toast.success(), toast.error(), etc.
 export const toast = {
-  show: (type: ToastType, title: string, message: string, options?: ToastOptions) =>
+  show: (type: ToastType, title: string, message: string = '', options?: ToastOptions) =>
     useToastStore.getState().addToast(type, title, message, options),
-  success: (title: string, message: string, options?: ToastOptions) =>
+  success: (title: string, message: string = '', options?: ToastOptions) =>
     useToastStore.getState().addToast('success', title, message, options),
-  error: (title: string, message: string, options?: ToastOptions) =>
+  error: (title: string, message: string = '', options?: ToastOptions) =>
     useToastStore.getState().addToast('error', title, message, options),
-  warning: (title: string, message: string, options?: ToastOptions) =>
+  warning: (title: string, message: string = '', options?: ToastOptions) =>
     useToastStore.getState().addToast('warning', title, message, options),
-  info: (title: string, message: string, options?: ToastOptions) =>
+  info: (title: string, message: string = '', options?: ToastOptions) =>
     useToastStore.getState().addToast('info', title, message, options),
-  sync: (title: string, message: string, options?: ToastOptions) =>
+  sync: (title: string, message: string = '', options?: ToastOptions) =>
     useToastStore.getState().addToast('sync', title, message, options),
   dismiss: (id: string) => useToastStore.getState().dismissToast(id),
 };

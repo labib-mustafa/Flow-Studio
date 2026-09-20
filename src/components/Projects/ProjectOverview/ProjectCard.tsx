@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Edit2, CheckCircle, MessageSquare, Trash2, Pin, Image } from 'lucide-react';
 import { sound } from '../../../stores/soundStore';
 
@@ -44,22 +44,10 @@ export const ProjectCard = React.memo(({
   onContextMenu,
 }: ProjectCardProps) => {
   const [imageError, setImageError] = useState(false);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   React.useEffect(() => {
     setImageError(false);
   }, [image]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: +(x * 4).toFixed(2), y: +(-y * 4).toFixed(2) });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setTilt({ x: 0, y: 0 });
-  }, []);
 
   const handleClick = (e: React.MouseEvent) => {
     sound.tick();
@@ -87,13 +75,7 @@ export const ProjectCard = React.memo(({
     <div
       onClick={handleClick}
       onContextMenu={onContextMenu}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: `perspective(1000px) rotateY(${tilt.x}deg) rotateX(${tilt.y}deg)`,
-        transition: 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease',
-      }}
-      className="group bg-white rounded-2xl shadow-xs border border-slate-200/90 overflow-hidden hover:shadow-xl hover:shadow-slate-900/8 hover:border-slate-300 transition-all cursor-pointer font-display select-none will-change-transform"
+      className="group bg-white rounded-2xl shadow-xs border border-slate-200/90 overflow-hidden hover:shadow-lg hover:shadow-slate-900/5 hover:border-slate-300 transition-all duration-200 cursor-pointer font-display select-none"
     >
       <div className="h-48 relative overflow-hidden bg-slate-50 flex items-center justify-center">
         {image && !imageError ? (
