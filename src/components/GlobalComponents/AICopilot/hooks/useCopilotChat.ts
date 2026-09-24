@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatMessage, MainViewMode, TrainedRule } from '../types';
 import { STORAGE_KEYS } from '../constants';
-import { geminiService } from '../../../../services/geminiService';
+import { geminiService, getProviderForModel, getProviderFromKey } from '../../../../services/geminiService';
 import { useSettings } from '../../../../hooks/useSettings';
 import { useProjectStore } from '../../../../stores/projectStore';
 import { toast } from '../../../../stores/toastStore';
@@ -152,7 +152,12 @@ export const useCopilotChat = (
       return;
     }
 
-    if (!aiSettings.apiKey) {
+    // A key saved in the list counts, even if the single "active key" field is
+    // empty — there is no longer one blessed key, since the model picks the
+    // provider and either provider's key is usable.
+    const hasUsableKey = Boolean(aiSettings.apiKey) ||
+      (aiSettings.apiKeys || []).some(k => k.key && k.isEnabled !== false);
+    if (!hasUsableKey) {
       toast.error('Please configure your AI API key');
       return;
     }
@@ -170,11 +175,33 @@ export const useCopilotChat = (
       const apiHistory = newHistory.map(m => ({ role: m.role, content: m.content }));
       const allApiKeys = aiSettings.apiKeys || [];
       const enabledKeys = allApiKeys.filter(k => k.isEnabled !== false);
-      const fallbackKeys = enabledKeys.map(k => k.key).filter(k => k && k !== aiSettings.apiKey);
+
+      // The selected model decides the provider, and the provider decides which
+      // key is sent. Both keys stay enabled and usable; this only picks which one
+      // serves *this* turn. Without it the app would hand over a key that cannot
+      // serve the chosen model, and the model would be quietly substituted.
+      const modelProvider = getProviderForModel(aiSettings.model);
+      const providerKeyEntries = enabledKeys.filter(k => getProviderFromKey(k.key) === modelProvider);
+      const primaryKey =
+        providerKeyEntries.find(k => k.isActive)?.key ||
+        providerKeyEntries[0]?.key ||
+        // A key typed straight into the field rather than saved to the list.
+        (getProviderFromKey(aiSettings.apiKey) === modelProvider ? aiSettings.apiKey : '');
+
+      if (!primaryKey) {
+        toast.error(
+          modelProvider === 'gemini'
+            ? 'No enabled Gemini key. Add one in Settings, or choose a Groq model.'
+            : 'No enabled Groq key. Add one in Settings, or choose a Gemini model.'
+        );
+        return;
+      }
+
+      const fallbackKeys = providerKeyEntries.map(k => k.key).filter(k => k && k !== primaryKey);
       const customRulesPayload = trainedRules.map(r => ({ trigger: r.trigger, response: r.response }));
 
       const response = await geminiService.chat(
-        aiSettings.apiKey,
+        primaryKey,
         apiHistory,
         projectContext,
         aiSettings.model,
@@ -188,7 +215,15 @@ export const useCopilotChat = (
       if (response.wasRotated && response.rotatedKey) {
         const nextKey = response.rotatedKey.key;
         const nextId = response.rotatedKey.id;
-        const updatedKeys = allApiKeys.map(k => ({ ...k, isActive: (nextId && k.id === nextId) || k.key === nextKey }));
+        const rotatedProvider = getProviderFromKey(nextKey);
+        // Re-flag only inside the provider that rotated. Marking one key active
+        // across both providers is what made the second API look unused — each
+        // provider now keeps its own preferred key.
+        const updatedKeys = allApiKeys.map(k =>
+          getProviderFromKey(k.key) === rotatedProvider
+            ? { ...k, isActive: Boolean((nextId && k.id === nextId) || k.key === nextKey) }
+            : k
+        );
         updateSettings({ aiSettings: { ...aiSettings, apiKey: nextKey, apiKeys: updatedKeys } });
         toast.info(`Switched to backup key: ${response.rotatedKey.name || 'Next Available Key'}`);
       }

@@ -2053,9 +2053,16 @@ const toGeminiSchema = (schema: any): any => {
   return converted;
 };
 
-export const geminiTools = [
+/**
+ * Adapter: canonical tool definitions -> Gemini function declarations.
+ *
+ * Exported as a function rather than only as a prebuilt array because the
+ * request path may send a *subset* of the tools (see `selectGroqTools`), and a
+ * subset needs the same conversion applied to it.
+ */
+export const toGeminiDeclarations = (tools: any[]): any[] => [
   {
-    functionDeclarations: groqTools.map((tool: any) => ({
+    functionDeclarations: tools.map((tool: any) => ({
       name: tool.function.name,
       description: tool.function.description,
       parameters: toGeminiSchema(tool.function.parameters),
@@ -2063,9 +2070,139 @@ export const geminiTools = [
   },
 ];
 
+export const geminiTools = toGeminiDeclarations(groqTools);
+
 /**
  * Every tool name the model can call, in one place. Kept alongside the schema
  * so coverage checks (declared tool vs implemented handler) have a single
  * source to compare against.
  */
 export const toolNames: string[] = groqTools.map((tool: any) => tool.function.name);
+
+// ==========================================
+// 4. Budget-aware tool selection
+// ==========================================
+//
+// Why this exists: the full surface serialises to roughly 13,700 tokens. Groq's
+// on-demand tier allows 8,000 tokens per minute for small models, so sending
+// every schema makes *every* request a 413 before any model sees it — the app
+// was not slow, it was over capacity on arrival.
+//
+// Gemini's limits are far higher, so it keeps receiving the full surface and
+// loses no capability. Only providers that cannot fit the whole set get a
+// relevant subset, which is chosen by lexical match against the user's message
+// rather than a hand-maintained keyword table — that would be 128 entries to
+// keep in sync, and it would silently rot as tools are added.
+
+/** Rough token estimate for anything JSON-serialisable (~4 chars per token). */
+export const estimateTokens = (value: unknown): number => {
+  try {
+    return Math.ceil(JSON.stringify(value).length / 4);
+  } catch {
+    return 0;
+  }
+};
+
+/**
+ * Sent on every request regardless of the query.
+ *
+ * Deliberately small: these are the flows that either run constantly or are
+ * required by the system prompt's own rules (`list_task_board_schema` must be
+ * called before touching an unknown board field). Everything else is worth
+ * more as budget for tools the current message actually mentions.
+ */
+export const CORE_TOOL_NAMES: string[] = [
+  'navigate_to',
+  'get_studio_overview',
+  'list_task_board_schema',
+  'create_tasks',
+  'update_task',
+  'delete_tasks',
+  'create_new_project',
+  'update_project',
+  'create_client',
+  'create_lead',
+  'get_task_board_digest',
+  'update_project_note',
+];
+
+const QUERY_STOP_WORDS = new Set([
+  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'please', 'can',
+  'you', 'our', 'all', 'any', 'new', 'get', 'set', 'make', 'add', 'let', 'about',
+  'them', 'they', 'then', 'than', 'there', 'their', 'what', 'when', 'who', 'how',
+  'was', 'were', 'are', 'has', 'have', 'had', 'not', 'but', 'its', 'it', 'me',
+  'my', 'on', 'in', 'to', 'of', 'a', 'an', 'is', 'do', 'at', 'by', 'up',
+]);
+
+/**
+ * Query terms, with a crude singular form added.
+ *
+ * Tool names are mostly singular (`update_task`) while people write plurals
+ * ("update the tasks"), so "tasks" alone would miss `update_task` on the name
+ * match and fall back to a weaker description match.
+ */
+const extractQueryTerms = (query: string): string[] => {
+  const terms = new Set<string>();
+  for (const raw of (query || '').toLowerCase().split(/[^a-z0-9_]+/)) {
+    if (raw.length < 3 || QUERY_STOP_WORDS.has(raw)) continue;
+    terms.add(raw);
+    if (raw.endsWith('s') && raw.length > 4) terms.add(raw.slice(0, -1));
+  }
+  return Array.from(terms);
+};
+
+/**
+ * Lexical relevance of one tool to the query.
+ *
+ * A name hit is worth three description hits: the name is the tool's identity,
+ * the description is prose and matches incidental words.
+ */
+const scoreToolForQuery = (tool: any, terms: string[]): number => {
+  if (terms.length === 0) return 0;
+  const name = String(tool?.function?.name || '').toLowerCase();
+  const description = String(tool?.function?.description || '').toLowerCase();
+  let score = 0;
+  for (const term of terms) {
+    if (name.includes(term)) score += 3;
+    else if (description.includes(term)) score += 1;
+  }
+  return score;
+};
+
+/**
+ * Pick the tools to send, given how many tokens the provider can spare.
+ *
+ * Returns the full array when it fits, so no capability is ever withheld from a
+ * provider that can carry it. Otherwise returns the core set plus the
+ * highest-scoring tools that fit the budget, in the original declaration order
+ * so the prompt's grouping stays legible.
+ */
+export const selectGroqTools = (
+  query: string,
+  tokenBudget: number,
+  tools: any[] = groqTools
+): any[] => {
+  if (estimateTokens(tools) <= tokenBudget) return tools;
+
+  const terms = extractQueryTerms(query);
+
+  const core = tools.filter((t: any) => CORE_TOOL_NAMES.includes(t.function?.name));
+  const rest = tools
+    .filter((t: any) => !CORE_TOOL_NAMES.includes(t.function?.name))
+    .map((t: any) => ({ tool: t, score: scoreToolForQuery(t, terms) }))
+    .sort((a: any, b: any) => b.score - a.score);
+
+  const chosen = new Set<any>(core);
+  let used = estimateTokens(core);
+
+  for (const { tool, score } of rest) {
+    // An unmatched tool is only worth sending if there is room left over.
+    const cost = estimateTokens(tool);
+    if (used + cost > tokenBudget) continue;
+    if (score === 0 && used > tokenBudget * 0.6) continue;
+    chosen.add(tool);
+    used += cost;
+  }
+
+  return tools.filter((t: any) => chosen.has(t));
+};

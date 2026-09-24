@@ -11,6 +11,15 @@ import { simpleParser } from 'mailparser';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import { GoogleGenAI, Type } from '@google/genai';
+import { groqTools, geminiTools, selectGroqTools, estimateTokens } from './serverAiTools.js';
+import {
+  createGroqRateLedger,
+  providerForModel,
+  planGroqRequest,
+  GROQ_DEFAULT_TPM,
+  GROQ_OUTPUT_RESERVE,
+} from './serverAiRateLimit.js';
 
 // In CJS (production esbuild output), __filename is a global.
 // In ESM (dev), we derive it from import.meta.url.
@@ -24,7 +33,7 @@ try {
 const app = express();
 const CONFIG_FILE = path.resolve(process.cwd(), 'flowstudio.config.json');
 
-const APP_LEVEL_STORES = ['settings', 'notifications', 'dev'];
+const APP_LEVEL_STORES = ['settings', 'notifications', 'dev', 'workspaces'];
 
 function getAppDataDir(): string {
   const base = process.env.APPDATA || 
@@ -38,7 +47,66 @@ function getAppDataDir(): string {
   return appDir;
 }
 
-function getStoreFilePath(name: string): string {
+function getEmptyStoreState(name: string): Record<string, any> {
+  switch (name) {
+    case 'projects':
+      return { projects: [], currentProject: null };
+    case 'clients':
+      return { clients: [], notes: [], selectedClientId: '', searchQuery: '', statusFilter: 'All' };
+    case 'clientDetails':
+      return { appointments: [], documents: [], contracts: [] };
+    case 'leads':
+      return { leads: [], selectedLeadId: null, filter: 'all' };
+    case 'tasks':
+      return { tasks: [] };
+    case 'billing':
+      return { invoices: [], expenses: [], receipts: [] };
+    case 'moodboard':
+      return { projectItems: {}, personalItems: [] };
+    case 'team':
+      return { members: [], invites: [], customRoles: [] };
+    case 'activities':
+      return { activities: [] };
+    case 'events':
+      return { events: [] };
+    case 'notes':
+      return { notes: [] };
+    case 'time':
+      return { timeEntries: [] };
+    case 'mail':
+      return { emails: [] };
+    case 'mailTemplates':
+      return { templates: [] };
+    case 'leadDummies':
+      return { dummies: [] };
+    case 'teamMessages':
+      return { messages: [] };
+    case 'trash':
+      return { trashItems: [] };
+    case 'scraper':
+      return { scrapedLeads: [], selectedIds: [], logs: [] };
+    case 'workspace':
+      return {
+        name: 'Untitled Workspace',
+        tagline: '',
+        logo: '',
+        legalName: '',
+        email: '',
+        phone: '',
+        address: '',
+        taxId: '',
+        currency: 'USD',
+        currencySymbol: '$',
+        website: '',
+        workingHours: 'Mon - Fri, 9:00 AM - 6:00 PM',
+        timezone: 'auto'
+      };
+    default:
+      return {};
+  }
+}
+
+function getStoreFilePath(name: string, workspaceId: string = 'default'): string {
   if (APP_LEVEL_STORES.includes(name)) {
     const appDir = getAppDataDir();
     const appFilePath = path.join(appDir, `${name}.json`);
@@ -60,10 +128,39 @@ function getStoreFilePath(name: string): string {
   }
 
   const { dataPath } = getConfig();
-  if (!fs.existsSync(dataPath)) {
-    fs.mkdirSync(dataPath, { recursive: true });
+  const safeWorkspaceId = (workspaceId || 'default').replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
+  const workspaceDir = path.join(dataPath, 'workspaces', safeWorkspaceId);
+  if (!fs.existsSync(workspaceDir)) {
+    fs.mkdirSync(workspaceDir, { recursive: true });
   }
-  return path.join(dataPath, `${name}.json`);
+
+  const targetFilePath = path.join(workspaceDir, `${name}.json`);
+
+  // Auto-migrate existing root files to default workspace folder so zero user data is lost
+  if (safeWorkspaceId === 'default' && !fs.existsSync(targetFilePath)) {
+    try {
+      const rootLegacyPath = path.join(dataPath, `${name}.json`);
+      if (fs.existsSync(rootLegacyPath)) {
+        fs.copyFileSync(rootLegacyPath, targetFilePath);
+        console.log(`[FlowStudio Server] Auto-migrated ${name}.json to default workspace: ${targetFilePath}`);
+      }
+    } catch (e) {
+      console.error(`[FlowStudio Server] Migration error for ${name}.json:`, e);
+    }
+  }
+
+  // Non-default workspaces: if file doesn't exist yet, initialize clean empty store
+  if (safeWorkspaceId !== 'default' && !fs.existsSync(targetFilePath)) {
+    try {
+      const emptyState = getEmptyStoreState(name);
+      fs.writeFileSync(targetFilePath, JSON.stringify({ state: emptyState, version: 0 }, null, 2), 'utf-8');
+      console.log(`[FlowStudio Server] Initialized clean empty store for ${name}.json in workspace ${safeWorkspaceId}`);
+    } catch (e) {
+      console.error(`[FlowStudio Server] Failed to initialize store ${name}.json:`, e);
+    }
+  }
+
+  return targetFilePath;
 }
 
 function getConfig(): { dataPath: string; backendPort?: number } {
@@ -773,8 +870,8 @@ function bootstrap(): void {
 const sseClients: express.Response[] = [];
 const lastApiWriteTimestamps = new Map<string, number>();
 
-function broadcastStoreChange(storeName: string, source: 'api' | 'fs' = 'api') {
-  const payload = JSON.stringify({ type: 'store_updated', store: storeName, source, timestamp: Date.now() });
+function broadcastStoreChange(storeName: string, source: 'api' | 'fs' = 'api', workspaceId: string = 'default') {
+  const payload = JSON.stringify({ type: 'store_updated', store: storeName, workspaceId, source, timestamp: Date.now() });
   for (let i = sseClients.length - 1; i >= 0; i--) {
     try {
       sseClients[i].write(`data: ${payload}\n\n`);
@@ -790,25 +887,33 @@ const fsWatchDebounceTimers = new Map<string, NodeJS.Timeout>();
 function setupDataWatcher(dirPath: string) {
   try {
     if (!fs.existsSync(dirPath)) return;
-    fs.watch(dirPath, { recursive: false }, (eventType, filename) => {
+    fs.watch(dirPath, { recursive: true }, (eventType, filename) => {
       if (!filename || typeof filename !== 'string' || !filename.endsWith('.json') || filename.endsWith('.tmp')) return;
-      const storeName = path.basename(filename, '.json');
       
-      if (fsWatchDebounceTimers.has(storeName)) {
-        clearTimeout(fsWatchDebounceTimers.get(storeName)!);
+      const normalized = filename.replace(/\\/g, '/');
+      const parts = normalized.split('/');
+      let wsId = 'default';
+      const storeName = path.basename(normalized, '.json');
+      if (parts.length >= 3 && parts[0] === 'workspaces') {
+        wsId = parts[1];
+      }
+
+      const dedupeKey = `${wsId}:${storeName}`;
+      if (fsWatchDebounceTimers.has(dedupeKey)) {
+        clearTimeout(fsWatchDebounceTimers.get(dedupeKey)!);
       }
 
       const timer = setTimeout(() => {
-        fsWatchDebounceTimers.delete(storeName);
-        const lastApiTime = lastApiWriteTimestamps.get(storeName) || 0;
+        fsWatchDebounceTimers.delete(dedupeKey);
+        const lastApiTime = lastApiWriteTimestamps.get(dedupeKey) || lastApiWriteTimestamps.get(storeName) || 0;
         if (Date.now() - lastApiTime < 2000) {
           // Skip broadcast: this file change was triggered by our own internal API write
           return;
         }
-        broadcastStoreChange(storeName, 'fs');
+        broadcastStoreChange(storeName, 'fs', wsId);
       }, 120);
 
-      fsWatchDebounceTimers.set(storeName, timer);
+      fsWatchDebounceTimers.set(dedupeKey, timer);
     });
     console.log(`[FlowStudio Server] Watching ${dirPath} for real-time live sync.`);
   } catch (err) {
@@ -888,13 +993,14 @@ app.put('/api/config', (req, res) => {
 // 3. GET /api/store/:name
 app.get('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper', 'workspace', 'workspaces'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const filePath = getStoreFilePath(name);
+    const wsHeader = (req.headers['x-workspace-id'] as string) || (req.query.workspace as string) || 'default';
+    const filePath = getStoreFilePath(name, wsHeader);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Store file not found' });
@@ -910,13 +1016,14 @@ app.get('/api/store/:name', (req, res) => {
 // 4. PUT /api/store/:name
 app.put('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper', 'workspace', 'workspaces'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const filePath = getStoreFilePath(name);
+    const wsHeader = (req.headers['x-workspace-id'] as string) || (req.query.workspace as string) || 'default';
+    const filePath = getStoreFilePath(name, wsHeader);
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -928,8 +1035,10 @@ app.put('/api/store/:name', (req, res) => {
     fs.writeFileSync(tmpPath, content, 'utf-8');
     fs.renameSync(tmpPath, filePath);
 
+    const dedupeKey = `${wsHeader}:${name}`;
+    lastApiWriteTimestamps.set(dedupeKey, Date.now());
     lastApiWriteTimestamps.set(name, Date.now());
-    broadcastStoreChange(name, 'api');
+    broadcastStoreChange(name, 'api', wsHeader);
 
     res.json({ success: true });
   } catch (e: any) {
@@ -940,19 +1049,20 @@ app.put('/api/store/:name', (req, res) => {
 // 5. DELETE /api/store/:name
 app.delete('/api/store/:name', (req, res) => {
   try {
-    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper'];
+    const validStores = ['clients', 'leads', 'projects', 'tasks', 'team', 'moodboard', 'settings', 'trash', 'billing', 'activities', 'events', 'mail', 'mailTemplates', 'time', 'notifications', 'clientDetails', 'notes', 'leadDummies', 'teamMessages', 'dev', 'scraper', 'workspace', 'workspaces'];
     const { name } = req.params;
     if (!validStores.includes(name)) {
       return res.status(400).json({ error: 'Invalid store name' });
     }
 
-    const filePath = getStoreFilePath(name);
+    const wsHeader = (req.headers['x-workspace-id'] as string) || (req.query.workspace as string) || 'default';
+    const filePath = getStoreFilePath(name, wsHeader);
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
-    broadcastStoreChange(name, 'api');
+    broadcastStoreChange(name, 'api', wsHeader);
 
     res.json({ success: true });
   } catch (e: any) {
@@ -1268,6 +1378,1446 @@ app.get('/api/storage-info', (req, res) => {
     res.json({ totalBytes, files });
   } catch (e: any) {
     sendError(res, e);
+  }
+});
+
+// ==========================================
+// AI DESIGN CO-PILOT ENDPOINTS (/api/ai/*)
+// ==========================================
+
+function detectProvider(apiKey: string): 'groq' | 'gemini' {
+  const k = (apiKey || '').trim();
+  if (k.startsWith('AIzaSy')) return 'gemini';
+  return 'groq';
+}
+
+const groqModelsCache = new Map<string, { models: string[]; timestamp: number }>();
+
+async function getAvailableGroqModels(apiKey: string): Promise<string[]> {
+  const trimmed = apiKey.trim();
+  const cached = groqModelsCache.get(trimmed);
+  if (cached && Date.now() - cached.timestamp < 10 * 60 * 1000) {
+    return cached.models;
+  }
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${trimmed}`
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.data)) {
+        const chatModels = data.data
+          .filter((m: any) =>
+            m.active !== false &&
+            !m.id.includes('whisper') &&
+            !m.id.includes('guard') &&
+            !m.id.includes('safeguard') &&
+            !m.id.includes('orpheus') &&
+            !m.id.includes('allam')
+          )
+          .map((m: any) => m.id);
+        if (chatModels.length > 0) {
+          groqModelsCache.set(trimmed, { models: chatModels, timestamp: Date.now() });
+          return chatModels;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[AI Groq] Could not query models list:', e);
+  }
+  return [
+    'qwen/qwen3.8-27b',
+    'openai/gpt-oss-120b',
+    'llama-3.1-8b-instant'
+  ];
+}
+
+const geminiModelsCache = new Map<string, { models: string[]; timestamp: number }>();
+
+async function getAvailableGeminiModels(apiKey: string): Promise<string[]> {
+  const trimmed = apiKey.trim();
+  const cached = geminiModelsCache.get(trimmed);
+  if (cached && Date.now() - cached.timestamp < 1000 * 60 * 15) {
+    return cached.models;
+  }
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${trimmed}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.models)) {
+        const models = data.models
+          .map((m: any) => m.name ? m.name.replace(/^models\//, '') : '')
+          .filter((id: string) =>
+            id &&
+            (id.includes('flash') || id.includes('pro')) &&
+            !id.includes('embedding') &&
+            !id.includes('aqa') &&
+            !id.includes('2.0') &&
+            !id.includes('1.5') &&
+            !id.includes('2.5') &&
+            !id.includes('tts') &&
+            !id.includes('image') &&
+            !id.includes('audio') &&
+            !id.includes('live')
+          );
+        if (models.length > 0) {
+          geminiModelsCache.set(trimmed, { models, timestamp: Date.now() });
+          return models;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[AI Gemini] Could not query models list:', e);
+  }
+
+  return ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.6-flash'];
+}
+
+async function resolveModelAsync(apiKey: string, requestedModel?: string, provider: 'groq' | 'gemini' = 'groq'): Promise<string> {
+  if (provider === 'gemini') {
+    const available = await getAvailableGeminiModels(apiKey);
+
+    // If user requested a specific valid model (e.g. gemini-3.5-flash, gemini-3.7-flash)
+    if (requestedModel) {
+      const cleanReq = requestedModel.replace(/^models\//, '');
+      const deprecated = [
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+        'gemini-2.5-flash',
+        'claude-opus-4.6-thinking',
+        'canopylabs/orpheus-v1-english',
+        'canopylabs/orpheus-arabic-saudi',
+        'allam-2-7b',
+        'llama-3.3-70b-versatile'
+      ];
+      if (!deprecated.includes(cleanReq)) {
+        if (available.includes(cleanReq) || cleanReq.startsWith('gemini-')) {
+          return cleanReq;
+        }
+      }
+    }
+
+    // Default priority for Gemini:
+    const geminiPreferred = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.6-flash'];
+    for (const p of geminiPreferred) {
+      if (available.includes(p)) return p;
+    }
+
+    return available[0] || 'gemini-3.5-flash';
+  }
+
+  // Provider is Groq: query available models
+  const available = await getAvailableGroqModels(apiKey);
+
+  if (requestedModel && available.includes(requestedModel)) {
+    return requestedModel;
+  }
+
+  // Preferred priority list of best models for tools & reasoning:
+  const preferred = [
+    'qwen/qwen3.8-27b',
+    'openai/gpt-oss-120b',
+    'llama-3.1-8b-instant'
+  ];
+
+  for (const p of preferred) {
+    if (available.includes(p)) {
+      return p;
+    }
+  }
+
+  return available[0] || 'qwen/qwen3.8-27b';
+}
+
+function resolveModel(requestedModel?: string, provider: 'groq' | 'gemini' = 'groq'): string {
+  if (provider === 'gemini') {
+    if (requestedModel && !requestedModel.includes('2.0') && !requestedModel.includes('1.5') && !requestedModel.includes('claude') && requestedModel.startsWith('gemini-')) {
+      return requestedModel.replace(/^models\//, '');
+    }
+    return 'gemini-3.5-flash';
+  }
+  return requestedModel && (requestedModel.includes('qwen') || requestedModel.includes('gpt-oss')) ? requestedModel : 'qwen/qwen3.8-27b';
+}
+
+async function callGroqChat(apiKey: string, payload: any): Promise<any> {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey.trim()}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  // Record the provider's own budget numbers before anything else, so even a
+  // failed request tells the ledger how much headroom this key actually has.
+  // These headers are set on every response; only `retry-after` is 429-only.
+  groqRateLedger.record(apiKey, res);
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    const msg = errorBody?.error?.message || res.statusText || 'Groq API request failed';
+
+    // Auto-heal 404 model not found: pick an available alternative and retry immediately!
+    if (res.status === 404 && (msg.includes('model') || msg.includes('does not exist') || msg.includes('access'))) {
+      const available = await getAvailableGroqModels(apiKey);
+      const fallback = available.find(m => m !== payload.model) || 'llama-3.1-8b-instant';
+      console.warn(`[AI Groq] Model '${payload.model}' not accessible on this key. Auto-falling back to available model '${fallback}'...`);
+      const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey.trim()}`
+        },
+        body: JSON.stringify({ ...payload, model: fallback })
+      });
+      if (retryRes.ok) {
+        const json = await retryRes.json();
+        return {
+          ...json,
+          _switchedModel: fallback,
+          _switchReason: 'model_not_found',
+          _switchNotice: `Switched to ${fallback} (previous model was unavailable).`
+        };
+      }
+    }
+
+    // Auto-heal 400 tool calling not supported or unsupported model
+    if (res.status === 400 && (msg.includes('tool calling') || msg.includes('not supported') || msg.includes('unsupported'))) {
+      const available = await getAvailableGroqModels(apiKey);
+      const fallback = available.find(m => m !== payload.model && (m.includes('qwen') || m.includes('120b') || m.includes('8b'))) || 'qwen/qwen3.8-27b';
+      console.warn(`[AI Groq] Model '${payload.model}' does not support tools (${msg}). Auto-switching to '${fallback}'...`);
+      const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey.trim()}`
+        },
+        body: JSON.stringify({ ...payload, model: fallback })
+      });
+      if (retryRes.ok) {
+        const json = await retryRes.json();
+        return {
+          ...json,
+          _switchedModel: fallback,
+          _switchReason: 'tool_unsupported',
+          _switchNotice: `Switched to ${fallback} (previous model did not support tool calling).`
+        };
+      }
+    }
+
+    // Auto-heal 413 TPM limit exceeded on Groq.
+    //
+    // The previous version trimmed message *text*, which was never the problem:
+    // the tool schemas are ~13,700 of the ~16,400 tokens in a request that
+    // fails this way, so the retry still exceeded the limit. It also fell
+    // through and rethrew the *first* attempt's error, which is why the
+    // surfaced message named a model and a token count the retry never used.
+    if (res.status === 413 || msg.includes('tokens per minute') || msg.includes('TPM') || msg.includes('Request too large')) {
+      const observedLimit = Number((msg.match(/Limit\s+(\d+)/i) || [])[1]) || 0;
+      const messageTokens = estimateTokens(payload.messages);
+
+      // Learn the actual ceiling instead of guessing the tier, and keep the
+      // reduced budget for the rest of the session.
+      groqToolTokenBudget = observedLimit > 0
+        ? Math.max(600, observedLimit - messageTokens - 1200)
+        : Math.max(600, Math.floor(groqToolTokenBudget / 2));
+
+      const retryTools = selectGroqTools(
+        lastUserMessageText(payload.messages),
+        groqToolTokenBudget
+      );
+      console.warn(
+        `[AI Groq] 413 on '${payload.model}' (limit ${observedLimit || 'unknown'}, ` +
+        `${messageTokens} message tokens). Retrying with ${retryTools.length}/${groqTools.length} ` +
+        `tools and a ${groqToolTokenBudget}-token tool budget.`
+      );
+
+      const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey.trim()}`
+        },
+        body: JSON.stringify({ ...payload, tools: retryTools, model: 'qwen/qwen3.8-27b' })
+      });
+      // Learn from the retry as well, so a 413 still updates the ledger.
+      groqRateLedger.record(apiKey, retryRes);
+      if (retryRes.ok) {
+        const json = await retryRes.json();
+        return {
+          ...json,
+          _switchedModel: 'qwen/qwen3.8-27b',
+          _switchReason: 'tpm_limit',
+          _switchNotice: `Trimmed the tool set to fit this key's token limit (${retryTools.length} tools).`
+        };
+      }
+
+      // Report the retry's own failure. Falling through here would surface the
+      // original 413 as though nothing had been attempted.
+      const retryBody = await retryRes.json().catch(() => ({}));
+      const retryMsg = retryBody?.error?.message || retryRes.statusText || 'retry failed';
+      throw new Error(
+        `[Groq ${retryRes.status}] ${retryMsg} — after retrying with ` +
+        `${retryTools.length} of ${groqTools.length} tools.`
+      );
+    }
+
+    // Auto-heal temporary peak traffic & high demand (e.g. 70B spike in traffic) -> auto-fallback to high-capacity 8B
+    const isHighDemand =
+      res.status === 503 ||
+      res.status === 429 ||
+      msg.includes('high demand') ||
+      msg.includes('Spikes in demand') ||
+      msg.includes('Temporary peak traffic') ||
+      msg.includes('model_overloaded') ||
+      msg.includes('rate_limit_exceeded') ||
+      msg.includes('overloaded');
+
+    if (isHighDemand) {
+      const available = await getAvailableGroqModels(apiKey);
+      const fallback = payload.model === 'llama-3.1-8b-instant'
+        ? (available.find(m => m !== payload.model && !m.includes('70b')) || available.find(m => m !== payload.model) || 'llama-3.3-70b-versatile')
+        : 'llama-3.1-8b-instant';
+
+      console.warn(`[AI Groq] Model '${payload.model}' experiencing high demand/peak traffic (${msg}). Auto-switching to '${fallback}'...`);
+      const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey.trim()}`
+        },
+        body: JSON.stringify({ ...payload, model: fallback })
+      });
+      if (retryRes.ok) {
+        const json = await retryRes.json();
+        return {
+          ...json,
+          _switchedModel: fallback,
+          _switchReason: 'high_demand',
+          _switchNotice: `Switched to ${fallback === 'llama-3.1-8b-instant' ? 'Llama 3.1 8B Instant' : fallback} due to temporary peak traffic.`
+        };
+      }
+    }
+
+    throw new Error(`[Groq ${res.status}] ${msg}`);
+  }
+
+  return await res.json();
+}
+
+function parseGenAIError(error: any): string {
+  if (!error) return 'An unknown error occurred';
+  const rawMsg = error.message || String(error);
+
+  if (
+    rawMsg.includes('high demand') ||
+    rawMsg.includes('Spikes in demand') ||
+    rawMsg.includes('Temporary peak traffic') ||
+    rawMsg.includes('model_overloaded')
+  ) {
+    return 'This model is currently experiencing high demand. The system attempted to failover. Please retry in a few seconds or select Llama 3.1 8B Instant.';
+  }
+
+  if (rawMsg.includes('invalid_api_key') || rawMsg.includes('Invalid API Key') || (rawMsg.includes('401') && rawMsg.includes('Groq'))) {
+    return 'Invalid Groq API key. Please check your key at console.groq.com/keys (starts with "gsk_").';
+  }
+  if (rawMsg.includes('rate_limit_exceeded') || (rawMsg.includes('429') && rawMsg.includes('Groq'))) {
+    return 'Groq rate limit reached (30 requests/min). Please wait a few moments and try again.';
+  }
+
+  try {
+    const parsed = JSON.parse(rawMsg);
+    if (parsed.error && parsed.error.message) {
+      const em = parsed.error.message;
+      if (parsed.error.reason === 'API_KEY_INVALID' || em.includes('API key not valid')) {
+        return 'The API key is invalid. Please make sure you copied your key correctly (Google "AIzaSy..." or Groq "gsk_...").';
+      }
+      if (parsed.error.code === 429 || parsed.error.status === 'RESOURCE_EXHAUSTED' || em.includes('Resource has been exhausted') || em.includes('quota') || em.includes('overloaded')) {
+        return 'Google Gemini free-tier rate limits reached (15 req/min). Switch to Groq in Settings for 14,400 free requests/day!';
+      }
+      return em;
+    }
+  } catch {
+    // rawMsg is not JSON
+  }
+
+  if (rawMsg.includes('API_KEY_INVALID') || rawMsg.includes('API key not valid')) {
+    return 'The API key is invalid. Please make sure you copied your key correctly (Google "AIzaSy..." or Groq "gsk_...").';
+  }
+  if (rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('quota') || rawMsg.includes('overloaded') || rawMsg.includes('503')) {
+    return 'Google Gemini free-tier rate limits reached (15 req/min). Switch to Groq in Settings for 14,400 free requests/day!';
+  }
+  return rawMsg;
+}
+
+async function callWithRetry<T>(fn: () => Promise<T>, maxRetries = 2, initialDelay = 1500): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      attempt++;
+      const msg = error?.message || String(error);
+      const isHighDemandOrQuota = 
+        msg.includes('429') || 
+        msg.includes('RESOURCE_EXHAUSTED') || 
+        msg.includes('overloaded') || 
+        msg.includes('503') ||
+        msg.includes('quota') ||
+        msg.includes('rate_limit_exceeded') ||
+        msg.includes('high demand');
+
+      if (attempt <= maxRetries && isHighDemandOrQuota) {
+        console.warn(`[AI Retry] API rate limit/high demand detected. Auto-retrying in ${initialDelay * attempt}ms (Attempt ${attempt}/${maxRetries})...`);
+        await new Promise(r => setTimeout(r, initialDelay * attempt));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+// Groq & Gemini Tool Definitions are imported from serverAiTools.js
+
+/**
+ * Token budget for Groq tool definitions, per request.
+ *
+ * Groq's on-demand tier caps small models at 8,000 tokens/minute, and the full
+ * 128-tool schema serialises to ~13,700 — so the whole surface cannot be sent
+ * there at all. This is the slice of that limit reserved for tools: the system
+ * prompt (~2,700) and the output have to fit alongside it.
+ *
+ * Starts at a value that fits the smallest published limit, because exceeding
+ * the limit fails the request outright while sending fewer tools only narrows
+ * what one turn can do. `callGroqChat` lowers it further if a 413 reports an
+ * even smaller ceiling, and reuses that learned value for the session.
+ *
+ * Override with FLOWSTUDIO_GROQ_TOOL_BUDGET on a higher Groq tier.
+ */
+let groqToolTokenBudget = Number(process.env.FLOWSTUDIO_GROQ_TOOL_BUDGET) || 3600;
+
+/** The most recent user turn, used to pick a relevant tool subset. */
+const lastUserMessageText = (messages: any[]): string => {
+  if (!Array.isArray(messages)) return '';
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m && (m.role === 'user' || !m.role)) {
+      return typeof m.content === 'string' ? m.content : '';
+    }
+  }
+  return '';
+};
+
+// Provider routing and Groq rate limiting live in serverAiRateLimit.ts, so the
+// duration parser and the budgeting maths can be exercised without starting a
+// server or pulling in the tool schemas. This ledger is process-wide.
+const groqRateLedger = createGroqRateLedger();
+
+// Constants (GROQ_DEFAULT_TPM, GROQ_OUTPUT_RESERVE, MIN_TOOL_BUDGET) come from
+// serverAiRateLimit.ts.
+
+// 0. POST /api/ai/chat - Conversational Personal Agent with Tools (Groq & Gemini)
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    // Build candidate key pool from enabledKeys or apiKey + fallbackKeys
+    const rawKeyPool: Array<{ id?: string; name?: string; key: string; provider?: string }> = [];
+
+    if (Array.isArray(req.body.enabledKeys) && req.body.enabledKeys.length > 0) {
+      for (const item of req.body.enabledKeys) {
+        if (typeof item === 'string' && item.trim()) {
+          rawKeyPool.push({ key: item.trim() });
+        } else if (item && typeof item === 'object' && typeof item.key === 'string' && item.key.trim()) {
+          if (item.isEnabled !== false) {
+            rawKeyPool.push({
+              id: item.id,
+              name: item.name,
+              key: item.key.trim(),
+              provider: item.provider
+            });
+          }
+        }
+      }
+    }
+
+    // If active apiKey was provided, ensure it is the first candidate in the pool
+    const activeKeyStr = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : '';
+    if (activeKeyStr) {
+      const existingIdx = rawKeyPool.findIndex((k) => k.key === activeKeyStr);
+      if (existingIdx > 0) {
+        const [matched] = rawKeyPool.splice(existingIdx, 1);
+        rawKeyPool.unshift(matched);
+      } else if (existingIdx === -1) {
+        rawKeyPool.unshift({ key: activeKeyStr });
+      }
+    }
+
+    // Add any legacy fallbackKeys if not already present
+    if (Array.isArray(req.body.fallbackKeys)) {
+      for (const fb of req.body.fallbackKeys) {
+        const fbKey = typeof fb === 'string' ? fb.trim() : (fb && typeof fb === 'object' && typeof fb.key === 'string' ? fb.key.trim() : '');
+        if (fbKey && !rawKeyPool.some((k) => k.key === fbKey)) {
+          rawKeyPool.push(typeof fb === 'object' ? { ...fb, key: fbKey } : { key: fbKey });
+        }
+      }
+    }
+
+    // Deduplicate by secret key string
+    const allKeys: Array<{ id?: string; name?: string; key: string; provider?: string }> = [];
+    const seenSecrets = new Set<string>();
+    for (const kObj of rawKeyPool) {
+      if (kObj.key && !seenSecrets.has(kObj.key)) {
+        seenSecrets.add(kObj.key);
+        allKeys.push(kObj);
+      }
+    }
+
+    if (allKeys.length === 0) {
+      return res.status(400).json({ success: false, error: 'API key is required' });
+    }
+
+    const { messages, projectContext, model, customRules, timeZone } = req.body;
+
+    // Route by the model the user actually selected.
+    //
+    // Every enabled key is a candidate, but the chosen model decides which
+    // provider serves the turn. The loop used to try all keys against whichever
+    // model and let `resolveModelAsync` coerce it — so picking a Gemini model
+    // while a Groq key happened to sit first would quietly answer with a Groq
+    // model, and vice versa.
+    const requestedModel = typeof model === 'string' ? model : '';
+    // With no model named, keep the previous behaviour and let the first key
+    // decide, rather than defaulting every such request to Groq.
+    const requestedProvider: 'groq' | 'gemini' = requestedModel
+      ? providerForModel(requestedModel)
+      : ((allKeys[0].provider as 'groq' | 'gemini') || detectProvider(allKeys[0].key));
+    const providerKeys = allKeys.filter(
+      (k) => (k.provider || detectProvider(k.key)) === requestedProvider
+    );
+
+    if (providerKeys.length === 0) {
+      const label = requestedProvider === 'gemini' ? 'Gemini' : 'Groq';
+      return res.status(400).json({
+        success: false,
+        error:
+          `No enabled ${label} API key for "${model || 'the selected model'}". ` +
+          `Add one in Settings, or choose a model from your other provider.`
+      });
+    }
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ success: false, error: 'Messages are required' });
+    }
+
+    // Calculate real-world calendar and time context in user's device timezone
+    const userTimeZone = typeof timeZone === 'string' && timeZone.trim() ? timeZone.trim() : 'UTC';
+    const now = new Date();
+
+    let curDateStr = '';
+    let weekdayStr = '';
+    let curTimeStr = '';
+    let curYear = now.getFullYear();
+
+    try {
+      // 1. Get YYYY-MM-DD in user's device timezone
+      const dateParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: userTimeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(now);
+      curDateStr = dateParts;
+      curYear = parseInt(dateParts.split('-')[0], 10);
+
+      // 2. Get Weekday in user's device timezone
+      weekdayStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: userTimeZone,
+        weekday: 'long'
+      }).format(now);
+
+      // 3. Get Current Time in user's device timezone
+      curTimeStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: userTimeZone,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).format(now);
+    } catch {
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      curDateStr = `${year}-${month}-${day}`;
+      weekdayStr = now.toLocaleDateString('en-US', { weekday: 'long' });
+      curTimeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    const rulesSection = Array.isArray(customRules) && customRules.length > 0
+      ? `\nUSER-TRAINED CUSTOM KNOWLEDGE & TRUTHS (Strictly obey without deviation):\n` +
+        customRules.map((r: any) => `- When user asks about "${r.trigger}": ${r.response}`).join('\n')
+      : '';
+
+    const isUniversal = !projectContext?.id || projectContext?.id === 'universal' || projectContext?.id === 'none' || projectContext?.isUniversal;
+
+    const projectStats = projectContext?.projectStats;
+    const projectRoster = Array.isArray(projectContext?.projectRoster) ? projectContext.projectRoster : [];
+    const taskStats = projectContext?.taskStats;
+
+    const studioMetricsSection = projectStats
+      ? `\nLIVE FLOW STUDIO METRICS & TRUTHS (Ground truth for counts and statuses):
+- Total Studio Projects: ${projectStats.total}
+  * Active / Planning: ${projectStats.active}
+  * In Progress: ${projectStats.inProgress}
+  * Completed: ${projectStats.completed}
+- All Studio Projects:
+${projectRoster.map((p: any) => `  • "${p.name}" — Status: ${p.status}, Progress: ${p.progress}%, Client: ${p.client}`).join('\n')}
+- Current Tasks Metrics (${isUniversal ? 'Studio-wide' : `Project "${projectContext?.title}"`}): Total: ${taskStats?.total || 0}, Todo: ${taskStats?.todo || 0}, In Progress: ${taskStats?.inProgress || 0}, In Review: ${taskStats?.review || 0}, Done: ${taskStats?.done || 0}
+
+CRITICAL INSTRUCTION FOR QUERIES LIKE "how many in total, all active, in progress and completed" OR "how many projects":
+Always answer directly using the exact numbers above. Present a clean bulleted breakdown of Total, Active, In Progress, and Completed projects. Never say you only track 1 project or tell the user to navigate to the Projects view to see the list.`
+      : '';
+
+    const workspaceSection = isUniversal
+      ? `ACTIVE WORKSPACE SCOPE: UNIVERSAL / ENTIRE APP MODE
+- The user has selected "None" (Universal mode).
+- You are thinking across the ENTIRE Flow Studio application, rather than being scoped to one single project.
+- You have universal oversight of all studio tasks, team members, all clients, all projects, and calendar events.
+- When creating tasks, team members, or scheduling meetings, understand they apply studio-wide.`
+      : `ACTIVE WORKSPACE CONTEXT:
+- Project ID: "${projectContext?.id || 'default'}"
+- Project Title: "${projectContext?.title || 'Active Project'}"
+- Client: "${projectContext?.clientName || 'General Studio'}"
+- Total Attached Project Notes: ${projectContext?.notesCount || 0}`;
+
+    const ws = projectContext?.workspace;
+    const workspaceBrandingSection = ws
+      ? `\nACTIVE STUDIO & COMPANY PROFILE:
+- Studio / Company Name: "${ws.name || 'Flow Studio'}"
+- Tagline / Specialization: "${ws.tagline || 'Design & Digital Product Studio'}"
+- Legal Entity: "${ws.legalName || ws.name || 'Flow Studio'}"
+- Default Invoicing Currency: ${ws.currency || 'USD ($)'}
+- Tax ID / VAT: ${ws.taxId || 'N/A'}
+- Studio Operating Hours: ${ws.workingHours || 'Mon - Fri, 9:00 AM - 6:00 PM'}`
+      : '';
+
+    const mb = projectContext?.moodboardContext;
+    const moodboardSection = mb
+      ? `\nLIVE MOODBOARD CANVAS & ACTIVE VIEWPORT CONTEXT:
+- Canvas Active Viewport Center: x=${mb.activeView?.center?.x}, y=${mb.activeView?.center?.y}
+- Canvas Visible Viewport Bounds: X from ${mb.activeView?.visibleBounds?.minX} to ${mb.activeView?.visibleBounds?.maxX}, Y from ${mb.activeView?.visibleBounds?.minY} to ${mb.activeView?.visibleBounds?.maxY} (Current Zoom: ${mb.activeView?.zoom}x)
+- Existing Items on Canvas: ${mb.itemsCount} item(s)
+${mb.itemsSummary && mb.itemsSummary.length > 0 ? `Existing items on canvas:\n${mb.itemsSummary.map((item: any) => `  • [${item.type}] "${item.title}" at (x: ${item.x}, y: ${item.y}, w: ${item.width}, h: ${item.height})`).join('\n')}` : '  • Canvas is currently empty.'}
+
+CRITICAL RULES FOR "add_moodboard_items":
+- When adding cards (notes, colors, images, bookmarks) to the Moodboard, ALWAYS place them INSIDE the user's active visible viewport bounds around the center (x: ${mb.activeView?.center?.x}, y: ${mb.activeView?.center?.y}).
+- Pass explicit "x" and "y" coordinates for each item inside the visible bounds so they appear directly in the user's current view without overlapping existing items.
+- For design notes, ideas, or key takeaways, use type "note" with pleasant soft pastel colors like "#fffbeb", "#fef3c7", "#dcfce7", "#fee2e2", or "#f1f5f9".`
+      : '';
+
+    const systemInstruction = `You are Nova, the elite autonomous AI Personal Design & Project Agent inside Flow Studio, collaborating with ${ws?.name || 'the studio'}.
+You have the warmth, intelligence, and speed of ChatGPT and Gemini. You specialize in branding, graphic design, design systems, and creative studio management.
+
+CRITICAL REAL-WORLD TEMPORAL CONTEXT (STRICTLY OBEY):
+- Current Real-World Date: ${curDateStr} (${weekdayStr})
+- Current Time: ${curTimeStr}
+- User Timezone: ${userTimeZone}
+- Current Year: ${curYear}
+
+${workspaceBrandingSection}
+${workspaceSection}
+${studioMetricsSection}
+${moodboardSection}
+${rulesSection}
+
+CRITICAL ANTI-HALLUCINATION & STRICT TOOL ROUTING (ABSOLUTE RULES):
+1. TEAM MEMBERS: When asked to add, hire, or create a TEAM MEMBER (staff, employee, colleague) — whether with custom details or dummy data — you MUST call "create_team_member". Use "update_team_member" or "delete_team_member" accordingly.
+   * NEVER substitute a project note, task, or document when asked for a team member!
+2. CLIENTS CRM & CLIENT DETAILS:
+   * When asked to add or register a CLIENT: call "create_client". Use "update_client" or "delete_client" for client edits.
+   * When asked to book/schedule an appointment or meeting with a CLIENT: call "book_client_appointment".
+   * When asked to tag, categorize, or add/remove brand tags on a client: call "manage_client_tags".
+   * When asked to log or add a note/minutes/feedback for a specific client: call "create_client_note".
+   * When asked to log/create an invoice for a specific client: call "log_client_invoice".
+   * When asked to create/schedule a task for a client: call "create_client_task".
+   * When asked to attach/add a regulatory document or template (NDA, MSA, Onboarding Workbook, SOW) to a client: call "attach_client_document".
+   * When asked to rate a client (communication, velocity): call "rate_client".
+   * When asked to assign/remove an expert or team member for a client: call "assign_client_expert".
+   * When asked to view, check, or open a client's profile or sub-tab (overview, tasks, files, notes, financials, projects): call "open_client_details".
+3. SALES LEADS CRM & SCRAPING:
+   * When asked to find, scrape, or search sales leads: call "scrape_leads".
+   * When asked to add or log a SALES LEAD: call "create_lead". Use "update_lead", "delete_lead", or "promote_lead_to_client".
+4. BILLING & INVOICES: When asked to create or bill an INVOICE: call "create_invoice". Use "update_invoice_status" or "delete_invoice".
+5. PROJECT DETAILS — 5 KEY PAGES & CAPABILITIES:
+   A. OVERVIEW PAGE:
+      * When asked to add or remove project tags or taxonomy labels: call "manage_project_tags" (action: "add" | "remove", tag: string).
+      * When asked to link or attach a Figma Master canvas or Client Brief document (Google Docs, Notion): call "link_project_resource" (type: "figma" | "brief", url: string).
+      * When asked to set, update, or change the project hero cover banner: call "update_project_banner" (url: string).
+      * When asked to edit project title, client, status, deadline, category, or description: call "update_project".
+      * When asked to create a new project: call "create_new_project". Use "delete_project" to delete/archive.
+   B. TASKS PAGE:
+      * When asked to create deliverables or tasks: call "create_tasks" with phases ('todo', 'inprogress', 'review', 'done'), priorities ('urgent', 'high', 'medium', 'low'), and due dates.
+      * When asked to update a task (status, phase, priority, due date): call "update_task".
+      * When asked to delete or clear tasks: call "delete_tasks".
+      * When asked to add comments or progress updates to a task: call "add_task_comment".
+   C. FILES PAGE:
+      * When asked to create the dedicated filesystem workspace folder for a project: call "create_project_folder".
+      * When asked to open, browse, or explore project files: call "navigate_to" with view: "project-files".
+   D. NOTES PAGE:
+      * When asked to record or write design briefs, meeting transcripts, or creative requirements: call "create_project_note".
+      * When asked to update note content: call "update_project_note".
+      * When asked to delete or clear notes: call "delete_project_notes".
+   E. MOODBOARD PAGE:
+      * When asked to curate visual inspiration, color palettes, sticky directives, or bookmarks: call "add_moodboard_items".
+      * When asked to delete or remove a specific moodboard card, swatch, or note: call "delete_moodboard_item" (itemTitle: string).
+      * When asked to clear or reset the entire moodboard canvas: call "clear_moodboard".
+6. NAVIGATION & SUB-PAGES:
+   * When asked to go to, open, view, or switch to ANY page or project sub-tab: call "navigate_to".
+   * Supported views (exactly these, no others): "dashboard", "projects", "new-project", "project-overview", "project-tasks", "project-files", "project-notes", "project-moodboard", "leads", "lead-generator", "email-drafts", "sent-emails", "clients", "team", "member-details", "files", "calendar", "time", "billing", "new-invoice", "reports".
+   * Settings, Developer tools, and the recycle bin are NOT navigable destinations. If asked for one, say so plainly and offer the closest supported page instead.
+   * Pass "projectTitle" in "navigate_to" if user specifies which project to navigate into.
+7. CALENDAR & MEETINGS: When asked to schedule a studio meeting, call, or event: call "schedule_event". Use "update_event" or "delete_event".
+8. TIME TRACKING: When asked to start tracking time: call "start_timer". When asked to stop: call "stop_timer". When asked to log past hours: call "add_time_entry".
+
+9. TASK BOARD OPERATIONS (beyond create/update/delete):
+   * Call "list_task_board_schema" FIRST whenever you need a field, column, or status id you cannot see. Never guess a column name.
+   * "set_task_assignees" REPLACES the assignee list; it does not append. Pass the complete intended list.
+   * Bulk change across several tasks: "bulk_update_tasks" (phase, priority, completion status).
+   * Start and due dates: "set_task_dates" (YYYY-MM-DD). Task type: "set_task_type".
+   * Custom field values: "write_task_field_value". Add a field: "create_task_field". Rename/hide/move/delete a field: "update_task_field".
+   * Status label and colour: "update_task_status_config". Sorting: "sort_task_board".
+
+10. MOODBOARD CANVAS OPERATIONS (beyond adding cards):
+   * Cards are addressed by title or id. Aligning, distributing, locking, duplicating and stacking act on a SELECTION, so call "select_moodboard_items" first when the user names specific cards.
+   * Alignment needs 2+ selected cards and distribution needs 3+; the tool reports the shortfall rather than silently doing nothing.
+   * Stacking: "arrange_moodboard_items" (front / forward / backward / back). Viewport: "control_moodboard_view". Grid: "configure_moodboard_grid".
+   * Palette extraction: "extract_moodboard_palette". Cropping: "crop_moodboard_item". Section frames: "create_moodboard_section". Canvas history: "undo_moodboard" and "redo_moodboard".
+
+11. EMAIL CAMPAIGNS:
+   * Templates: "list_email_templates", "create_email_template", "update_email_template", "delete_email_template".
+   * Campaigns: "create_email_batch" (multi-step follow-ups), "manage_email_batch" (pause/resume/delete), "list_email_campaigns".
+   * Queue: "manage_queue_item" (cancel / sendNow / edit), "process_email_queue". Replies: "sync_email_replies", "list_email_replies".
+   * Scheduling: "update_followup_settings". Mailbox credentials are never yours to read or write.
+
+12. LEADS PIPELINE AND SCRAPING:
+   * Bulk work: "bulk_update_leads", "bulk_delete_leads", "bulk_promote_leads". Call "select_leads" first when the user is looking at the table.
+   * Table structure: "list_lead_columns", "create_lead_column", "update_lead_column", "delete_lead_column", "reorder_lead_columns". Row order: "reorder_lead".
+   * Importing: "import_leads_csv" takes the CSV text including its header row. Timeline entries: "log_lead_activity".
+   * Scraper: "list_scraper_config", "update_scraper_config", "set_scraper_filters", "set_scraper_tab", "list_scraped_leads", "select_scraped_leads", "remove_scraped_lead", "clear_scraped_leads", "add_scraped_leads", "clear_scraper_logs".
+   * You CANNOT run a scrape, and you CANNOT read or set the scraper API key. Both are deliberate: say so once, and point the user to the scraper page.
+
+13. TEAM AND BILLING:
+   * Invitations: "invite_team_member", "resend_team_invite", "revoke_team_invite". Roles: "manage_team_role" (add / remove). Roster: "list_team".
+   * Billing: "list_billing_summary", "update_billing_address", "update_saved_card".
+   * You CANNOT read or write a card number. Only the holder name, brand, and expiry are settable. If asked for the number, explain once and point to Billing settings.
+
+14. READING COMES BEFORE WRITING:
+   * For ANY question about the current state of the studio — "how are we doing", "what is overdue", "where does this project stand", "any unpaid invoices", "how much time did we log" — call a read tool FIRST instead of inferring from earlier conversation.
+   * "get_studio_overview" is the single best call for studio-wide questions. Then "get_task_board_digest", "get_project_digest", "get_client_digest", "get_lead_pipeline_digest", "get_time_summary", "get_calendar_agenda", "list_activities", "list_notifications".
+   * Never state a number you did not read from a tool. If a read tool returns nothing, say the data is not there.
+
+15. CONFIRMATION POLICY FOR DESTRUCTIVE AND OUTBOUND ACTIONS:
+   * Deleting records, deleting a board field, clearing a moodboard, emptying the scraper staging area, sending email, and inviting people are irreversible or leave the app.
+   * The app shows the user its own confirmation prompt before these run. That prompt is a safety net, NOT permission to skip explaining yourself.
+   * Before calling one, say plainly what you are about to do and to what. Never bury a destructive action inside a sentence that also asks something else.
+   * If the user declines, the tool result states it was cancelled. Report it as cancelled — never claim the action happened.
+   * Sending email must ALWAYS be preceded by showing the exact recipients, subject, and body.
+   * Some deletions cannot be undone at all (clients, invoices, projects). Treat those as final.
+
+16. OUT OF SCOPE — say so plainly and do not attempt a workaround:
+   * App settings, Developer tools, appearance, and API-key management.
+   * Sign-in, registration, and account flows.
+   * The recycle bin / data page, including restoring and permanently deleting items.
+   * Reading or writing ANY secret: mailbox passwords, SMTP/IMAP credentials, the scraper API key, or card numbers.
+   * When asked for one of these, explain it is not something you can do and name the screen that can.
+
+Always be concise, aesthetic, inspiring, and decisive. Avoid corporate boilerplate.`;
+
+    // Failover stays inside the requested provider, so the model the user chose
+    // is the model that answers. Only `providerKeys` are eligible.
+    let lastError: any = null;
+    for (let kIdx = 0; kIdx < providerKeys.length; kIdx++) {
+      const currentKeyObj = providerKeys[kIdx];
+      const currentKey = currentKeyObj.key;
+      // Every key in providerKeys already matches the requested provider, so the
+      // model is never re-routed to the other API. Typed explicitly because the
+      // key pool carries `provider` as a loose string.
+      const provider: 'groq' | 'gemini' = requestedProvider;
+      const selectedModel = await resolveModelAsync(currentKey, model, provider);
+
+      try {
+        if (provider === 'groq') {
+          const groqMessages = [
+            { role: 'system', content: systemInstruction },
+            ...messages.map((m: any) => ({
+              role: m.role === 'assistant' || m.role === 'model' ? 'assistant' : 'user',
+              content: m.content || m.text || ''
+            }))
+          ];
+
+          // Fit this turn inside whatever per-minute budget the key has left,
+          // using the provider's own reported figures. The plan narrows the tool
+          // list first, then drops older conversation turns.
+          const rateState = groqRateLedger.get(currentKey);
+          const plan = planGroqRequest({
+            messages: groqMessages,
+            query: lastUserMessageText(groqMessages),
+            availableTokens: groqRateLedger.availableTokens(currentKey),
+            ceilingTokens: rateState?.limitTokens ?? GROQ_DEFAULT_TPM,
+            hasHeaderData: rateState?.remainingTokens != null,
+            staticToolBudget: groqToolTokenBudget,
+            estimate: estimateTokens,
+            selectTools: (query: string, budget: number) => selectGroqTools(query, budget),
+          });
+
+          if (!plan.fits) {
+            const wait = groqRateLedger.retryAfterSeconds(currentKey) || 30;
+            throw new Error(
+              `[Groq limit] This key has ${plan.availableTokens} of ${plan.ceilingTokens} tokens left ` +
+              `this minute, and the request still needs ${plan.totalTokens} even after trimming. ` +
+              `Retry in about ${wait}s, switch to a Gemini model, or use a key from another Groq org.`
+            );
+          }
+
+          if (plan.tools.length < groqTools.length) {
+            console.log(
+              `[AI Groq] Sending ${plan.tools.length}/${groqTools.length} tools ` +
+              `(~${estimateTokens(plan.tools)} tool tokens; ${plan.availableTokens}/${plan.ceilingTokens} TPM ` +
+              `left${plan.droppedMessages ? `; dropped ${plan.droppedMessages} older turns` : ''}).`
+            );
+          }
+
+          const groqRes = await callWithRetry(() =>
+            callGroqChat(currentKey, {
+              model: selectedModel,
+              messages: plan.messages,
+              tools: plan.tools,
+              tool_choice: 'auto',
+              temperature: 0.7,
+              // Bound the completion, so the output's share of the TPM window is
+              // a known number instead of however much the model might emit.
+              max_completion_tokens: GROQ_OUTPUT_RESERVE
+            })
+          );
+
+          const choice = groqRes.choices?.[0];
+          const msg = choice?.message || {};
+          const responseText = msg.content || '';
+          const toolCalls: any[] = [];
+
+          if (Array.isArray(msg.tool_calls)) {
+            for (const tc of msg.tool_calls) {
+              let args = {};
+              try {
+                args = typeof tc.function?.arguments === 'string'
+                  ? JSON.parse(tc.function.arguments)
+                  : (tc.function?.arguments || {});
+              } catch (e) {
+                console.warn('[AI Groq] Failed to parse tool arguments:', e);
+              }
+              toolCalls.push({
+                name: tc.function?.name,
+                args
+              });
+            }
+          }
+
+          return res.json({
+            success: true,
+            text: responseText,
+            toolCalls,
+            rotated: kIdx > 0,
+            switchedModel: groqRes._switchedModel,
+            modelSwitchNotice: groqRes._switchNotice,
+            usedKey: {
+              id: currentKeyObj.id,
+              name: currentKeyObj.name,
+              key: currentKey,
+              provider
+            }
+          });
+        }
+
+        // Provider: Google Gemini
+        const ai = new GoogleGenAI({ apiKey: currentKey });
+        const contents = messages.map((m: any) => ({
+          role: m.role === 'assistant' || m.role === 'model' ? 'model' : 'user',
+          parts: [{ text: m.content || m.text || '' }]
+        }));
+
+        let response: any;
+        let switchedGeminiModel: string | undefined;
+        let geminiSwitchNotice: string | undefined;
+
+        const geminiRing = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.6-flash'];
+        const modelsToTry = [selectedModel, ...geminiRing.filter(m => m !== selectedModel)];
+
+        for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
+          const attemptModel = modelsToTry[mIdx];
+          try {
+            response = await callWithRetry(() =>
+              ai.models.generateContent({
+                model: attemptModel,
+                contents,
+                config: {
+                  systemInstruction,
+                  tools: geminiTools
+                }
+              })
+            );
+            if (attemptModel !== selectedModel) {
+              switchedGeminiModel = attemptModel;
+              geminiSwitchNotice = `Switched to ${attemptModel} (seamless high-availability failover).`;
+            }
+            break;
+          } catch (geminiErr: any) {
+            const errMsg = geminiErr?.message || String(geminiErr);
+            const isModelUnavailable = errMsg.includes('no longer available') || errMsg.includes('404') || errMsg.includes('not found');
+            const isHighDemand = errMsg.includes('high demand') || errMsg.includes('overloaded') || errMsg.includes('503') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('429');
+
+            if ((isModelUnavailable || isHighDemand) && mIdx < modelsToTry.length - 1) {
+              console.warn(`[AI Gemini] Model '${attemptModel}' unavailable/busy (${errMsg}). Auto-trying '${modelsToTry[mIdx + 1]}'...`);
+              continue;
+            }
+            throw geminiErr;
+          }
+        }
+
+        const responseText = response.text || '';
+        const toolCalls = response.functionCalls || [];
+
+        return res.json({
+          success: true,
+          text: responseText,
+          toolCalls: toolCalls.map((fc: any) => ({
+            name: fc.name,
+            args: fc.args || {}
+          })),
+          rotated: kIdx > 0,
+          switchedModel: switchedGeminiModel,
+          modelSwitchNotice: geminiSwitchNotice,
+          usedKey: {
+            id: currentKeyObj.id,
+            name: currentKeyObj.name,
+            key: currentKey,
+            provider: 'gemini'
+          }
+        });
+      } catch (err: any) {
+        lastError = err;
+        const msg = err?.message || String(err);
+        console.warn(`[AI Failover] Key #${kIdx + 1} (${currentKeyObj.name || provider}) error: ${msg}`);
+
+        // If there are other enabled keys available in the pool, auto-rotate to the next key on ANY error
+        if (kIdx < allKeys.length - 1) {
+          const nextKeyObj = allKeys[kIdx + 1];
+          console.warn(`[AI Failover] Auto-switching to backup key #${kIdx + 2}: "${nextKeyObj.name || nextKeyObj.provider || 'Next Key'}"...`);
+          continue;
+        }
+        throw err;
+      }
+    }
+  } catch (error: any) {
+    console.error('[AI] chat error:', error?.message || error);
+    res.status(400).json({ success: false, error: parseGenAIError(error) });
+  }
+});
+
+// 1. POST /api/ai/test-key
+app.post('/api/ai/test-key', async (req, res) => {
+  try {
+    const rawKey = req.body.apiKey;
+    const apiKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+    const model = req.body.model;
+    if (!apiKey) return res.status(400).json({ success: false, error: 'API key is required' });
+
+    const provider = detectProvider(apiKey);
+    const selectedModel = await resolveModelAsync(apiKey, model, provider);
+
+    if (provider === 'groq') {
+      const response = await callGroqChat(apiKey, {
+        model: selectedModel,
+        messages: [{ role: 'user', content: 'Respond with JSON: {"status":"ok"}' }],
+        max_tokens: 25,
+        response_format: { type: 'json_object' }
+      });
+
+      if (response.choices?.[0]?.message?.content) {
+        return res.json({
+          success: true,
+          message: `Groq AI connected! (${selectedModel} • 14,400 free req/day)`
+        });
+      } else {
+        return res.status(400).json({ success: false, error: 'No response received from Groq' });
+      }
+    }
+
+    // Google Gemini
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents: 'Respond with: {"status":"ok"}',
+      config: {
+        responseMimeType: 'application/json'
+      }
+    });
+
+    if (response.text) {
+      return res.json({ success: true, message: `Gemini API key is valid and connected (${selectedModel})` });
+    } else {
+      return res.status(400).json({ success: false, error: 'No response received from model' });
+    }
+  } catch (error: any) {
+    console.error('[AI] test-key failed:', error?.message || error);
+    return res.status(400).json({ success: false, error: parseGenAIError(error) });
+  }
+});
+
+// 2. POST /api/ai/generate-tasks
+app.post('/api/ai/generate-tasks', async (req, res) => {
+  try {
+    const rawKey = req.body.apiKey;
+    const apiKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+    const { notes, projectId, projectTitle, model } = req.body;
+    if (!apiKey) return res.status(400).json({ success: false, error: 'API key is required' });
+    if (!notes) return res.status(400).json({ success: false, error: 'Notes or requirements are required' });
+
+    const provider = detectProvider(apiKey);
+    const selectedModel = await resolveModelAsync(apiKey, model, provider);
+
+    const systemInstruction = `You are the Flow Studio AI Design Co-Pilot.
+Your role is to analyze project notes, client feedback, or briefs and convert them into structured, actionable, high-density project tasks.
+Rules:
+- Be specific, concise, and focused on design, branding, and deliverables.
+- Valid priorities: 'urgent', 'high', 'medium', 'low'.
+- Valid phases: 'todo', 'inprogress', 'review', 'done'.
+- Due dates should be formatted as YYYY-MM-DD.`;
+
+    const prompt = `Project Title: ${projectTitle || 'Design Project'}
+Project Notes & Requirements:
+${notes}
+
+Generate 4 to 8 distinct, professional tasks for this design project.`;
+
+    let rawTasks: any[] = [];
+
+    if (provider === 'groq') {
+      const groqRes = await callWithRetry(() =>
+        callGroqChat(apiKey, {
+          model: selectedModel,
+          messages: [
+            {
+              role: 'system',
+              content: systemInstruction + '\nYou must output a valid JSON object with the shape: {"tasks": [{"title": "...", "details": "...", "phase": "todo", "priority": "high", "dueDate": "YYYY-MM-DD"}]}'
+            },
+            { role: 'user', content: prompt }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.2
+        })
+      );
+      const parsed = JSON.parse(groqRes.choices?.[0]?.message?.content || '{"tasks":[]}');
+      rawTasks = parsed.tasks || [];
+    } else {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await callWithRetry(() =>
+        ai.models.generateContent({
+          model: selectedModel,
+          contents: prompt,
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                tasks: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      details: { type: Type.STRING },
+                      phase: { type: Type.STRING },
+                      priority: { type: Type.STRING },
+                      dueDate: { type: Type.STRING }
+                    },
+                    required: ['title', 'phase', 'priority']
+                  }
+                }
+              },
+              required: ['tasks']
+            }
+          }
+        })
+      );
+      const parsed = JSON.parse(response.text || '{"tasks":[]}');
+      rawTasks = parsed.tasks || [];
+    }
+
+    const formattedTasks = rawTasks.map((t: any, index: number) => ({
+      id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${index}`,
+      projectId: projectId || 'default',
+      title: t.title || 'Untitled Task',
+      details: t.details || '',
+      phase: ['todo', 'inprogress', 'review', 'done'].includes(t.phase) ? t.phase : 'todo',
+      status: 'Incomplete',
+      priority: ['urgent', 'high', 'medium', 'low'].includes(t.priority) ? t.priority : 'medium',
+      dueDate: t.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      taskType: 'task',
+      assignees: []
+    }));
+
+    res.json({ success: true, tasks: formattedTasks });
+  } catch (error: any) {
+    console.error('[AI] generate-tasks error:', error?.message || error);
+    res.status(400).json({ success: false, error: parseGenAIError(error) });
+  }
+});
+
+// 3. POST /api/ai/extract-brief
+app.post('/api/ai/extract-brief', async (req, res) => {
+  try {
+    const rawKey = req.body.apiKey;
+    const apiKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+    const { notes, model } = req.body;
+    if (!apiKey) return res.status(400).json({ success: false, error: 'API key is required' });
+    if (!notes) return res.status(400).json({ success: false, error: 'Notes are required' });
+
+    const provider = detectProvider(apiKey);
+    const selectedModel = await resolveModelAsync(apiKey, model, provider);
+
+    const systemInstruction = `You are the Flow Studio AI Design Co-Pilot.
+Read and synthesize the provided client notes, meeting transcripts, or creative requirements into a polished Executive Design Brief.
+Identify the core project goals, visual design directives, proposed brand color accents (hex codes), typography suggestions, and key deliverables.`;
+
+    let brief = {};
+
+    if (provider === 'groq') {
+      const groqRes = await callWithRetry(() =>
+        callGroqChat(apiKey, {
+          model: selectedModel,
+          messages: [
+            {
+              role: 'system',
+              content: systemInstruction + '\nYou must output a JSON object with: { projectTitle: string, summary: string, objectives: string[], visualDirectives: string[], brandColors: string[], typographySuggestions: string[], keyDeliverables: string[], constraints: string[] }'
+            },
+            { role: 'user', content: notes }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.3
+        })
+      );
+      brief = JSON.parse(groqRes.choices?.[0]?.message?.content || '{}');
+    } else {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await callWithRetry(() =>
+        ai.models.generateContent({
+          model: selectedModel,
+          contents: notes,
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                projectTitle: { type: Type.STRING },
+                summary: { type: Type.STRING },
+                objectives: { type: Type.ARRAY, items: { type: Type.STRING } },
+                visualDirectives: { type: Type.ARRAY, items: { type: Type.STRING } },
+                brandColors: { type: Type.ARRAY, items: { type: Type.STRING } },
+                typographySuggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                keyDeliverables: { type: Type.ARRAY, items: { type: Type.STRING } },
+                constraints: { type: Type.ARRAY, items: { type: Type.STRING } }
+              },
+              required: ['projectTitle', 'summary', 'objectives', 'visualDirectives', 'keyDeliverables']
+            }
+          }
+        })
+      );
+      brief = JSON.parse(response.text || '{}');
+    }
+
+    res.json({ success: true, brief });
+  } catch (error: any) {
+    console.error('[AI] extract-brief error:', error?.message || error);
+    res.status(400).json({ success: false, error: parseGenAIError(error) });
+  }
+});
+
+// 4. POST /api/ai/generate-moodboard
+app.post('/api/ai/generate-moodboard', async (req, res) => {
+  try {
+    const rawKey = req.body.apiKey;
+    const apiKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+    const { vibeOrPrompt, projectId, model } = req.body;
+    if (!apiKey) return res.status(400).json({ success: false, error: 'API key is required' });
+    if (!vibeOrPrompt) return res.status(400).json({ success: false, error: 'Prompt or vibe is required' });
+
+    const provider = detectProvider(apiKey);
+    const selectedModel = await resolveModelAsync(apiKey, model, provider);
+
+    const systemInstruction = `You are the Flow Studio AI Design Co-Pilot.
+Generate high-fidelity, aesthetic creative directives for a 2D infinite Moodboard canvas based on the user's design style or project vibe.
+Include:
+1. A 4 to 6 color harmonious brand palette with creative color names and exact 6-digit hex codes.
+2. 2 to 3 sticky notes with actionable design guidelines, layout principles, or typography rules.
+3. 2 typography cards with font pairings and aesthetic descriptions.`;
+
+    let parsed: any = {};
+
+    if (provider === 'groq') {
+      const groqRes = await callWithRetry(() =>
+        callGroqChat(apiKey, {
+          model: selectedModel,
+          messages: [
+            {
+              role: 'system',
+              content: systemInstruction + '\nYou must output a JSON object with: { colorPalette: [{"title": "...", "color": "#HEX"}], stickyNotes: [{"title": "...", "content": "...", "color": "#HEX"}], typographyCards: [{"title": "...", "content": "..."}] }'
+            },
+            { role: 'user', content: vibeOrPrompt }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.4
+        })
+      );
+      parsed = JSON.parse(groqRes.choices?.[0]?.message?.content || '{}');
+    } else {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await callWithRetry(() =>
+        ai.models.generateContent({
+          model: selectedModel,
+          contents: vibeOrPrompt,
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                colorPalette: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      color: { type: Type.STRING }
+                    },
+                    required: ['title', 'color']
+                  }
+                },
+                stickyNotes: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      content: { type: Type.STRING },
+                      color: { type: Type.STRING }
+                    },
+                    required: ['title', 'content']
+                  }
+                },
+                typographyCards: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      content: { type: Type.STRING }
+                    },
+                    required: ['title', 'content']
+                  }
+                }
+              },
+              required: ['colorPalette', 'stickyNotes']
+            }
+          }
+        })
+      );
+      parsed = JSON.parse(response.text || '{}');
+    }
+
+    const items: any[] = [];
+    const timestamp = Date.now();
+
+    // Position Swatches in Row 1 (y: 100)
+    (parsed.colorPalette || []).forEach((c: any, i: number) => {
+      const hex = c.color.startsWith('#') ? c.color : `#${c.color}`;
+      items.push({
+        id: `col-${timestamp}-${i}`,
+        projectId: projectId || 'default',
+        type: 'color',
+        x: 100 + i * 200,
+        y: 100,
+        width: 180,
+        height: 180,
+        title: c.title || 'Brand Accent',
+        color: hex,
+        content: hex,
+        category: 'Brand Colors'
+      });
+    });
+
+    // Position Sticky Notes in Row 2 (y: 320)
+    const stickyColors = ['#fef3c7', '#e0f2fe', '#fce7f3', '#d1fae5'];
+    (parsed.stickyNotes || []).forEach((s: any, i: number) => {
+      items.push({
+        id: `stk-${timestamp}-${i}`,
+        projectId: projectId || 'default',
+        type: 'sticky',
+        x: 100 + i * 250,
+        y: 320,
+        width: 230,
+        height: 200,
+        title: s.title || 'Design Directive',
+        content: s.content,
+        color: s.color || stickyColors[i % stickyColors.length],
+        category: 'Design Directives'
+      });
+    });
+
+    // Position Typography Cards in Row 3 (y: 560)
+    (parsed.typographyCards || []).forEach((t: any, i: number) => {
+      items.push({
+        id: `typ-${timestamp}-${i}`,
+        projectId: projectId || 'default',
+        type: 'sticky',
+        x: 100 + i * 300,
+        y: 560,
+        width: 280,
+        height: 170,
+        title: t.title || 'Typography Guideline',
+        content: t.content,
+        color: '#f8f9fa',
+        category: 'Typography'
+      });
+    });
+
+    res.json({ success: true, items });
+  } catch (error: any) {
+    console.error('[AI] generate-moodboard error:', error?.message || error);
+    res.status(400).json({ success: false, error: parseGenAIError(error) });
+  }
+});
+
+// 5. POST /api/ai/models - Query available models for active keys
+app.post('/api/ai/models', async (req, res) => {
+  try {
+    const rawKeys: string[] = [];
+    if (Array.isArray(req.body.apiKeys)) {
+      for (const item of req.body.apiKeys) {
+        const kStr = typeof item === 'string' ? item.trim() : (item && typeof item.key === 'string' ? item.key.trim() : '');
+        if (kStr && !rawKeys.includes(kStr)) rawKeys.push(kStr);
+      }
+    }
+    if (typeof req.body.apiKey === 'string' && req.body.apiKey.trim()) {
+      const kStr = req.body.apiKey.trim();
+      if (!rawKeys.includes(kStr)) rawKeys.push(kStr);
+    }
+
+    if (rawKeys.length === 0) {
+      return res.status(400).json({ success: false, error: 'API key is required' });
+    }
+
+    const seenModelIds = new Set<string>();
+    const modelsList: Array<{
+      id: string;
+      name: string;
+      provider: 'groq' | 'gemini';
+      badge: string;
+      description: string;
+    }> = [];
+
+    const formatModelOption = (id: string, provider: 'groq' | 'gemini') => {
+      if (id === 'gemini-3.5-flash') {
+        return { id, name: 'Gemini 3.5 Flash', provider, badge: 'High Stability', description: 'High-throughput multimodal model with 1M context' };
+      }
+      if (id === 'gemini-3.7-flash') {
+        return { id, name: 'Gemini 3.7 Flash', provider, badge: 'Ultra Fast', description: 'Fast multimodal intelligence with 1M context' };
+      }
+      if (id === 'gemini-3.8-flash') {
+        return { id, name: 'Gemini 3.8 Flash', provider, badge: 'Flagship', description: 'Deep reasoning & advanced project intelligence' };
+      }
+      if (id === 'gemini-3.6-flash') {
+        return { id, name: 'Gemini 3.6 Flash', provider, badge: 'Recommended', description: 'Google AI Studio recommended model' };
+      }
+      if (id === 'qwen/qwen3.8-27b') {
+        return { id, name: 'Qwen 3.8 27B', provider, badge: 'Groq LPU', description: 'Sub-second inference with tool calling support' };
+      }
+      if (id === 'openai/gpt-oss-120b') {
+        return { id, name: 'GPT OSS 120B', provider, badge: 'Groq Deep', description: 'Deep reasoning architecture on Groq hardware' };
+      }
+      if (id === 'llama-3.1-8b-instant') {
+        return { id, name: 'Llama 3.1 8B Instant', provider, badge: 'Ultra Fast', description: 'Sub-second speed, 14.4k req/day free' };
+      }
+      return {
+        id,
+        name: id.split('/').pop()?.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') || id,
+        provider,
+        badge: provider === 'groq' ? 'Groq LPU' : 'Gemini AI',
+        description: `Available via your ${provider === 'groq' ? 'Groq' : 'Gemini'} API key`
+      };
+    };
+
+    const deprecated = [
+      'gemini-2.0',
+      'gemini-1.5',
+      'gemini-2.5',
+      'claude-opus-4.6-thinking',
+      'canopylabs',
+      'orpheus',
+      'allam',
+      'whisper',
+      'guard',
+      'safeguard',
+      'llama-3.3-70b-versatile'
+    ];
+
+    for (const key of rawKeys) {
+      const provider = detectProvider(key);
+      try {
+        if (provider === 'groq') {
+          const groqModels = await getAvailableGroqModels(key);
+          for (const mId of groqModels) {
+            const isDep = deprecated.some(d => mId.includes(d));
+            if (!isDep && !seenModelIds.has(mId)) {
+              seenModelIds.add(mId);
+              modelsList.push(formatModelOption(mId, 'groq'));
+            }
+          }
+        } else {
+          const geminiModels = await getAvailableGeminiModels(key);
+          for (const mId of geminiModels) {
+            const isDep = deprecated.some(d => mId.includes(d));
+            if (!isDep && !seenModelIds.has(mId)) {
+              seenModelIds.add(mId);
+              modelsList.push(formatModelOption(mId, 'gemini'));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[AI Models] Could not fetch models for ${provider} key:`, err);
+      }
+    }
+
+    // Always guarantee at least standard fallback models if lists were empty
+    if (modelsList.length === 0) {
+      modelsList.push(
+        formatModelOption('gemini-3.5-flash', 'gemini'),
+        formatModelOption('gemini-3.7-flash', 'gemini'),
+        formatModelOption('gemini-3.8-flash', 'gemini'),
+        formatModelOption('gemini-3.6-flash', 'gemini'),
+        formatModelOption('qwen/qwen3.8-27b', 'groq'),
+        formatModelOption('openai/gpt-oss-120b', 'groq')
+      );
+    }
+
+    return res.json({
+      success: true,
+      models: modelsList
+    });
+  } catch (error: any) {
+    console.error('[AI] models query error:', error?.message || error);
+    res.status(400).json({ success: false, error: parseGenAIError(error) });
   }
 });
 

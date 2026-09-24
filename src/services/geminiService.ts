@@ -68,6 +68,17 @@ export function getProviderFromKey(key?: string): 'groq' | 'gemini' | 'unknown' 
   return 'unknown';
 }
 
+/**
+ * Which provider must serve a given model id.
+ *
+ * The selected model decides the provider, and the provider decides which key
+ * is used. This is the client-side twin of `providerForModel` in server.ts —
+ * the two must agree, or the client would send a key the server then rejects.
+ */
+export function getProviderForModel(model?: string): 'groq' | 'gemini' {
+  return /^gemini/i.test((model || '').trim()) ? 'gemini' : 'groq';
+}
+
 export function cleanErrorMessage(raw: string): string {
   if (!raw) return 'An unknown error occurred';
   if (raw.includes('invalid_api_key') || raw.includes('Invalid API Key') || (raw.includes('401') && raw.includes('Groq'))) {
@@ -75,6 +86,17 @@ export function cleanErrorMessage(raw: string): string {
   }
   if (raw.includes('rate_limit_exceeded') || (raw.includes('429') && raw.includes('Groq'))) {
     return 'Groq rate limit reached (30 requests/min). Please wait a few seconds and try again.';
+  }
+  if (raw.includes('Groq limit')) {
+    // Already written for the user in server.ts, including the retry estimate.
+    return raw.replace(/^\[Groq limit\]\s*/, '');
+  }
+  if (raw.includes('413') || raw.includes('tokens per minute') || raw.includes('Request too large')) {
+    return (
+      'This request is larger than your Groq key allows per minute, even after trimming the tool list. ' +
+      'Groq\u2019s on-demand tier allows 8,000 tokens/minute, which the full tool surface exceeds. ' +
+      'Add a Gemini key in Settings, or move the Groq key to a higher tier.'
+    );
   }
   try {
     const parsed = JSON.parse(raw);
