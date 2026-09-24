@@ -757,7 +757,7 @@ Phase 4 is now the only item left, and it is no longer optional. The agent surfa
 
 ---
 
-## 18. Phase 4 — Confirmation gate + prompt rewrite (Done)
+## 18. Phase 4 — Confirmation gate, fast-path closure + prompt rewrite (Done)
 
 All phases are now complete.
 
@@ -781,11 +781,23 @@ Two design choices:
 
 Deliberately **not** gated: field edits, status changes, tagging, reordering, and everything read-only. Gating routine work is how confirmation fatigue sets in.
 
-### KNOWN GAP — the predictable fast-path bypasses the gate
+### 4c. The fast-path gate bypass (closed)
 
-`tryExecutePredictableTask` (the <5ms matcher that runs before the API call) receives `deleteTask` and `clearMoodboardItems` in its dependency object and can invoke them **without going through the gate**. So "delete all tasks" typed verbatim against a matching pattern can still delete without confirmation.
+4a gated the model path and left the fast path wide open. `tryExecutePredictableTask` — the matcher that runs **before the model and before the API-key check** — received `deleteTask` and `clearMoodboardItems` in its dependency object and could invoke them on a pattern match alone. So "delete all tasks", typed verbatim, deleted with no confirmation, while the identical intent routed through the model produced a prompt.
 
-This is not fixed. It needs the same classifier wired into `predictableActionsMatcher`'s destructive branches, and that file was not read in this pass — I am flagging it rather than guessing at its structure.
+Closed. Three changes:
+
+- [predictableActionsMatcher.ts](src/components/GlobalComponents/AICopilot/utils/predictableActionsMatcher.ts) gained an `approveDestructive` helper. For each destructive branch it builds a synthetic `AgentToolCall` — `delete_project_notes`, `delete_tasks`, `clear_moodboard` — and runs it through **`assessToolCall`**, the same classifier the model path uses. One intent therefore produces one dialog with identical wording, whichever route caught it, and there is no second risk table to keep in sync.
+- The three branches (delete notes, delete tasks, clear moodboard) now `await` that verdict before touching anything. `matchPredictableTask` and `tryExecutePredictableTask` are consequently `async`, and [useCopilotChat.ts](src/components/GlobalComponents/AICopilot/hooks/useCopilotChat.ts) awaits it.
+- **A decline is reported, not swallowed.** The branch writes `Cancelled — you declined to delete all N tasks from "…". Nothing was changed.` into the chat and consumes the prompt — the instruction was understood and refused, so falling through to the model would only re-ask, or fail outright when no API key is configured.
+
+Scope, stated precisely so this is not oversized: the other two fast-path matchers are **not** gated because they have nothing to gate. `matchPredictableClientAction` only books appointments, tags clients, attaches documents and logs invoices; `tryMatchStudioOverview` only counts projects from the store. `matchPredictableTask` held all three destructive branches and now holds none.
+
+One guard against prompting for nothing: a branch whose target list is empty skips the dialog entirely, so "delete all tasks" on an empty board does not raise a confirmation for zero tasks.
+
+**Verified statically:** `npx tsc --noEmit` reports **28 errors, unchanged from the baseline**, and **none of the three edited files appears in that list**. The two agent-path errors that do appear — `clientDetailsHandlers.ts` and `predictableClientMatcher.ts` — are the same two pre-existing ones recorded in §5.
+
+What this is *not*: runtime evidence. Nothing here was observed refusing a delete.
 
 ### 4b. Prompt rewrite
 
@@ -818,14 +830,14 @@ This is not fixed. It needs the same classifier wired into `predictableActionsMa
 | **Phase 1** — moodboard, tasks, navigation | **Complete** | 27 |
 | **Phase 2** — email, team, billing, leads, scraper | **Complete** | 44 |
 | **Phase 3** — read / intelligence | **Complete** | 10 |
-| **Phase 4** — confirmation gate, prompt rewrite | **Complete** | — |
+| **Phase 4** — confirmation gate, fast-path closure, prompt rewrite | **Complete** | — |
 
-**Declared tool surface: 47 → 128.** Handler modules: 16. Undo branches: 55. Gated action sites: 24.
+**Declared tool surface: 47 → 128.** Handler modules: 16. Undo branches: 55. Gated action sites: 24 (model path) + 3 (fast path).
 
 ### Honest limitations
 
 1. **Nothing was executed.** All 128 tools were verified by static analysis and type-checking only. No agent run, no API key, no tool call. The audit and the implementation are both static reads.
-2. **The fast-path gate bypass above is real and unfixed.**
+2. **The fast-path gate bypass is closed** (§4c) — but by static reasoning, like everything else in this list, not by watching it refuse a delete.
 3. **The repo has 28 pre-existing type errors**, two of them inside the agent path (`clientDetailsHandlers.ts:37` and `predictableClientMatcher.ts:52`, both calling `addEvent` without required fields). None were introduced here.
 4. **No tests exist for any of this**, and no tests were added.
 5. **"List project files" remains unbuilt**, though D-4 finally unblocked it: the tree comes from `FSEntry` objects returned by `fetch('/api/fs/list')` or `electronAPI.fs.listFiles` — not a store, not a mock. The backend handler behind that endpoint is still unconfirmed, so the tool stays unbuilt rather than risk returning fabricated filenames.
