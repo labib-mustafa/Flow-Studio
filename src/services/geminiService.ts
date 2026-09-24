@@ -115,6 +115,17 @@ export function cleanErrorMessage(raw: string): string {
 
 import { getUserTimeZone } from '../lib/timezone';
 
+/**
+ * Outer ceiling on one agent turn, in milliseconds.
+ *
+ * The server bounds each individual provider call, but it can retry across keys
+ * and models, so this is the last line of defence: past it the UI recovers with
+ * a real error instead of spinning "thinking" forever with input locked behind
+ * it. Sits above the server's own timeout so its more specific message wins when
+ * it can.
+ */
+const CHAT_REQUEST_TIMEOUT_MS = 150_000;
+
 export const geminiService = {
   /** Send conversational messages to the personal agent */
   chat: async (
@@ -135,20 +146,38 @@ export const geminiService = {
     modelSwitchNotice?: string;
   }> => {
     const trimmedKey = (apiKey || '').trim();
-    const res = await fetch('/api/ai/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apiKey: trimmedKey,
-        fallbackKeys: Array.isArray(fallbackKeys) ? fallbackKeys : [],
-        enabledKeys: Array.isArray(enabledKeys) ? enabledKeys : [],
-        messages,
-        projectContext,
-        model,
-        customRules,
-        timeZone: timeZone || getUserTimeZone()
-      })
-    });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CHAT_REQUEST_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: trimmedKey,
+          fallbackKeys: Array.isArray(fallbackKeys) ? fallbackKeys : [],
+          enabledKeys: Array.isArray(enabledKeys) ? enabledKeys : [],
+          messages,
+          projectContext,
+          model,
+          customRules,
+          timeZone: timeZone || getUserTimeZone()
+        }),
+        signal: controller.signal
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        throw new Error(
+          `The agent did not respond within ${Math.round(CHAT_REQUEST_TIMEOUT_MS / 1000)} seconds, ` +
+          `so the request was stopped. The provider stalled — try again, or switch to a different model.`
+        );
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     const data = await res.json();
     if (!res.ok || !data.success) {

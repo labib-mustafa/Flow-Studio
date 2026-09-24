@@ -1542,6 +1542,17 @@ function resolveModel(requestedModel?: string, provider: 'groq' | 'gemini' = 'gr
   return requestedModel && (requestedModel.includes('qwen') || requestedModel.includes('gpt-oss')) ? requestedModel : 'qwen/qwen3.8-27b';
 }
 
+/**
+ * Hard ceiling on a single Groq call.
+ *
+ * Without this, a stalled connection leaves the client's `await` pending
+ * forever: the spinner never resolves, no error is ever shown, and because the
+ * UI treats "thinking" as a lock, every later message queues behind a request
+ * that will never finish. Failing loudly beats hanging invisibly — 90s is far
+ * longer than a healthy call, so hitting it always means something is wrong.
+ */
+const GROQ_REQUEST_TIMEOUT_MS = Number(process.env.FLOWSTUDIO_GROQ_TIMEOUT_MS) || 90_000;
+
 async function callGroqChat(apiKey: string, payload: any): Promise<any> {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -1549,7 +1560,18 @@ async function callGroqChat(apiKey: string, payload: any): Promise<any> {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey.trim()}`
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    // Actually cancels the socket, so a stalled request cannot hold the event
+    // loop's work open indefinitely.
+    signal: AbortSignal.timeout(GROQ_REQUEST_TIMEOUT_MS)
+  }).catch((err: any) => {
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      throw new Error(
+        `[Groq timeout] No response within ${Math.round(GROQ_REQUEST_TIMEOUT_MS / 1000)}s. ` +
+        `The request was abandoned instead of left hanging. Try again, or switch to a Gemini model.`
+      );
+    }
+    throw err;
   });
 
   // Record the provider's own budget numbers before anything else, so even a
@@ -1642,7 +1664,8 @@ async function callGroqChat(apiKey: string, payload: any): Promise<any> {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey.trim()}`
         },
-        body: JSON.stringify({ ...payload, tools: retryTools, model: 'qwen/qwen3.8-27b' })
+        body: JSON.stringify({ ...payload, tools: retryTools, model: 'qwen/qwen3.8-27b' }),
+        signal: AbortSignal.timeout(GROQ_REQUEST_TIMEOUT_MS)
       });
       // Learn from the retry as well, so a 413 still updates the ledger.
       groqRateLedger.record(apiKey, retryRes);
@@ -2308,15 +2331,27 @@ Always be concise, aesthetic, inspiring, and decisive. Avoid corporate boilerpla
         const msg = err?.message || String(err);
         console.warn(`[AI Failover] Key #${kIdx + 1} (${currentKeyObj.name || provider}) error: ${msg}`);
 
-        // If there are other enabled keys available in the pool, auto-rotate to the next key on ANY error
-        if (kIdx < allKeys.length - 1) {
-          const nextKeyObj = allKeys[kIdx + 1];
+        // Rotate to the next key of THIS provider on any error.
+        //
+        // This must measure `providerKeys`, not `allKeys`. Measuring the wider
+        // pool made the check true whenever another provider also had a key, so
+        // on the last eligible key it `continue`d, the loop exited, and the
+        // `throw` below was never reached — leaving the handler with no response
+        // to send and the client waiting on a request that would never settle.
+        if (kIdx < providerKeys.length - 1) {
+          const nextKeyObj = providerKeys[kIdx + 1];
           console.warn(`[AI Failover] Auto-switching to backup key #${kIdx + 2}: "${nextKeyObj.name || nextKeyObj.provider || 'Next Key'}"...`);
           continue;
         }
         throw err;
       }
     }
+
+    // Safety net: this handler must always produce a response. Dropping out of
+    // the key loop without one is precisely what left the client spinning
+    // forever with no error, so make that outcome impossible rather than merely
+    // unlikely.
+    throw lastError || new Error('[AI] No provider returned a response.');
   } catch (error: any) {
     console.error('[AI] chat error:', error?.message || error);
     res.status(400).json({ success: false, error: parseGenAIError(error) });
