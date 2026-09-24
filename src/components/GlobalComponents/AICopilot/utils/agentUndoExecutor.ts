@@ -269,6 +269,12 @@ export const executeUndoForToolResults = (
       }
 
       // ---------- Team ----------
+      // Legacy aliases (`add_team_member`, `create_project`, `add_project_event`)
+      // are still accepted here on purpose. Nothing current can emit them — no
+      // schema declares them and the handlers no longer branch on them — but this
+      // executor reads toolResults persisted in chat history, which can predate
+      // the current schema. Accepting a stale name costs one comparison; dropping
+      // it would silently no-op the Undo button on an old message.
       else if (tr.toolName === 'create_team_member' || tr.toolName === 'add_team_member') {
         if (data?.id) {
           useTeamStore.getState().deleteMember(data.id);

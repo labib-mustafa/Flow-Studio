@@ -17,7 +17,7 @@ export function handleCalendarTimeTools(
   const { activeProjId, activeProjTitle, addEvent, startTimer } = ctx;
 
   // 1. Schedule Event
-  if (call.name === 'schedule_event' || call.name === 'add_project_event') {
+  if (call.name === 'schedule_event') {
     const { title, date, time, category, duration, type, description } = call.args;
     if (title && date) {
       const validTypes = ['Call', 'Design', 'Team Sync', 'Other'];
@@ -94,7 +94,7 @@ export function handleCalendarTimeTools(
   }
 
   // 4. Start Timer
-  if (call.name === 'start_timer' || call.name === 'start_time_tracker') {
+  if (call.name === 'start_timer') {
     const taskTitle = call.args.title || call.args.taskTitle || 'Task Timer';
     const projTitle = call.args.projectTitle || activeProjTitle;
     startTimer(activeProjId, projTitle, taskTitle);

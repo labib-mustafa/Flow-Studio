@@ -186,7 +186,7 @@ Handlers destructure argument names the schema never declares, so the model's co
 Because no handler throws on a missing key (each falls through to a lookup, then returns a generic failure), this fails **silently** — the dispatcher's fallback at [agentToolDispatcher.ts:115](src/components/GlobalComponents/AICopilot/utils/agentToolDispatcher.ts:115) reports "Target item not found or tool unsupported."
 
 ### D3. Undeclared alias tools
-Handlers match names that appear in no schema: `add_project_event` and `start_time_tracker` ([calendarTimeHandlers.ts:20,97](src/components/GlobalComponents/AICopilot/utils/toolHandlers/calendarTimeHandlers.ts:20)), `add_team_member` ([opsHandlers.ts:14](src/components/GlobalComponents/AICopilot/utils/toolHandlers/opsHandlers.ts:14)). Dead branches that also mask D2 during local testing.
+Handlers match names that appear in no schema: `add_project_event` and `start_time_tracker` ([calendarTimeHandlers.ts:20,97](src/components/GlobalComponents/AICopilot/utils/toolHandlers/calendarTimeHandlers.ts:20)), `add_team_member` ([opsHandlers.ts:14](src/components/GlobalComponents/AICopilot/utils/toolHandlers/opsHandlers.ts:14)). Dead branches that also mask D2 during local testing. *(Resolved in §19.)*
 
 ### D4. `navigate_to` cannot express most destinations
 See section 4. No enum, 15 described vs 24 routable, includes an excluded page.
@@ -312,7 +312,7 @@ This section supersedes the "Not yet done" list in section 9.
 - New [registry.ts](src/components/GlobalComponents/AICopilot/utils/toolHandlers/registry.ts): `HANDLED_TOOL_NAMES` lists every name the handlers branch on, plus `isToolHandled()`.
 - [agentToolDispatcher.ts](src/components/GlobalComponents/AICopilot/utils/agentToolDispatcher.ts): the terminal fallback now separates two causes that used to share one message — an **unimplemented tool name** (logged as an error with instructions) versus a **handler that ran but could not resolve its target**. It also now reports thrown errors instead of swallowing them.
 
-Coverage result: all **47** declared tools have a handler branch. Three further names are handled but declared nowhere (`create_project`, `add_project_event`, `start_time_tracker`) — unreachable by the model, listed as deletion candidates.
+Coverage result: all **47** declared tools have a handler branch. Three further names are handled but declared nowhere (`create_project`, `add_project_event`, `start_time_tracker`) — unreachable by the model, listed as deletion candidates. *(Resolved in §19: all three retired, and the check now passes as an exact set match at 128.)*
 
 **Honest limitation:** this is a runtime signal, not a compile-time guarantee. `serverAiTools.ts` imports `@google/genai`, so it cannot be pulled into the client bundle just to type-check a union. A true build-time check needs the tool schema split into a dependency-free module that both sides import.
 
@@ -822,6 +822,63 @@ What this is *not*: runtime evidence. Nothing here was observed refusing a delet
 
 ---
 
+## 19. Cleanup pass — aliases retired, z-order deduplicated
+
+Two loose ends the audit left open, both now closed.
+
+### Aliases retired
+
+D3 recorded handler branches matching names that exist in no schema. They were dead in **both** directions — no code in the repo emitted them, and the model could not, because no schema declared them — so they could never run. Their real cost was masking: a handler that worked when called as `create_project` looked healthy even though the schema said `create_new_project`, which is exactly how the seven renamed-argument tools in D2 stayed hidden.
+
+Removed from the live path:
+
+| Alias | Removal |
+|---|---|
+| `create_project` | [projectTaskHandlers.ts:127](src/components/GlobalComponents/AICopilot/utils/toolHandlers/projectTaskHandlers.ts:127) |
+| `add_project_event` | [calendarTimeHandlers.ts:20](src/components/GlobalComponents/AICopilot/utils/toolHandlers/calendarTimeHandlers.ts:20) |
+| `start_time_tracker` | [calendarTimeHandlers.ts:97](src/components/GlobalComponents/AICopilot/utils/toolHandlers/calendarTimeHandlers.ts:97) |
+| `add_team_member` | Branch already removed in §13; this pass cleared its registry residue |
+
+The three alias entries also left [registry.ts](src/components/GlobalComponents/AICopilot/utils/toolHandlers/registry.ts), which had carried them only so the coverage check would not flag them as unknown.
+
+**Deliberate exception.** [agentUndoExecutor.ts](src/components/GlobalComponents/AICopilot/utils/agentUndoExecutor.ts) still accepts the aliases, and now says why in a comment. That file is not a dispatcher — it is a *reader of `toolResults` persisted in chat history*, which can predate the current schema. Accepting a stale name costs one comparison; rejecting it would silently no-op the Undo button on an old message. A consumer of recorded data being permissive about legacy identifiers is a different proposition from a dispatcher accepting calls nothing can make.
+
+### Registry and schema now match exactly
+
+The coverage claim is no longer "128 declared, 131 known". Diffing the two sets directly:
+
+```
+registry unique : 128
+schema unique   : 128
+declared but NOT handled : (none)
+handled but NOT declared : (none)
+```
+
+Every declared tool has a handler branch, and every handler branch is reachable by the model. That parity was only approximate before this pass, and it is the property the whole surface's trustworthiness rests on.
+
+### Moodboard z-order deduplicated
+
+Phase 1 added `bringToFront` / `bringForward` / `sendToBack` / `sendBackward` to `moodboardStore.ts` so the agent could reach them, which left the algorithm defined twice — once in the store, once inline in [MoodboardPage.tsx](src/components/Projects/ProjectDetails/MoodboardPage/MoodboardPage.tsx) (four functions, ~50 lines, two copies free to drift).
+
+The page's four functions are now one-line delegates to the store actions, so there is a single implementation and the context menu runs exactly the code the agent runs.
+
+The delegation was verified as behaviour-preserving rather than assumed:
+- The page's `saveToHistory` **is** the store's, destructured from `useMoodboardStore()` at [MoodboardPage.tsx:68](src/components/Projects/ProjectDetails/MoodboardPage/MoodboardPage.tsx:68) — not a second history stack.
+- `saveToHistory` writes `items` as well as pushing history ([moodboardStore.ts:155](src/stores/moodboardStore.ts:155)), so the store actions — which call it alone — reach the same end state as the page's `setItems(...)` + `saveToHistory(...)` pair.
+- The page destructures the whole store with no selector, so its `selectedIds` is the same value a store action reads from `get()`.
+
+One incidental improvement: the store actions return early when none of the target ids exist in `items`, where the inline versions pushed a no-op entry onto the history stack.
+
+### Verification
+
+- `npx tsc --noEmit`: **28 errors, unchanged from the baseline.** None of the four edited files (`registry.ts`, `calendarTimeHandlers.ts`, `projectTaskHandlers.ts`, `MoodboardPage.tsx`) appears in the output.
+- Registry ↔ schema set diff: exact match, 128 ↔ 128, empty in both directions.
+- Alias sweep across `src`: the three retired names appear **only** in `agentUndoExecutor.ts`, at the three deliberate reader sites.
+
+**Not verified:** the moodboard context menu was never clicked. The delegation argument rests on `saveToHistory` setting `items` and on the page reading the store's `selectedIds` — both read from source, neither observed running.
+
+---
+
 ## Final status
 
 | Phase | Status | Tools added |
@@ -832,7 +889,7 @@ What this is *not*: runtime evidence. Nothing here was observed refusing a delet
 | **Phase 3** — read / intelligence | **Complete** | 10 |
 | **Phase 4** — confirmation gate, fast-path closure, prompt rewrite | **Complete** | — |
 
-**Declared tool surface: 47 → 128.** Handler modules: 16. Undo branches: 55. Gated action sites: 24 (model path) + 3 (fast path).
+**Declared tool surface: 47 → 128.** Handler modules: 16. Undo branches: 55. Gated action sites: 24 (model path) + 3 (fast path). Registry ↔ schema parity: exact, 128 ↔ 128.
 
 ### Honest limitations
 
@@ -842,3 +899,4 @@ What this is *not*: runtime evidence. Nothing here was observed refusing a delet
 4. **No tests exist for any of this**, and no tests were added.
 5. **"List project files" remains unbuilt**, though D-4 finally unblocked it: the tree comes from `FSEntry` objects returned by `fetch('/api/fs/list')` or `electronAPI.fs.listFiles` — not a store, not a mock. The backend handler behind that endpoint is still unconfirmed, so the tool stays unbuilt rather than risk returning fabricated filenames.
 6. **No ReportsPage mirror** was built; `get_studio_overview` computes from stores and is named for that, not for the Reports page.
+7. **The cleanup in §19 is static too.** Alias removal is safe because a whole-`src` sweep found no emitter, and registry/schema parity is a real set diff — but the moodboard z-order delegation was never exercised in the UI, and it is the one change in this document that alters code a user interacts with by clicking.

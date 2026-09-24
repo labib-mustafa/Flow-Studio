@@ -124,7 +124,7 @@ export function handleProjectTaskTools(
   }
 
   // 5. Create Project
-  if (call.name === 'create_new_project' || call.name === 'create_project') {
+  if (call.name === 'create_new_project') {
     const { title, name, client, clientName, description, deadline, status } = call.args;
     const projTitle = title || name;
     if (projTitle) {

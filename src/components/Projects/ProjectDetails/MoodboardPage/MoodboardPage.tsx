@@ -880,59 +880,14 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
     setContextMenu({ x: e.clientX, y: e.clientY, isOpen: true, targetId });
   };
 
-  const bringToFront = () => {
-    if (selectedIds.length === 0) return;
-    const newItems = [...items];
-    const selectedItems = newItems.filter(item => selectedIds.includes(item.id));
-    const unselectedItems = newItems.filter(item => !selectedIds.includes(item.id));
-    setItems([...unselectedItems, ...selectedItems]);
-    saveToHistory([...unselectedItems, ...selectedItems]);
-  };
-
-  const bringForward = () => {
-    if (selectedIds.length === 0) return;
-    const newItems = [...items];
-    let madeChanges = false;
-    for (let i = newItems.length - 2; i >= 0; i--) {
-      if (selectedIds.includes(newItems[i].id) && !selectedIds.includes(newItems[i+1].id)) {
-        const temp = newItems[i];
-        newItems[i] = newItems[i+1];
-        newItems[i+1] = temp;
-        madeChanges = true;
-      }
-    }
-    if (madeChanges) {
-      setItems(newItems);
-      saveToHistory(newItems);
-    }
-  };
-
-  const sendToBack = () => {
-    if (selectedIds.length === 0) return;
-    const newItems = [...items];
-    const selectedItems = newItems.filter(item => selectedIds.includes(item.id));
-    const unselectedItems = newItems.filter(item => !selectedIds.includes(item.id));
-    setItems([...selectedItems, ...unselectedItems]);
-    saveToHistory([...selectedItems, ...unselectedItems]);
-  };
-
-  const sendBackward = () => {
-    if (selectedIds.length === 0) return;
-    const newItems = [...items];
-    let madeChanges = false;
-    for (let i = 1; i < newItems.length; i++) {
-        if (selectedIds.includes(newItems[i].id) && !selectedIds.includes(newItems[i-1].id)) {
-            const temp = newItems[i];
-            newItems[i] = newItems[i-1];
-            newItems[i-1] = temp;
-            madeChanges = true;
-        }
-    }
-    if (madeChanges) {
-        setItems(newItems);
-        saveToHistory(newItems);
-    }
-  };
+  // Z-order delegates to the store, so the algorithm has one definition and the
+  // agent reaches exactly the code this context menu does. These were inline
+  // copies of the same reordering, mirrored into the store for agent access;
+  // keeping both invited them to drift.
+  const bringToFront = () => { useMoodboardStore.getState().bringToFront(); };
+  const bringForward = () => { useMoodboardStore.getState().bringForward(); };
+  const sendToBack = () => { useMoodboardStore.getState().sendToBack(); };
+  const sendBackward = () => { useMoodboardStore.getState().sendBackward(); };
 
   // Calculate selection box dimensions
   const selectionLeft = Math.min(selectionStart.x, selectionCurrent.x);

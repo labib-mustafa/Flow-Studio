@@ -182,13 +182,6 @@ export const HANDLED_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
 
   // Navigation
   'navigate_to',
-
-  // Undeclared compatibility aliases still honoured by handlers. Not in any
-  // schema, so the model cannot emit them; listed so the coverage check does
-  // not flag them as unknown. Candidates for deletion.
-  'create_project',
-  'add_project_event',
-  'start_time_tracker',
 ]);
 
 export const isToolHandled = (name: string): boolean => HANDLED_TOOL_NAMES.has(name);
