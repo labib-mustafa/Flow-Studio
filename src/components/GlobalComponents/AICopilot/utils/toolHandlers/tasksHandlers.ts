@@ -168,8 +168,12 @@ export function handleTasksTools(call: AgentToolCall, ctx: { activeProjId: strin
 
     const updates: Record<string, any> = {};
     if (args.phase && ['todo', 'inprogress', 'review', 'done'].includes(args.phase)) updates.phase = args.phase;
-    if (args.priority !== undefined && ['urgent', 'high', 'medium', 'low', ''].includes(args.priority)) {
-      updates.priority = args.priority;
+    // 'none' is the schema's stand-in for clearing a priority — an empty string
+    // in the enum is rejected outright by Gemini. The store still receives '',
+    // so behaviour is unchanged on both providers.
+    if (args.priority !== undefined) {
+      if (args.priority === 'none') updates.priority = '';
+      else if (['urgent', 'high', 'medium', 'low'].includes(args.priority)) updates.priority = args.priority;
     }
     if (args.status && ['Complete', 'Incomplete'].includes(args.status)) updates.status = args.status;
 

@@ -869,7 +869,16 @@ export const groqTools = [
         properties: {
           tasks: { type: 'array', items: { type: 'string' }, description: 'Task titles or ids to update' },
           phase: { type: 'string', enum: ['todo', 'inprogress', 'review', 'done'] },
-          priority: { type: 'string', enum: ['urgent', 'high', 'medium', 'low', ''] },
+          // 'none' rather than '' for clearing: an empty string in an enum is
+          // legal JSON Schema and Groq accepts it, but Gemini rejects the entire
+          // request ("enum[4]: cannot be empty"). One canonical schema has to
+          // satisfy both providers, so the sentinel is named and the handler maps
+          // it back to ''.
+          priority: {
+            type: 'string',
+            enum: ['urgent', 'high', 'medium', 'low', 'none'],
+            description: "'none' clears the priority. Omit the field to leave it unchanged."
+          },
           status: { type: 'string', enum: ['Complete', 'Incomplete'] }
         },
         required: ['tasks']
@@ -2028,6 +2037,25 @@ const JSON_SCHEMA_TYPE_TO_GEMINI: Record<string, Type> = {
   object: Type.OBJECT,
 };
 
+/**
+ * Enums Gemini will refuse, each reported once.
+ *
+ * An empty string inside an enum is legal JSON Schema and Groq accepts it, so
+ * nothing complains here — the failure only appears once someone selects a
+ * Gemini model, as an opaque 400 naming a declaration index that cannot be
+ * traced back to a tool. Naming it in the log makes that diagnosable instead.
+ */
+const reportedBadEnums = new Set<string>();
+const warnInvalidGeminiEnum = (values: any[]): void => {
+  const signature = JSON.stringify(values);
+  if (reportedBadEnums.has(signature)) return;
+  reportedBadEnums.add(signature);
+  console.warn(
+    `[AI Schema] enum contains an empty string, which Gemini rejects: ${signature}. ` +
+    `Use a named sentinel instead - see bulk_update_tasks.priority.`
+  );
+};
+
 const toGeminiSchema = (schema: any): any => {
   if (!schema || typeof schema !== 'object') return schema;
 
@@ -2037,7 +2065,10 @@ const toGeminiSchema = (schema: any): any => {
     converted.type = JSON_SCHEMA_TYPE_TO_GEMINI[schema.type] ?? Type.STRING;
   }
   if (schema.description) converted.description = schema.description;
-  if (Array.isArray(schema.enum)) converted.enum = schema.enum;
+  if (Array.isArray(schema.enum)) {
+    if (schema.enum.some((v: any) => v === '')) warnInvalidGeminiEnum(schema.enum);
+    converted.enum = schema.enum;
+  }
   if (Array.isArray(schema.required)) converted.required = schema.required;
 
   if (schema.properties && typeof schema.properties === 'object') {
