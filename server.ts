@@ -1385,10 +1385,33 @@ app.get('/api/storage-info', (req, res) => {
 // AI DESIGN CO-PILOT ENDPOINTS (/api/ai/*)
 // ==========================================
 
+/**
+ * Which provider a key string belongs to.
+ *
+ * Google issues two key families now: legacy standard keys ("AIza...") and the
+ * newer auth keys AI Studio returns ("AQ.Ab..."). Matching only "AIzaSy" sent
+ * every AQ. key down the Groq branch, where it was refused and the user was told
+ * their Google key was an invalid Groq key.
+ */
 function detectProvider(apiKey: string): 'groq' | 'gemini' {
   const k = (apiKey || '').trim();
-  if (k.startsWith('AIzaSy')) return 'gemini';
+  if (k.startsWith('gsk_')) return 'groq';
+  if (k.startsWith('AIza') || k.startsWith('AQ.')) return 'gemini';
   return 'groq';
+}
+
+/**
+ * Provider for a key-pool entry, preferring a stored value only when it is
+ * actually usable.
+ *
+ * `k.provider || detectProvider(k.key)` was wrong because 'unknown' is truthy:
+ * it survived the check and then matched no provider at all, so a valid key was
+ * excluded from every pool.
+ */
+function keyProvider(entry: { key?: string; provider?: string }): 'groq' | 'gemini' {
+  const stored = entry?.provider;
+  if (stored === 'groq' || stored === 'gemini') return stored;
+  return detectProvider(entry?.key || '');
 }
 
 const groqModelsCache = new Map<string, { models: string[]; timestamp: number }>();
@@ -1732,7 +1755,7 @@ async function callGroqChat(apiKey: string, payload: any): Promise<any> {
   return await res.json();
 }
 
-function parseGenAIError(error: any): string {
+function parseGenAIError(error: any, provider?: 'groq' | 'gemini'): string {
   if (!error) return 'An unknown error occurred';
   const rawMsg = error.message || String(error);
 
@@ -1745,10 +1768,28 @@ function parseGenAIError(error: any): string {
     return 'This model is currently experiencing high demand. The system attempted to failover. Please retry in a few seconds or select Llama 3.1 8B Instant.';
   }
 
-  if (rawMsg.includes('invalid_api_key') || rawMsg.includes('Invalid API Key') || (rawMsg.includes('401') && rawMsg.includes('Groq'))) {
-    return 'Invalid Groq API key. Please check your key at console.groq.com/keys (starts with "gsk_").';
+  // Name whichever provider actually refused the key. This previously said
+  // "Groq" regardless, so a user whose Google key was rejected was sent to
+  // console.groq.com for advice about a key Google had turned down.
+  const authFailed =
+    rawMsg.includes('invalid_api_key') ||
+    rawMsg.includes('Invalid API Key') ||
+    rawMsg.includes('API_KEY_INVALID') ||
+    rawMsg.includes('API key not valid') ||
+    /(^|\D)401(\D|$)/.test(rawMsg);
+  if (authFailed) {
+    if (provider === 'gemini') {
+      return 'The Gemini key was rejected by Google. Check it at aistudio.google.com/apikey \u2014 Google keys start with "AIza" or "AQ."';
+    }
+    if (provider === 'groq') {
+      return 'Invalid Groq API key. Please check your key at console.groq.com/keys (starts with "gsk_").';
+    }
+    return 'The API key was rejected. Check the key you entered in Settings.';
   }
-  if (rawMsg.includes('rate_limit_exceeded') || (rawMsg.includes('429') && rawMsg.includes('Groq'))) {
+  if (rawMsg.includes('rate_limit_exceeded') || /(^|\D)429(\D|$)/.test(rawMsg)) {
+    if (provider === 'gemini') {
+      return 'Gemini rate limit reached. Please wait a few moments and try again.';
+    }
     return 'Groq rate limit reached (30 requests/min). Please wait a few moments and try again.';
   }
 
@@ -1845,6 +1886,10 @@ const groqRateLedger = createGroqRateLedger();
 
 // 0. POST /api/ai/chat - Conversational Personal Agent with Tools (Groq & Gemini)
 app.post('/api/ai/chat', async (req, res) => {
+  // Declared outside the try so the catch can name the provider that actually
+  // failed; it is assigned inside once the requested model is known.
+  let requestedProvider: 'groq' | 'gemini' = 'groq';
+
   try {
     // Build candidate key pool from enabledKeys or apiKey + fallbackKeys
     const rawKeyPool: Array<{ id?: string; name?: string; key: string; provider?: string }> = [];
@@ -1914,12 +1959,10 @@ app.post('/api/ai/chat', async (req, res) => {
     const requestedModel = typeof model === 'string' ? model : '';
     // With no model named, keep the previous behaviour and let the first key
     // decide, rather than defaulting every such request to Groq.
-    const requestedProvider: 'groq' | 'gemini' = requestedModel
+    requestedProvider = requestedModel
       ? providerForModel(requestedModel)
-      : ((allKeys[0].provider as 'groq' | 'gemini') || detectProvider(allKeys[0].key));
-    const providerKeys = allKeys.filter(
-      (k) => (k.provider || detectProvider(k.key)) === requestedProvider
-    );
+      : keyProvider(allKeys[0]);
+    const providerKeys = allKeys.filter((k) => keyProvider(k) === requestedProvider);
 
     if (providerKeys.length === 0) {
       const label = requestedProvider === 'gemini' ? 'Gemini' : 'Groq';
@@ -2354,7 +2397,7 @@ Always be concise, aesthetic, inspiring, and decisive. Avoid corporate boilerpla
     throw lastError || new Error('[AI] No provider returned a response.');
   } catch (error: any) {
     console.error('[AI] chat error:', error?.message || error);
-    res.status(400).json({ success: false, error: parseGenAIError(error) });
+    res.status(400).json({ success: false, error: parseGenAIError(error, requestedProvider) });
   }
 });
 
@@ -2404,7 +2447,14 @@ app.post('/api/ai/test-key', async (req, res) => {
     }
   } catch (error: any) {
     console.error('[AI] test-key failed:', error?.message || error);
-    return res.status(400).json({ success: false, error: parseGenAIError(error) });
+    // Recompute the provider here: the one used for the attempt is scoped to
+    // the try block. This is the endpoint the Settings "Test" button hits, so
+    // the message must name the provider the key was actually tried against.
+    const failingKey = req.body?.apiKey;
+    return res.status(400).json({
+      success: false,
+      error: parseGenAIError(error, detectProvider(typeof failingKey === 'string' ? failingKey : '')),
+    });
   }
 });
 

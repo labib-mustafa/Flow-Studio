@@ -61,10 +61,21 @@ export interface AgentToolCall {
   args: Record<string, any>;
 }
 
+/**
+ * Which provider a key belongs to, judged by its shape.
+ *
+ * Google now issues two key families: the legacy standard keys ("AIza...") and
+ * the newer auth keys AI Studio hands out, which begin "AQ.Ab...". Recognising
+ * only "AIzaSy" meant a fresh AI Studio key was classified "unknown" — and
+ * downstream anything not known to be Gemini was treated as Groq, so a perfectly
+ * valid Google key was posted to api.groq.com and came back telling the user
+ * their Google key was an invalid *Groq* key.
+ */
 export function getProviderFromKey(key?: string): 'groq' | 'gemini' | 'unknown' {
   const trimmed = (key || '').trim();
+  if (!trimmed) return 'unknown';
   if (trimmed.startsWith('gsk_')) return 'groq';
-  if (trimmed.startsWith('AIzaSy')) return 'gemini';
+  if (trimmed.startsWith('AIza') || trimmed.startsWith('AQ.')) return 'gemini';
   return 'unknown';
 }
 
@@ -79,12 +90,31 @@ export function getProviderForModel(model?: string): 'groq' | 'gemini' {
   return /^gemini/i.test((model || '').trim()) ? 'gemini' : 'groq';
 }
 
-export function cleanErrorMessage(raw: string): string {
+export function cleanErrorMessage(raw: string, provider?: 'groq' | 'gemini'): string {
   if (!raw) return 'An unknown error occurred';
-  if (raw.includes('invalid_api_key') || raw.includes('Invalid API Key') || (raw.includes('401') && raw.includes('Groq'))) {
-    return 'Invalid Groq API key. Please check your key at console.groq.com/keys (starts with "gsk_").';
+
+  // An auth failure has to name whichever provider actually rejected the key.
+  // This used to blame Groq unconditionally, so a Google key produced advice
+  // about console.groq.com even when Google was the one refusing it.
+  const authFailed =
+    raw.includes('invalid_api_key') ||
+    raw.includes('Invalid API Key') ||
+    raw.includes('API_KEY_INVALID') ||
+    /(^|\D)401(\D|$)/.test(raw);
+  if (authFailed) {
+    if (provider === 'gemini') {
+      return 'The Gemini key was rejected by Google. Check it at aistudio.google.com/apikey \u2014 Google keys start with "AIza" or "AQ."';
+    }
+    if (provider === 'groq') {
+      return 'Invalid Groq API key. Please check your key at console.groq.com/keys (starts with "gsk_").';
+    }
+    return 'The API key was rejected. Check the key you entered in Settings.';
   }
-  if (raw.includes('rate_limit_exceeded') || (raw.includes('429') && raw.includes('Groq'))) {
+
+  if (raw.includes('rate_limit_exceeded') || /(^|\D)429(\D|$)/.test(raw)) {
+    if (provider === 'gemini') {
+      return 'Gemini rate limit reached. Please wait a few seconds and try again.';
+    }
     return 'Groq rate limit reached (30 requests/min). Please wait a few seconds and try again.';
   }
   if (raw.includes('Groq limit')) {
@@ -181,7 +211,9 @@ export const geminiService = {
 
     const data = await res.json();
     if (!res.ok || !data.success) {
-      throw new Error(cleanErrorMessage(data.error || 'Chat failed'));
+      // The model decides the provider, so it also decides whose name belongs in
+      // the error. Naming the wrong one sends the user to the wrong console.
+      throw new Error(cleanErrorMessage(data.error || 'Chat failed', getProviderForModel(model)));
     }
 
     return {
