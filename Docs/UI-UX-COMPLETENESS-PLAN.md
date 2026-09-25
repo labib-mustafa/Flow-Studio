@@ -120,6 +120,20 @@ Consequence: 232 files each restyle buttons, inputs, popovers, and modals by han
 
 The reason consistency decays is structural: **the one quality gate that exists is already red**, so nothing fails when it decays. A red build that everyone has learned to ignore is functionally identical to no build at all — which is how 27 errors and four competing palettes accumulated in the same tree.
 
+**Resolved 2026-09-25 — and switching the gate on paid for itself immediately.** All 27 errors are fixed; `npm run lint` exits 0 and CI blocks on `tsc --noEmit` → `eslint` → `vite build` (`format:check` is advisory, since the tree has never been Prettier-formatted). ESLint then surfaced **seven defects that the type-checker could not see**:
+
+| Defect | User-visible impact |
+|---|---|
+| `main.cjs` `fs:createFile` called `resolveFsPath` / `invalidateCache` from module scope, but both are scoped inside the `FileSystemService` closure | `ReferenceError` on **every create-file action** in the desktop app |
+| `FileExplorer` returned a fast path *before* four hooks | "Rendered more hooks than during the previous render" whenever a folder held both images and non-images |
+| `ProjectHeader` called four hooks *after* `if (!currentProject) return null` | Same crash on first project load |
+| `App.tsx` `default:` rendered `<Projects>` without `onEditProject` | `onEditProject is not a function` on any unrecognised view |
+| `NotesPage` assigned the `{color,contrast,textShadow}` object to `style.caretColor` | Caret colour silently never applied |
+| `OverviewPage` compared `phase` to `'in_progress'` while the store uses `'inprogress'` | Dead branch — in-progress styling never rendered |
+| `teamStore` had `merged.invites = merged.invites` | No-op assignment hiding the real intent |
+
+**Four of these are hard crashes or silently dead UI on ordinary user actions**, and none were visible to `tsc` — nor had any ever been reported. That is the concrete argument for a lint gate, and the reason it should not be traded away later.
+
 ### 1.9 Data honesty
 
 `MOCK_DATA_REPORT.md` catalogs **25 hardcoded mock structures**, several of which are *fallback render paths that a real user will hit*: `NotificationDropdown.tsx` hardcodes 3 notifications; `Dashboard/Renewals.tsx` hardcodes Adobe/Figma/Slack as literal JSX; `TaskPage/FilesTab.tsx` hardcodes `brand_guide.pdf`; `billingStore.ts` seeds balance `12400` and cardholder `"Bruce Wayne"`; `teamStore.ts` seeds `John Doe`.
@@ -295,6 +309,8 @@ So: swap `focus:` → `focus-visible:` on the pointer-driven controls (one sed p
 
 ### Phase 3 — Make it enforceable (R4; ~2 days, prevents regression)
 
+> **Status 2026-09-25: 3.1, 3.2 and 3.3 are in place.** `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.editorconfig`, `.gitattributes` and the CI workflow now exist, and `npm run lint` is green. 3.4 (`AGENTS.md` split), 3.5 (visual regression) and 3.6 (repo hygiene) remain. One caveat: the CI workflow file is committed locally but **not yet on the remote** — GitHub rejects pushes containing workflow files unless the token carries the `workflow` scope. Add the scope, then push it.
+
 **3.1** Add ESLint (`eslint-config-next`-style flat config is not applicable — use `typescript-eslint` + `eslint-plugin-react-hooks`) with two custom guardrails:
 - `no-restricted-syntax` / a small custom rule flagging hex literals (`#[0-9a-fA-F]{3,8}`) in `className` outside `src/index.css` and designated status maps.
 - `no-restricted-imports` banning direct imports that bypass `src/components/ui` for the primitives you have built.
@@ -338,8 +354,10 @@ Only once the above is in place:
 | Empty-state implementations | 4 | 1 |
 | Fabricated fallbacks reachable by a real user | 5+ | 0 |
 | Test files | 0 | >0 (smoke + visual) |
-| Lint/format/CI configs | 0 | 3 |
-| Type errors from `npm run lint` | **27** in 16 files | 0 |
+| Lint/format/CI configs | 0 → **4 added** (`eslint.config.js`, `.prettierrc`, `.editorconfig`, `.gitattributes`) + CI workflow | 4 |
+| Type errors from `npm run lint` | 27 in 16 files → **0** | 0 |
+| ESLint errors | 186 → **0** (401 warnings retained) | 0 |
+| Real defects found by the new gate | **7** (4 crashes / dead UI) | 0 |
 | `aria-` occurrences / files containing them | 29 / 6 of 232 | every popover, modal, icon button |
 | `focus-visible:` usages (vs `focus:` 622) | 0 | pointer controls migrated |
 | Docs statements contradicting code | 2 (primary, dark mode) — **both resolved 2026-09-25** | 0 |
