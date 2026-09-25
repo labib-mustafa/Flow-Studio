@@ -108,7 +108,7 @@ export const AddBookmarkModal: React.FC<AddBookmarkModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
               <Globe size={18} />
             </div>
             <h3 className="font-bold text-slate-800 text-base">Add Web Link Bookmark</h3>
@@ -139,7 +139,7 @@ export const AddBookmarkModal: React.FC<AddBookmarkModalProps> = ({
                     setUrl(e.target.value);
                     parseUrl(e.target.value);
                   }}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </div>
               <button
@@ -204,7 +204,7 @@ export const AddBookmarkModal: React.FC<AddBookmarkModalProps> = ({
               placeholder="https://images.unsplash.com/photo-..."
               value={thumbnail}
               onChange={(e) => setThumbnail(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-primary"
+              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-accent"
             />
           </div>
 

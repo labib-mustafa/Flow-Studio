@@ -271,12 +271,12 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
           <div className="w-full md:w-[30%] p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-slate-100 flex flex-col gap-6 bg-white">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">text_fields</span>
+                <span className="material-symbols-outlined text-accent">text_fields</span>
                 <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Typography</h3>
               </div>
               <button 
                 onClick={() => addToQueue({ type: 'typography', font: fontFamily, weight: fontWeight, italic: isItalic })}
-                className="text-primary hover:bg-blue-50 p-1 rounded transition-colors" 
+                className="text-accent hover:bg-blue-50 p-1 rounded transition-colors" 
                 title="Add to Queue"
               >
                 <span className="material-symbols-outlined text-lg">add_circle</span>
@@ -290,7 +290,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
                   <select 
                     value={fontFamily}
                     onChange={(e) => setFontFamily(e.target.value)}
-                    className="w-full pl-3 pr-8 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-primary focus:border-primary appearance-none font-medium outline-none"
+                    className="w-full pl-3 pr-8 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-accent focus:border-accent appearance-none font-medium outline-none"
                   >
                     <option>Inter</option>
                     <option>Playfair Display</option>
@@ -310,7 +310,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
                       onClick={() => w === 'Italic' ? setIsItalic(!isItalic) : setFontWeight(w)}
                       className={`flex-1 py-2 px-2 border rounded-lg text-xs transition-all ${
                         (w === 'Italic' && isItalic) || (w !== 'Italic' && fontWeight === w)
-                          ? 'border-primary bg-blue-50 text-primary font-bold shadow-sm'
+                          ? 'border-accent bg-blue-50 text-accent font-bold shadow-sm'
                           : 'border-slate-200 text-slate-600 font-medium hover:bg-slate-50 hover:border-slate-300'
                       } ${w === 'Italic' ? 'italic font-black' : ''}`}
                     >
@@ -339,7 +339,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
             <div className="flex-1 p-6 overflow-y-auto">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">palette</span>
+                  <span className="material-symbols-outlined text-accent">palette</span>
                   <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Color Palette</h3>
                 </div>
               </div>
@@ -348,7 +348,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-xs font-semibold text-slate-700">Saved Colors</label>
-                    <span className="text-[10px] text-primary font-bold cursor-pointer hover:underline">View All</span>
+                    <span className="text-[10px] text-accent font-bold cursor-pointer hover:underline">View All</span>
                   </div>
                   
                   <div className="mb-4">
@@ -495,7 +495,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
                   <div className="flex items-center">
                     <span className="bg-slate-50 border border-r-0 border-slate-200 text-slate-400 px-2.5 py-2 rounded-l-lg font-mono text-xs">#</span>
                     <input 
-                      className="w-full border-l-0 border-slate-200 bg-slate-50 rounded-r-lg py-2 px-2 text-slate-700 font-mono focus:ring-primary focus:border-primary text-xs uppercase font-bold outline-none" 
+                      className="w-full border-l-0 border-slate-200 bg-slate-50 rounded-r-lg py-2 px-2 text-slate-700 font-mono focus:ring-accent focus:border-accent text-xs uppercase font-bold outline-none" 
                       type="text" 
                       value={hex.replace('#', '')}
                       onChange={(e) => {
@@ -523,7 +523,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
                   <div key={stat.label} className="bg-slate-50 p-1.5 rounded-lg border border-slate-100 text-center relative">
                     <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1">{stat.label}</span>
                     <input 
-                      className="w-full bg-transparent text-center font-mono text-xs font-bold text-slate-700 outline-none focus:ring-1 focus:ring-primary rounded"
+                      className="w-full bg-transparent text-center font-mono text-xs font-bold text-slate-700 outline-none focus:ring-1 focus:ring-accent rounded"
                       type="number"
                       value={stat.value}
                       onChange={(e) => {
@@ -547,7 +547,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
                   <div key={stat.label} className="bg-slate-50 p-1.5 rounded-lg border border-slate-100 text-center">
                     <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1">{stat.label}</span>
                     <input 
-                      className="w-full bg-transparent text-center font-mono text-xs font-bold text-slate-700 outline-none focus:ring-1 focus:ring-primary rounded"
+                      className="w-full bg-transparent text-center font-mono text-xs font-bold text-slate-700 outline-none focus:ring-1 focus:ring-accent rounded"
                       type="number"
                       value={Number.isNaN(stat.value) ? 0 : stat.value}
                       onChange={(e) => {
@@ -578,7 +578,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
                     <div key={stat.label} className="bg-slate-50 p-1.5 rounded-lg border border-slate-100 text-center relative">
                       <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1">{stat.label}</span>
                       <input 
-                        className="w-full bg-transparent text-center font-mono text-xs font-bold text-slate-700 outline-none focus:ring-1 focus:ring-primary rounded"
+                        className="w-full bg-transparent text-center font-mono text-xs font-bold text-slate-700 outline-none focus:ring-1 focus:ring-accent rounded"
                         type="number"
                         value={stat.value}
                         onChange={(e) => {
@@ -600,7 +600,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
 
               <button 
                 onClick={() => addToQueue({ type: 'color', value: hex })}
-                className="w-full py-2.5 border border-primary text-primary bg-blue-50/50 rounded-xl text-xs font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 mt-auto"
+                className="w-full py-2.5 border border-accent text-accent bg-blue-50/50 rounded-xl text-xs font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 mt-auto"
               >
                 <span className="material-symbols-outlined text-base">queue</span>
                 Queue Custom Color
@@ -666,7 +666,7 @@ export const AddStylesModal: React.FC<AddStylesModalProps> = ({ isOpen, onClose,
               disabled={queue.length === 0}
               className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 ${
                 queue.length > 0 
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20 hover:bg-blue-600 hover:shadow-blue-600/30' 
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-hover hover:shadow-primary/30' 
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
             >

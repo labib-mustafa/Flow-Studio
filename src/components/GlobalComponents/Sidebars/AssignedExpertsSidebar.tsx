@@ -181,13 +181,13 @@ export const AssignedExpertsSidebar: React.FC<AssignedExpertsSidebarProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-20 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm outline-none"
+                  className="w-full pl-10 pr-20 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all shadow-sm outline-none"
                   placeholder="Find experts by name or email to add"
                 />
                 {searchQuery.includes('@') && (
                   <button
                     type="submit"
-                    className="absolute right-2 top-11/2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-bold transition-all"
+                    className="absolute right-2 top-11/2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-xs font-bold transition-all"
                   >
                     Invite
                   </button>
@@ -222,14 +222,14 @@ export const AssignedExpertsSidebar: React.FC<AssignedExpertsSidebarProps> = ({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-slate-700 truncate group-hover:text-primary transition-colors">
+                          <h4 className="text-sm font-semibold text-slate-700 truncate group-hover:text-accent transition-colors">
                             {expert.name}
                           </h4>
                           {expert.role && (
                             <p className="text-xs text-slate-400 truncate">{expert.role}</p>
                           )}
                         </div>
-                        <button className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-primary hover:border-primary transition-all shadow-sm">
+                        <button className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-accent hover:border-accent transition-all shadow-sm">
                           <span className="material-symbols-outlined text-base">add</span>
                         </button>
                       </div>
@@ -239,7 +239,7 @@ export const AssignedExpertsSidebar: React.FC<AssignedExpertsSidebarProps> = ({
                   {filteredAvailable.length > 2 && (
                     <button
                       onClick={() => setIsViewMoreOpen(prev => !prev)}
-                      className="w-full mt-2 py-2 flex items-center justify-center gap-1 text-xs font-semibold text-slate-500 hover:text-primary transition-colors"
+                      className="w-full mt-2 py-2 flex items-center justify-center gap-1 text-xs font-semibold text-slate-500 hover:text-accent transition-colors"
                     >
                       <span>{isViewMoreOpen ? 'View less' : 'View more'}</span>
                       <span className="material-symbols-outlined text-base transition-transform duration-200" style={{ transform: isViewMoreOpen ? 'rotate(180deg)' : 'none' }}>
@@ -267,7 +267,7 @@ export const AssignedExpertsSidebar: React.FC<AssignedExpertsSidebarProps> = ({
                         className="flex items-center gap-3 py-3 group px-2 hover:bg-slate-50 rounded-xl transition-colors"
                       >
                         {expert.invited ? (
-                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 text-primary">
+                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 text-accent">
                             <span className="material-symbols-outlined text-xl">mail</span>
                           </div>
                         ) : (
@@ -288,7 +288,7 @@ export const AssignedExpertsSidebar: React.FC<AssignedExpertsSidebarProps> = ({
                                 onClick={() => {
                                   toast.success('Invitation Resent', `Successfully resent invitation to ${expert.email}`);
                                 }}
-                                className="text-[10px] font-bold text-primary hover:text-blue-700 hover:underline cursor-pointer"
+                                className="text-[10px] font-bold text-accent hover:text-blue-700 hover:underline cursor-pointer"
                               >
                                 Resend invite?
                               </button>

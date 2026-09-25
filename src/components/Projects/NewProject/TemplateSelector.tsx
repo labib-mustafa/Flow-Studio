@@ -30,8 +30,8 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
       isSelected 
         ? 'border-blue-500 shadow-md ring-2 ring-blue-500/20' 
         : isStartFromScratch 
-          ? 'border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary' 
-          : 'border-border-light bg-white hover:border-primary/30 hover:shadow-soft-hover'
+          ? 'border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent' 
+          : 'border-border-light bg-white hover:border-accent/30 hover:shadow-soft-hover'
     }`}>
       {isBuiltIn && (
         <span className="absolute top-3 right-3 z-10 text-[9px] font-bold bg-white/90 backdrop-blur-sm text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide shadow-sm border border-slate-100">
@@ -54,7 +54,7 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
         {/* Icon */}
         <div className={`relative z-10 transition-transform duration-300 group-hover:scale-110 ${
           isStartFromScratch 
-            ? 'size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary' 
+            ? 'size-16 rounded-full bg-accent/10 flex items-center justify-center text-accent' 
             : iconColorClass
         }`}>
           <span className="material-symbols-outlined text-[40px] drop-shadow-sm">{icon}</span>

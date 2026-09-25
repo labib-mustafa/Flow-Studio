@@ -140,7 +140,7 @@ export const DevSettingsWorkspace: React.FC = () => {
                 placeholder="Search components..." 
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-hairline rounded-md text-sm outline-none focus:border-primary transition-colors bg-canvas text-ink"
+                className="w-full pl-9 pr-3 py-2 border border-hairline rounded-md text-sm outline-none focus:border-accent transition-colors bg-canvas text-ink"
               />
             </div>
           </div>

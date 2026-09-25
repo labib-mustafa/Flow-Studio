@@ -9,14 +9,17 @@
 }
 
 @theme {
-  --color-primary: #1978e5;
-  --color-primary-hover: #1565c0;
+  /* Monochrome main theme — `primary` owns CTAs and active states (decision 2026-09-25). */
+  --color-primary: #111111;
+  --color-primary-hover: #242424;
+
+  /* Blue is the accent — links, icon tints, rings, selection, focus. Never the primary CTA. */
+  --color-accent: #1978e5;
+  --color-accent-hover: #1565c0;
+
   --color-background-light: #f6f7f8;
-  --color-background-dark: #111821;
   --color-surface-light: #ffffff;
-  --color-surface-dark: #1e293b;
   --color-border-light: #e2e8f0;
-  --color-border-dark: #334155;
 
   --font-display: "Inter", sans-serif;
   --font-sans: "Inter", sans-serif;

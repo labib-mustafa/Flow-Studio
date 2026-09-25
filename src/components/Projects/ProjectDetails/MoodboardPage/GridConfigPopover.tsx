@@ -33,7 +33,7 @@ export const GridConfigPopover: React.FC<GridConfigPopoverProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
             <Grid size={16} />
           </div>
           <h4 className="font-bold text-slate-800 text-sm">Grid Settings</h4>
@@ -81,7 +81,7 @@ export const GridConfigPopover: React.FC<GridConfigPopoverProps> = ({
           step={5}
           value={gridConfig.size}
           onChange={(e) => onChangeGridConfig({ size: parseInt(e.target.value) })}
-          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary"
+          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-accent"
         />
       </div>
 
@@ -98,7 +98,7 @@ export const GridConfigPopover: React.FC<GridConfigPopoverProps> = ({
           step={0.05}
           value={gridConfig.opacity}
           onChange={(e) => onChangeGridConfig({ opacity: parseFloat(e.target.value) })}
-          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary"
+          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-accent"
         />
       </div>
 

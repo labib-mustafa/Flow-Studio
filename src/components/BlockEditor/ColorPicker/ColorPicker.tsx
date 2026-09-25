@@ -118,7 +118,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ onSelect, onClose, act
             className={`w-6 h-6 rounded-full border hover:scale-110 transition-transform relative shadow-sm ${
               activeColor && activeColor !== 'mixed' && (activeColor.toLowerCase() === color.toLowerCase() || 
               (activeColor.startsWith('rgb') && normalizeRgbToHex(activeColor) === color.toLowerCase()))
-                ? 'border-primary ring-2 ring-primary/20 scale-110 z-10' 
+                ? 'border-accent ring-2 ring-accent/20 scale-110 z-10' 
                 : (getLuminance(color) > 0.85 ? 'border-slate-300' : 'border-slate-200')
             }`}
             style={{ backgroundColor: color }}
@@ -415,7 +415,7 @@ const AdvancedPicker: React.FC<AdvancedPickerProps> = ({ initialColor, onCancel,
             type="text" 
             value={hex}
             onChange={(e) => handleHexChange(e.target.value)}
-            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs font-mono focus:border-primary outline-none transition-all"
+            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs font-mono focus:border-accent outline-none transition-all"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -424,7 +424,7 @@ const AdvancedPicker: React.FC<AdvancedPickerProps> = ({ initialColor, onCancel,
             type="text" 
             value={rgb.r}
             onChange={(e) => handleRgbChange('r', e.target.value)}
-            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs text-center focus:border-primary outline-none transition-all"
+            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs text-center focus:border-accent outline-none transition-all"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -433,7 +433,7 @@ const AdvancedPicker: React.FC<AdvancedPickerProps> = ({ initialColor, onCancel,
             type="text" 
             value={rgb.g}
             onChange={(e) => handleRgbChange('g', e.target.value)}
-            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs text-center focus:border-primary outline-none transition-all"
+            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs text-center focus:border-accent outline-none transition-all"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -442,7 +442,7 @@ const AdvancedPicker: React.FC<AdvancedPickerProps> = ({ initialColor, onCancel,
             type="text" 
             value={rgb.b}
             onChange={(e) => handleRgbChange('b', e.target.value)}
-            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs text-center focus:border-primary outline-none transition-all"
+            className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs text-center focus:border-accent outline-none transition-all"
           />
         </div>
       </div>

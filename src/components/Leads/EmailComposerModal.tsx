@@ -300,7 +300,7 @@ export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({ onClose,
                   value={batchName}
                   onChange={e => setBatchName(e.target.value)}
                   placeholder="e.g. Cold Outreach - Q3 Enterprise Leads"
-                  className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-primary/20 bg-white"
+                  className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-accent/20 bg-white"
                 />
               </div>
 
@@ -312,7 +312,7 @@ export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({ onClose,
                     onClick={() => {
                       setSteps([...steps, { delayDays: 3, subjectTemplate: 'Re: {{subject}}', bodyTemplate: 'Hi {{name}},\n\nJust checking in on this. Hope you are having a great week!\n\nBest,\nFlow Team' }]);
                     }}
-                    className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+                    className="text-[10px] font-bold text-accent hover:underline flex items-center gap-1"
                   >
                     + Add Step
                   </button>
@@ -468,7 +468,7 @@ export const EmailComposerModal: React.FC<EmailComposerModalProps> = ({ onClose,
                           setSelectedTemplateId(t.id);
                           setShowTemplatesDropdown(false);
                         }}
-                        className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 ${selectedTemplateId === t.id ? 'text-primary bg-primary/5 hover:bg-primary/10' : 'text-slate-700 hover:bg-slate-50'
+                        className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 ${selectedTemplateId === t.id ? 'text-accent bg-accent/5 hover:bg-accent/10' : 'text-slate-700 hover:bg-slate-50'
                           }`}
                       >
                         <span className="material-symbols-outlined text-[14px] text-slate-400">description</span>

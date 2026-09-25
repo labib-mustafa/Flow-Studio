@@ -20,9 +20,9 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
           >
             <span className="material-symbols-outlined text-[18px]">checklist</span>
             Tasks
-            <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full ml-1">12</span>
+            <span className="bg-accent/10 text-accent text-[10px] px-1.5 py-0.5 rounded-full ml-1">12</span>
           </button>
-          <button className="pb-4 text-sm font-bold text-primary border-b-2 border-primary relative flex items-center gap-2">
+          <button className="pb-4 text-sm font-bold text-accent border-b-2 border-accent relative flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">description</span>
             Files
           </button>
@@ -49,7 +49,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
             <input 
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none transition-all" 
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-accent focus:border-accent outline-none transition-all" 
               placeholder="Search project files..." 
               type="text"
               value={searchQuery}
@@ -69,21 +69,21 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
               <div className="aspect-video bg-slate-100 rounded-lg mb-3 flex items-center justify-center">
                 <span className="material-symbols-outlined text-4xl text-rose-500">picture_as_pdf</span>
               </div>
-              <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-primary transition-colors">brand_guide.pdf</h4>
+              <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-accent transition-colors">brand_guide.pdf</h4>
               <p className="text-[10px] text-slate-500 mt-1">Updated 2h ago • 4.2 MB</p>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer group">
               <div className="aspect-video bg-slate-100 rounded-lg mb-3 flex items-center justify-center">
                 <span className="material-symbols-outlined text-4xl text-amber-500">folder_zip</span>
               </div>
-              <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-primary transition-colors">logo_pack.zip</h4>
+              <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-accent transition-colors">logo_pack.zip</h4>
               <p className="text-[10px] text-slate-500 mt-1">Updated Yesterday • 12.8 MB</p>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer group">
               <div className="aspect-video bg-slate-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
                 <span className="material-symbols-outlined text-4xl text-emerald-500">image</span>
               </div>
-              <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-primary transition-colors">hero_illustration.png</h4>
+              <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-accent transition-colors">hero_illustration.png</h4>
               <p className="text-[10px] text-slate-500 mt-1">Updated Oct 18 • 2.1 MB</p>
             </div>
           </div>
@@ -95,7 +95,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
               <span className="material-symbols-outlined text-emerald-500">rocket_launch</span>
               Ready to Ship
             </h3>
-            <a className="text-xs font-bold text-primary hover:underline" href="#">View All Finals →</a>
+            <a className="text-xs font-bold text-accent hover:underline" href="#">View All Finals →</a>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <table className="w-full text-left">
@@ -116,7 +116,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                         <span className="material-symbols-outlined text-[20px]">web_asset</span>
                       </div>
                       <div>
-                        <span className="block text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">Homepage_v4_Final.fig</span>
+                        <span className="block text-sm font-bold text-slate-900 group-hover:text-accent transition-colors">Homepage_v4_Final.fig</span>
                         <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 uppercase tracking-wide">Approved</span>
                       </div>
                     </div>
@@ -126,7 +126,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                   <td className="px-6 py-4 text-xs text-slate-500">Oct 20, 2024</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Open in location">
+                      <button className="p-1.5 text-slate-400 hover:text-accent transition-colors" title="Open in location">
                         <span className="material-symbols-outlined text-[18px]">folder_open</span>
                       </button>
                       <button className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors">
@@ -142,7 +142,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                         <span className="material-symbols-outlined text-[20px]">movie</span>
                       </div>
                       <div>
-                        <span className="block text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">Promo_Video_Export.mp4</span>
+                        <span className="block text-sm font-bold text-slate-900 group-hover:text-accent transition-colors">Promo_Video_Export.mp4</span>
                         <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 uppercase tracking-wide">Approved</span>
                       </div>
                     </div>
@@ -152,7 +152,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                   <td className="px-6 py-4 text-xs text-slate-500">Oct 19, 2024</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Open in location">
+                      <button className="p-1.5 text-slate-400 hover:text-accent transition-colors" title="Open in location">
                         <span className="material-symbols-outlined text-[18px]">folder_open</span>
                       </button>
                       <button className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors">
@@ -168,7 +168,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                         <span className="material-symbols-outlined text-[20px]">developer_board</span>
                       </div>
                       <div>
-                        <span className="block text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">Dev_Hand-off_Spec.pdf</span>
+                        <span className="block text-sm font-bold text-slate-900 group-hover:text-accent transition-colors">Dev_Hand-off_Spec.pdf</span>
                         <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 uppercase tracking-wide">Approved</span>
                       </div>
                     </div>
@@ -178,7 +178,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                   <td className="px-6 py-4 text-xs text-slate-500">Oct 18, 2024</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Open in location">
+                      <button className="p-1.5 text-slate-400 hover:text-accent transition-colors" title="Open in location">
                         <span className="material-symbols-outlined text-[18px]">folder_open</span>
                       </button>
                       <button className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors">
@@ -209,8 +209,8 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                 <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-slate-400 group-hover:text-primary">description</span>
-                      <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">Typography_Scales.fig</span>
+                      <span className="material-symbols-outlined text-slate-400 group-hover:text-accent">description</span>
+                      <span className="text-sm font-bold text-slate-700 group-hover:text-accent transition-colors">Typography_Scales.fig</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-xs text-slate-500">Figma File</td>
@@ -218,7 +218,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                   <td className="px-6 py-4 text-xs text-slate-500">Oct 15, 2024</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Open in location">
+                      <button className="p-1.5 text-slate-400 hover:text-accent transition-colors" title="Open in location">
                         <span className="material-symbols-outlined text-[18px]">folder_open</span>
                       </button>
                       <button className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors">
@@ -230,8 +230,8 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                 <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-slate-400 group-hover:text-primary">article</span>
-                      <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">Feedback_Summary.docx</span>
+                      <span className="material-symbols-outlined text-slate-400 group-hover:text-accent">article</span>
+                      <span className="text-sm font-bold text-slate-700 group-hover:text-accent transition-colors">Feedback_Summary.docx</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-xs text-slate-500">Document</td>
@@ -239,7 +239,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ onTabChange }) => {
                   <td className="px-6 py-4 text-xs text-slate-500">Oct 12, 2024</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Open in location">
+                      <button className="p-1.5 text-slate-400 hover:text-accent transition-colors" title="Open in location">
                         <span className="material-symbols-outlined text-[18px]">folder_open</span>
                       </button>
                       <button className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors">

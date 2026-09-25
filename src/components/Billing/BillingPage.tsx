@@ -225,7 +225,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                     {/* Front Side */}
                     <div className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-[#1c1c1e] via-[#09090b] to-[#171719] p-6 text-white [backface-visibility:hidden] border border-white/10 overflow-hidden flex flex-col justify-between shadow-xl">
                       {/* Glowing background shapes */}
-                      <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-primary/20 blur-3xl pointer-events-none"></div>
+                      <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-accent/20 blur-3xl pointer-events-none"></div>
                       <div className="absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
 
                       <div className="flex items-start justify-between relative z-10">
@@ -269,7 +269,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                     <div className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-[#1c1c1e] via-[#09090b] to-[#121214] text-white [backface-visibility:hidden] [transform:rotateY(180deg)] border border-white/10 overflow-hidden flex flex-col items-center justify-center p-6 shadow-xl">
                       {/* Glowing ambient colors */}
                       <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
-                      <div className="absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
+                      <div className="absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-accent/10 blur-3xl pointer-events-none"></div>
 
                       <div className="relative z-10 text-center">
                         <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">Total Payments Cleared</p>
@@ -286,7 +286,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
 
             {/* Next Scheduled Payment Card (Right Bento - 7 cols) */}
             <div className="lg:col-span-7 flex flex-col justify-between rounded-3xl bg-white p-7 shadow-sm border border-slate-200/80 relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 size-48 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="absolute -top-12 -right-12 size-48 bg-accent/5 rounded-full blur-3xl pointer-events-none"></div>
 
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -321,7 +321,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
+                      className="h-full rounded-full bg-gradient-to-r from-accent to-emerald-500 transition-all duration-500"
                       style={{ width: `${Math.min(100, Math.max(8, (totalPaymentsCleared / balance) * 100))}%` }}
                     ></div>
                   </div>
@@ -351,7 +351,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
           <div className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div className="flex items-center gap-3">
-                <div className="size-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                <div className="size-11 rounded-2xl bg-accent/10 text-accent flex items-center justify-center shadow-inner">
                   <span className="material-symbols-outlined text-[24px]">receipt_long</span>
                 </div>
                 <div>
@@ -505,7 +505,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                                       e.stopPropagation();
                                       showToast(`Reminder email sent to ${item.recipientName}.`);
                                     }}
-                                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-xs font-bold text-primary transition-colors"
+                                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 text-xs font-bold text-accent transition-colors"
                                   >
                                     <span className="material-symbols-outlined text-[16px]">mail</span> Resend Receipt
                                   </button>
@@ -520,7 +520,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                                       item.lineItems.map((li, idx) => (
                                         <div key={li.id || idx} className="flex items-start justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                                           <div className="flex items-start gap-2.5">
-                                            <span className="material-symbols-outlined text-[16px] text-primary mt-0.5">check_circle</span>
+                                            <span className="material-symbols-outlined text-[16px] text-accent mt-0.5">check_circle</span>
                                             <div>
                                               <p className="text-xs font-bold text-slate-800">{li.description}</p>
                                               {li.subDescription && (
@@ -607,7 +607,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
         <div className="hidden xl:flex w-88 border-l border-slate-200/80 bg-white p-6 flex-col justify-between overflow-y-auto custom-scrollbar shrink-0 shadow-sm">
           <div className="space-y-6">
             {/* Primary Action Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-[#2563eb] to-[#1e40af] p-6 text-white shadow-xl shadow-primary/25">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-accent via-[#2563eb] to-[#1e40af] p-6 text-white shadow-xl shadow-accent/25">
               <div className="absolute right-0 top-0 size-36 -mr-10 -mt-10 rounded-full bg-white/15 blur-2xl pointer-events-none"></div>
 
               <div className="flex items-center justify-between mb-3">
@@ -624,7 +624,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
 
               <button
                 onClick={onNewInvoice}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-extrabold text-primary shadow-md hover:bg-slate-50 transition-all active:scale-95 transform hover:-translate-y-0.5"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-extrabold text-accent shadow-md hover:bg-slate-50 transition-all active:scale-95 transform hover:-translate-y-0.5"
               >
                 <span className="material-symbols-outlined text-[18px]">post_add</span>
                 Launch Invoice Builder
@@ -639,7 +639,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Verified Tax Address</h4>
                 <button
                   onClick={() => setIsEditAddressOpen(true)}
-                  className="text-primary hover:text-primary/80 transition-colors flex items-center"
+                  className="text-accent hover:text-accent/80 transition-colors flex items-center"
                 >
                   <span className="material-symbols-outlined text-[18px]">edit</span>
                 </button>
@@ -666,7 +666,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                   className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 transition-colors group"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-slate-400 group-hover:text-primary text-[20px]">description</span>
+                    <span className="material-symbols-outlined text-slate-400 group-hover:text-accent text-[20px]">description</span>
                     <span className="text-xs font-bold text-slate-700">W-9 Form (2024)</span>
                   </div>
                   <span className="material-symbols-outlined text-slate-300 group-hover:text-slate-600 text-[18px]">download</span>
@@ -677,7 +677,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                   className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 transition-colors group"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-slate-400 group-hover:text-primary text-[20px]">policy</span>
+                    <span className="material-symbols-outlined text-slate-400 group-hover:text-accent text-[20px]">policy</span>
                     <span className="text-xs font-bold text-slate-700">Tax Exemption Certificate</span>
                   </div>
                   <span className="material-symbols-outlined text-slate-300 group-hover:text-slate-600 text-[18px]">download</span>
@@ -708,7 +708,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                   required
                   value={addressNameInput}
                   onChange={(e) => setAddressNameInput(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
               <div>
@@ -718,7 +718,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                   required
                   value={addressLine1Input}
                   onChange={(e) => setAddressLine1Input(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
               <div>
@@ -728,7 +728,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
                   required
                   value={addressLine2Input}
                   onChange={(e) => setAddressLine2Input(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">

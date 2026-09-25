@@ -6,7 +6,7 @@ import { defineConfig, loadEnv } from 'vite';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
 
 // Read backendPort from flowstudio.config.json
-let backendPort = 3009;
+let backendPort = 3010;
 try {
   const configPath = path.resolve(__dirname, 'flowstudio.config.json');
   if (fs.existsSync(configPath)) {
@@ -16,7 +16,7 @@ try {
     }
   }
 } catch (e) {
-  console.warn('[Vite Config] Failed to read backendPort from config, falling back to 3009');
+    console.warn('[Vite Config] Failed to read backendPort from config, falling back to 3010');
 }
 
 export default defineConfig(({ mode }) => {

@@ -36,9 +36,7 @@ This document defines the visual design system, UI components, and user experien
     - [10.1 Transitions](#101-transitions)
     - [10.2 Hover States](#102-hover-states)
     - [10.3 Loading States & Skeletons](#103-loading-states--skeletons)
-11. [Dark Mode & Theming](#11-dark-mode--theming)
-    - [11.1 Theme Colors](#111-theme-colors)
-    - [11.2 Implementation](#112-implementation)
+11. [Theming Scope](#11-theming-scope)
 
 ---
 
@@ -63,7 +61,7 @@ Primary colors used across the application:
 | Primary | Accent / Link | Success | Warning | Error / Urgent | Canvas | Surface Card | Dark Floor | Muted Text |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | ![Primary](./assets/colors/primary.svg) | ![Accent](./assets/colors/brand-accent.svg) | ![Success](./assets/colors/success.svg) | ![Warning](./assets/colors/warning.svg) | ![Error](./assets/colors/error.svg) | ![Canvas](./assets/colors/background.svg) | ![Card](./assets/colors/surface-card.svg) | ![Dark](./assets/colors/surface-dark.svg) | ![Muted](./assets/colors/text-secondary.svg) |
-| **`#111111`** | **`#3b82f6`** | **`#10b981`** | **`#f59e0b`** | **`#ef4444`** | **`#ffffff`** | **`#f5f5f5`** | **`#101010`** | **`#6b7280`** |
+| **`#111111`** | **`#1978e5`** | **`#10b981`** | **`#f59e0b`** | **`#ef4444`** | **`#ffffff`** | **`#f5f5f5`** | **`#101010`** | **`#6b7280`** |
 | Primary CTAs | Brand Links | Completed | Review Stage | Overdue Alerts | Main Floor | Card Bodies | Deep Footer | Secondary Text |
 
 ---
@@ -72,9 +70,9 @@ Primary colors used across the application:
 
 | Token Name | Hex Code | Swatch | Usage & Description |
 |:---|:---|:---:|:---|
-| **Primary** | `#111111` | ![Primary](./assets/colors/primary-dot.svg) | Primary CTAs, high-contrast display headlines, active pills |
-| **Primary Active** | `#242424` | ![Primary Active](./assets/colors/primary-active-dot.svg) | Button press state and active hover feedback |
-| **Brand Accent** | `#3b82f6` | ![Brand Accent](./assets/colors/brand-accent-dot.svg) | Inline hyperlinks, focal category badges, selection rings |
+| **Primary** | `#111111` | ![Primary](./assets/colors/primary-dot.svg) | Primary CTAs, active pills, active states. **Decision (2026-09-25): the app's main theme is monochrome** — `primary` owns the action layer. |
+| **Primary Active** | `#242424` | ![Primary Active](./assets/colors/primary-active-dot.svg) | Button press state and hover feedback. Matches `--color-primary-hover` in `@theme`. |
+| **Accent (Blue)** | `#1978e5` | ![Accent](./assets/colors/brand-accent-dot.svg) | Inline links, icon tints, selection rings, focus, focal badges. **Blue is the accent — never the primary CTA.** Matches `--color-accent` in `@theme`. |
 | **Success** | `#10b981` | ![Success](./assets/colors/success-dot.svg) | Completed tasks, active client status, paid invoice badges |
 | **Warning** | `#f59e0b` | ![Warning](./assets/colors/warning-dot.svg) | Review stage, approaching deadlines, stagnant lead warnings |
 | **Error / Urgent** | `#ef4444` | ![Error](./assets/colors/error-dot.svg) | Overdue deliverables, destructive delete actions, error alerts |
@@ -85,6 +83,12 @@ Primary colors used across the application:
 | **Hairline Border** | `#e5e7eb` | ![Hairline](./assets/colors/hairline-dot.svg) | 1px border tone across inputs, cards, dividers, and popovers |
 | **Text Primary (Ink)** | `#111111` | ![Text Primary](./assets/colors/text-primary-dot.svg) | Main headline copy, modal titles, high-contrast labels |
 | **Text Secondary (Body)**| `#6b7280`| ![Text Secondary](./assets/colors/text-secondary-dot.svg) | Running body paragraphs, dates, breadcrumbs, column headers |
+
+> **Resolved — one monochrome action layer, one blue accent.** The app's main theme is **monochrome** (`Primary` `#111111`) with **blue as the accent** (`#1978e5`). The former documented `Brand Accent` `#3b82f6` is **retired from the spec**: in code, `--color-primary` now carries monochrome ink (CTAs, active states) and `--color-accent` carries blue (links, icon tints, rings, selection).
+>
+> **Rule of thumb:** if a user clicks it and it commits an action, it is `primary` (monochrome). If it draws attention, links, or indicates selection/focus, it is `accent` (blue).
+>
+> **⚠️ Settled in the spec, not yet true in the code.** `--color-accent` is presently the *token* blue only. The codebase still contains **324 raw Tailwind `blue-500 / blue-600 / blue-700` utilities across ~55 files** (44 of them in `AddNewClientPage` alone), plus one raw `#3b82f6`. So the app still ships **two blues in practice** — the token `#1978e5` and Tailwind's `#2563eb` / `#3b82f6`. Consolidating those onto `accent` is Phase 0/1 work. Until then: **do not add new `blue-*` utilities** — use `accent`.
 
 ---
 
@@ -233,13 +237,15 @@ Borderless data grid with status group headers, row isolation highlights on hove
 
 ---
 
-## 11. Dark Mode & Theming
+## 11. Theming Scope
 
-### 11.1 Theme Colors
-* Canvas: `#0a0a0b`
-* Surface Card: `#18181b`
-* Text Primary: `#fafafa`
-* Hairline Border: `#27272a`
+**Light theme only.** Flow Studio ships a single light theme. Dark mode is deliberately out of scope.
 
-### 11.2 Implementation
-Themed via CSS variables in `src/index.css` toggled by the `SettingsContext.tsx` provider, maintaining strict color contrast ratios across light and dark modes.
+Do not add:
+* `.dark` variants or `dark:` utility classes for product UI
+* Dark surface tokens (`--color-background-dark`, `--color-surface-dark`, `--color-border-dark`)
+* Theme-switching UI or a dark-mode setting
+
+Note: the AI Copilot chat panel is a permanently dark *component*, not a theme. Its dark styling is intentional and local to that panel — it is not a theming system and must not be generalised.
+
+`src/index.css` `@theme` is the single source of palette tokens. Any change to the palette belongs there, and the token names must stay in sync with §2 above.

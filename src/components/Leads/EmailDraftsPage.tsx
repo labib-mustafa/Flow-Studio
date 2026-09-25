@@ -800,7 +800,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                         type="text"
                         value={editSubject}
                         onChange={e => setEditSubject(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary/20 bg-white"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-accent/20 bg-white"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -809,7 +809,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                         value={editBody}
                         onChange={e => setEditBody(e.target.value)}
                         rows={6}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary/20 bg-white font-sans"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-accent/20 bg-white font-sans"
                       />
                     </div>
                   </div>
@@ -855,7 +855,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                     while (newDelays.length < num) newDelays.push(3);
                     setSettingsForm({ ...settingsForm, maxAttempts: num, followUpDelays: newDelays.slice(0, num) });
                   }}
-                  className="w-full max-w-[200px] px-3 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary/20 bg-white transition-all font-bold text-slate-950"
+                  className="w-full max-w-[200px] px-3 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-accent/20 bg-white transition-all font-bold text-slate-950"
                 />
                 <p className="text-[11px] text-slate-400 font-medium">If no reply after these emails, mark lead status as Archived/Lost.</p>
               </div>
@@ -880,7 +880,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                           newDelays[idx] = val;
                           setSettingsForm({ ...settingsForm, followUpDelays: newDelays });
                         }}
-                        className="w-[80px] px-3 py-1.5 text-center border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary/20 bg-white transition-all font-bold text-slate-950"
+                        className="w-[80px] px-3 py-1.5 text-center border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-accent/20 bg-white transition-all font-bold text-slate-950"
                       />
                       <span className="text-xs text-slate-700 font-bold">days after {previous}.</span>
                     </div>

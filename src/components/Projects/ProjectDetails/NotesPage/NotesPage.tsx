@@ -1012,7 +1012,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           {/* Toggle Button for Notes List */}
           <button
             onClick={() => setIsNotesListOpen(!isNotesListOpen)}
-            className={`absolute top-1/2 -translate-y-1/2 -right-3 z-[99999] flex items-center justify-center w-6 h-6 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-primary hover:border-primary shadow-sm transition-all duration-300 ${!isNotesListOpen ? 'rotate-180' : ''}`}
+            className={`absolute top-1/2 -translate-y-1/2 -right-3 z-[99999] flex items-center justify-center w-6 h-6 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-accent hover:border-accent shadow-sm transition-all duration-300 ${!isNotesListOpen ? 'rotate-180' : ''}`}
             title={isNotesListOpen ? "Collapse List" : "Expand List"}
           >
             <ChevronLeft size={18} />
@@ -1023,7 +1023,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
               <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
                 <Search size={18} />
               </span>
-              <input id="notes-search-input" className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search notes..." type="text" />
+              <input id="notes-search-input" className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none" placeholder="Search notes..." type="text" />
             </div>
             <button
               id="add-new-note-button"
@@ -1049,7 +1049,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                 <div
                   key={note.id}
                   onClick={() => selectNote(note.id)}
-                  className={`p-4 cursor-pointer border-b border-slate-100 transition-colors border-l-4 relative group ${activeNoteId === note.id ? 'border-primary bg-slate-100' : 'bg-white border-transparent hover:bg-slate-50'}`}
+                  className={`p-4 cursor-pointer border-b border-slate-100 transition-colors border-l-4 relative group ${activeNoteId === note.id ? 'border-accent bg-slate-100' : 'bg-white border-transparent hover:bg-slate-50'}`}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <h5 className={`text-sm font-bold truncate pr-10 ${activeNoteId === note.id ? 'text-slate-900' : 'text-slate-700'}`}>
@@ -1077,7 +1077,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           {!isNotesListOpen && (
             <div className="absolute inset-0 flex flex-col items-center pt-6 gap-6 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setIsNotesListOpen(true)}>
               <Search size={20} className="text-slate-400" />
-              <PlusCircle size={20} className="text-primary" />
+              <PlusCircle size={20} className="text-accent" />
               <div className="w-6 h-px bg-slate-200"></div>
               <FileText size={20} className="text-slate-400" />
               <FileText size={20} className="text-slate-400" />
@@ -1100,7 +1100,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
               <p className="text-slate-500 max-w-xs mx-auto mb-8">Select a note from the sidebar or create a new one to start writing.</p>
               <button
                 onClick={addNewNote}
-                className="flex items-center gap-2 py-2.5 px-6 bg-primary text-white font-semibold rounded-xl hover:bg-blue-600 transition-all shadow-md hover:shadow-lg active:scale-95 mx-auto"
+                className="flex items-center gap-2 py-2.5 px-6 bg-primary text-white font-semibold rounded-xl hover:bg-primary-hover transition-all shadow-md hover:shadow-lg active:scale-95 mx-auto"
               >
                 <Plus size={18} />
                 Create New Note
@@ -1123,7 +1123,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         type="text"
                         value={linkPrompt.url}
                         onChange={(e) => setLinkPrompt(prev => ({ ...prev, url: e.target.value }))}
-                        className="border border-slate-300 rounded px-2 py-1 text-sm w-64 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="border border-slate-300 rounded px-2 py-1 text-sm w-64 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -1159,7 +1159,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         type="text"
                         value={imagePrompt.url}
                         onChange={(e) => setImagePrompt(prev => ({ ...prev, url: e.target.value }))}
-                        className="border border-slate-300 rounded px-2 py-1 text-sm w-64 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="border border-slate-300 rounded px-2 py-1 text-sm w-64 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -1296,7 +1296,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                 <button
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => execCommand('bold')}
-                  className={`p-1 rounded font-bold transition-colors w-6 h-6 flex items-center justify-center ${commandStates.bold ? 'bg-slate-200 text-primary' : 'text-slate-700 hover:bg-slate-100'}`}
+                  className={`p-1 rounded font-bold transition-colors w-6 h-6 flex items-center justify-center ${commandStates.bold ? 'bg-slate-200 text-accent' : 'text-slate-700 hover:bg-slate-100'}`}
                   title="Bold"
                 >
                   B
@@ -1304,7 +1304,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                 <button
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => execCommand('italic')}
-                  className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center border ${commandStates.italic ? 'bg-slate-200 text-primary border-primary' : 'text-slate-700 hover:bg-slate-100 border-slate-200'}`}
+                  className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center border ${commandStates.italic ? 'bg-slate-200 text-accent border-accent' : 'text-slate-700 hover:bg-slate-100 border-slate-200'}`}
                   title="Italic"
                 >
                   <Italic size={18} />
@@ -1312,7 +1312,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                 <button
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => execCommand('underline')}
-                  className={`p-1 rounded underline transition-colors w-6 h-6 flex items-center justify-center ${commandStates.underline ? 'bg-slate-200 text-primary' : 'text-slate-700 hover:bg-slate-100'}`}
+                  className={`p-1 rounded underline transition-colors w-6 h-6 flex items-center justify-center ${commandStates.underline ? 'bg-slate-200 text-accent' : 'text-slate-700 hover:bg-slate-100'}`}
                   title="Underline"
                 >
                   U
@@ -1389,7 +1389,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => execCommand('justifyLeft')}
-                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyLeft ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyLeft ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Align Left"
                   >
                     <AlignStartVertical size={18} />
@@ -1397,7 +1397,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => execCommand('justifyCenter')}
-                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Align Center"
                   >
                     <AlignCenterVertical size={18} />
@@ -1405,7 +1405,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => execCommand('justifyRight')}
-                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyRight ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyRight ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Align Right"
                   >
                     <AlignEndVertical size={18} />
@@ -1417,7 +1417,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setActiveDropdown(activeDropdown === 'align' ? null : 'align')}
-                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter || commandStates.justifyRight ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'
+                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter || commandStates.justifyRight ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'
                       }`}
                     title="Alignment"
                   >
@@ -1435,7 +1435,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         <button
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => { execCommand('justifyLeft'); setActiveDropdown(null); }}
-                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyLeft ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyLeft ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Align Left"
                         >
                           <AlignStartVertical size={18} />
@@ -1443,7 +1443,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         <button
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => { execCommand('justifyCenter'); setActiveDropdown(null); }}
-                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyCenter ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Align Center"
                         >
                           <AlignCenterVertical size={18} />
@@ -1451,7 +1451,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         <button
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => { execCommand('justifyRight'); setActiveDropdown(null); }}
-                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyRight ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.justifyRight ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Align Right"
                         >
                           <AlignEndVertical size={18} />
@@ -1468,7 +1468,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => execCommand('insertUnorderedList')}
-                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Bullet List"
                   >
                     <List size={18} />
@@ -1476,7 +1476,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => execCommand('insertOrderedList')}
-                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertOrderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertOrderedList ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                     title="Numbered List"
                   >
                     <ListOrdered size={18} />
@@ -1488,7 +1488,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setActiveDropdown(activeDropdown === 'list' ? null : 'list')}
-                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList || commandStates.insertOrderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'
+                    className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList || commandStates.insertOrderedList ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'
                       }`}
                     title="Lists"
                   >
@@ -1506,7 +1506,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         <button
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => { execCommand('insertUnorderedList'); setActiveDropdown(null); }}
-                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertUnorderedList ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Bullet List"
                         >
                           <List size={18} />
@@ -1514,7 +1514,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         <button
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => { execCommand('insertOrderedList'); setActiveDropdown(null); }}
-                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertOrderedList ? 'bg-slate-200 text-primary' : 'text-slate-500 hover:bg-slate-100'}`}
+                          className={`p-1 rounded transition-colors w-6 h-6 flex items-center justify-center ${commandStates.insertOrderedList ? 'bg-slate-200 text-accent' : 'text-slate-500 hover:bg-slate-100'}`}
                           title="Numbered List"
                         >
                           <ListOrdered size={18} />
@@ -1567,13 +1567,13 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <Ban size={18} />
                 </button>
                 <div className="flex flex-wrap items-center gap-2 justify-end ml-auto">
-                  <button className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue-600 transition-colors">
+                  <button className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-primary-hover transition-colors">
                     <Lock size={16} /> Share
                   </button>
                   <div className="h-4 w-px bg-slate-300 mx-1"></div>
                   <button
                     onClick={toggleFullScreen}
-                    className={`p-1 rounded transition-colors ${isFullScreen ? 'text-primary bg-primary/10' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`p-1 rounded transition-colors ${isFullScreen ? 'text-accent bg-accent/10' : 'text-slate-500 hover:bg-slate-100'}`}
                     title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
                   >
                     {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
@@ -1625,7 +1625,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           {/* Toggle Button for Comments Sidebar */}
           <button
             onClick={() => setIsCommentsOpen(!isCommentsOpen)}
-            className={`absolute top-1/2 -translate-y-1/2 -left-3 z-[99999] flex items-center justify-center w-6 h-6 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-primary hover:border-primary shadow-sm transition-all duration-300 ${!isCommentsOpen ? 'rotate-180' : ''}`}
+            className={`absolute top-1/2 -translate-y-1/2 -left-3 z-[99999] flex items-center justify-center w-6 h-6 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-accent hover:border-accent shadow-sm transition-all duration-300 ${!isCommentsOpen ? 'rotate-180' : ''}`}
             title={isCommentsOpen ? "Collapse Comments" : "Expand Comments"}
           >
             <ChevronRight size={18} />
@@ -1640,7 +1640,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
           {isCommentsOpen && (
             <div className="flex flex-col flex-1 h-full overflow-hidden animate-in fade-in duration-300">
               <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group hover:border-primary transition-colors cursor-pointer">
+                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group hover:border-accent transition-colors cursor-pointer">
                   <div className="flex items-start gap-3 mb-2">
                     <img alt="Avatar" className="w-7 h-7 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGJiDXQrlF8Uo0-U-iFqhwJHxifeSYcvXJ-U0D--PDPtzE6INzM6BAXWM9qw970o1de023RZwyzJhXqa7xy6blnoio4TCteo8lQ7nf2INIWgCHa0eyGn0_Gpe1iI_dv0fPVzUcjaDzQ6NYFjlP98gLXqet-dF-vU0GKApHImm7FFjdkS1wHJJC7JxqdkOylJAbfLSmLX-j5ArAv4ros-SCy_XXNcz_1ojYHy2JTkOSAk_bSV_iMegkGvkVCAkSRSFkw-EhpCtRYVM" />
                     <div>
@@ -1653,7 +1653,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   </div>
                   <div className="pl-11">
                     <div className="flex items-center gap-2 mt-2 border-t border-slate-50 pt-2">
-                      <button className="text-[10px] text-slate-500 font-semibold hover:text-primary">Reply</button>
+                      <button className="text-[10px] text-slate-500 font-semibold hover:text-accent">Reply</button>
                       <button className="text-[10px] text-slate-500 font-semibold hover:text-emerald-600">Resolve</button>
                     </div>
                   </div>
@@ -1672,7 +1672,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   </div>
                   <div className="pl-11">
                     <div className="flex items-center gap-2 mt-2 border-t border-slate-50 pt-2">
-                      <button className="text-[10px] text-slate-500 font-semibold hover:text-primary">Reply</button>
+                      <button className="text-[10px] text-slate-500 font-semibold hover:text-accent">Reply</button>
                       <button className="text-[10px] text-slate-500 font-semibold hover:text-emerald-600">Resolve</button>
                     </div>
                   </div>
@@ -1696,8 +1696,8 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
 
               <div className="p-4 border-t border-slate-200 bg-white">
                 <div className="relative">
-                  <input className="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400 outline-none" placeholder="Add a comment..." type="text" />
-                  <button className="absolute right-2 top-2 text-slate-400 hover:text-primary p-1">
+                  <input className="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-accent focus:border-accent placeholder:text-slate-400 outline-none" placeholder="Add a comment..." type="text" />
+                  <button className="absolute right-2 top-2 text-slate-400 hover:text-accent p-1">
                     <Send size={18} />
                   </button>
                 </div>
@@ -1749,10 +1749,10 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
             <div className="p-8">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-200 rounded-xl p-10 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-blue-50/30 transition-all group"
+                className="border-2 border-dashed border-slate-200 rounded-xl p-10 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-blue-50/30 transition-all group"
               >
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
-                  <CloudUpload size={36} className="text-slate-400 group-hover:text-primary" />
+                  <CloudUpload size={36} className="text-slate-400 group-hover:text-accent" />
                 </div>
                 <p className="text-sm font-semibold text-slate-700 mb-1">Click to upload or drag and drop</p>
                 <p className="text-xs text-slate-400 text-center">PNG, JPG, GIF up to 10MB</p>
@@ -1779,7 +1779,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                   <input
                     type="text"
                     placeholder="https://example.com/image.jpg"
-                    className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                    className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         const url = (e.target as HTMLInputElement).value;
@@ -1798,7 +1798,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
                         setShowImageModal(false);
                       }
                     }}
-                    className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors"
+                    className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover transition-colors"
                   >
                     Add
                   </button>

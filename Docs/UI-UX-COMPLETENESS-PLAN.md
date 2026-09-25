@@ -11,7 +11,7 @@ The app does not feel incomplete because features are missing. It feels incomple
 
 So the work is not "add more UI". It is three things, in this order:
 
-1. **Collapse 4 palettes into 1 enforced token layer** (removes the inconsistency the user can feel).
+1. **Collapse the competing palettes into 1 enforced token layer** — the main theme is **monochrome** (`primary` `#111111`, owning CTAs and active states) with **blue as the single accent** (`--color-accent` `#1978e5`, owning links, icon tints, rings and selection). This removes the inconsistency the user can feel.
 2. **Build the ~12 missing primitives** so new screens can't invent their own button (stops the drift from re-accumulating).
 3. **Close the state-coverage and honesty gaps** (empty / loading / error / partial / first-run) — this is what actually converts "demo" into "complete".
 
@@ -23,14 +23,18 @@ Everything below is grounded in measurements from the current tree, not in gener
 
 ### 1.1 Competing primaries in one codebase
 
-| Value | Occurrences in `src/` | What it claims to be |
+| Value | Occurrences in `src/` | Role after the 2026-09-25 decision |
 |---|---|---|
-| `#111111` | 209 | Primary — per `Docs/DESIGN.md` |
-| `#1978e5` | 32 | Primary — per `src/index.css` `@theme` |
-| `#7b68ee` | 33 | ClickUp purple (task list, column resize, drop indicator) |
-| `#3713ec` | 1 | `--color-dash-primary` (Dashboard) |
+| `#111111` | 209 | **Primary — the main theme is monochrome.** Owns CTAs, active pills, active states. |
+| `#1978e5` | 32 raw + ~211 token uses | **Accent (blue).** Owns links, icon tints, rings, selection, focus. Never the CTA. |
+| **Tailwind `blue-500/600/700`** | **324 across ~55 files** | **The third blue — the largest single source of drift.** Untokenised. See below. |
+| `#3b82f6` | raw hex in a couple of places | Retired from the spec; should fold into `accent`. |
+| `#7b68ee` | 33 | Unmanaged purple (task list, column resize, drop indicator) — needs a token. |
+| `#3713ec` | 1 | Unmanaged purple (`--color-dash-primary`, Dashboard) — needs a token. |
 
-Four primaries, zero of them authoritative. A user moving Dashboard → Projects → Tasks sees three different "brand" colors for the same interaction model.
+The primary is settled: `#111111` owns the action layer and blue owns the accent layer.
+
+**The real headline, found only after migrating the tokens:** the app does **not** have four colours, it has **three separate blues** — the token `#1978e5`, Tailwind's `blue-600` `#2563eb`, and the documented `#3b82f6`. The raw `blue-*` family is used **324 times across ~55 files** — 44 sites in `AddNewClientPage` alone, plus `ApifyLeadGeneratorPage` (19), `MemberDetailsPage` (6), `EmailDraftsPage` (8), `FileExplorer` (17), `TeamPage` (6), `ClientDetailsPage` (12). This is concentrated in the **newest** screens (Clients, Leads, Team, Files), which were built while the older screens used the token. It is the clearest mechanical explanation of why the app reads as inconsistent: the same "blue" is three different hex values depending on which screen you are on, and which month it was written.
 
 ### 1.2 Dark-surface drift
 
@@ -62,12 +66,27 @@ Three different near-blacks are used as "the dark surface" with no rule for whic
 
 `bg-primary` (62 uses) and `text-primary` (97 uses) *do* resolve — to `#1978e5` from `@theme`, i.e. the blue. So 159 call sites believe they are using "the brand primary" while `Docs/DESIGN.md` says the brand primary is `#111111`. **The token layer is working against the documented design.**
 
+**Correction to an initial reading:** `text-primary` is *not* mis-rendering ink as blue. Sampling 18 call sites (Billing, Invoices, Clients) shows it used consistently as a **blue accent** — icon tints, `bg-primary/10` badge fills, `hover:text-primary` links. The code is internally consistent; the problem is that the *name* `primary` means "blue accent" in code and "near-black ink" in `Docs/DESIGN.md`. A naming collision across two systems, not a rendering bug.
+
+**Undefined token reference — a live defect (4 call sites).** `@theme` defines `--color-primary-hover` (used 3 times), but four call sites reach for `--color-primary-dark`, which does not exist:
+
+| File | Line | Dead class | Effect |
+|---|---|---|---|
+| `Billing/NewInvoicePage.tsx` | 447 | `hover:text-primary-dark` | no colour change on hover |
+| `Billing/NewInvoicePage.tsx` | 530 | `hover:text-primary-dark` | no colour change on hover |
+| `GlobalComponents/Sidebars/AssignedExpertsSidebar.tsx` | 190 | `hover:bg-primary-dark` | no background change on hover |
+| `Projects/NewProject/ProjectForm.tsx` | 201 | `hover:bg-primary-dark` | no background change on hover |
+
+Tailwind generates no utility for an undefined theme variable, so the class is **silently inert**. A primary button in `ProjectForm` and a link in `NewInvoicePage` therefore have no hover feedback at all. This is precisely the defect class a token audit surfaces and a visual-regression test would catch.
+
+**The light tokens don't match the docs either.** `@theme` defines `--color-background-light: #f6f7f8` and `--color-surface-light: #ffffff`, while `Docs/DESIGN.md` §2 specifies Canvas `#ffffff` and Surface Card `#f5f5f5`. Three different "white-ish" values across two systems.
+
 ### 1.5 Documentation that contradicts the code
 
 | Claim | Reality |
 |---|---|
-| `Docs/DESIGN.md` §11: dark mode "Implemented via CSS variables in `src/index.css` toggled by `SettingsContext.tsx`" | **Not implemented.** Zero hits for `documentElement.classList`, `classList.add('dark')`, or `darkMode` anywhere in `src/`. `dark:` appears 32 times in 232 files (almost all inside the AI Copilot's intentionally dark chat panel). `SettingsContext` has one unrelated boolean, `darkCanvas`. |
-| Backend port | `flowstudio.config.json` → **3011**; `vite.config.ts` fallback → **3009**; `README.md` → **3010**. Three values. |
+| `Docs/DESIGN.md` §11: dark mode "Implemented via CSS variables in `src/index.css` toggled by `SettingsContext.tsx`" | **Never implemented, and now out of scope.** Zero hits for `documentElement.classList`, `classList.add('dark')`, or `darkMode` anywhere in `src/`. The three dark tokens in `@theme` (`--color-background-dark`, `--color-surface-dark`, `--color-border-dark`) are referenced **0** times. **Decision (2026-09-25): Flow Studio is light-theme only.** §11 now states that explicitly instead of promising a feature that will not ship. |
+| Backend port | **Correction: not a documentation contradiction — one code bug.** `server.ts` defaults to **3010** and negotiates a fallback chain (`preferred, 3010, 3009, 3011, 3012`), persisting whichever port it wins to the gitignored `flowstudio.config.json` — hence **3011** on this machine, which is expected behaviour, not drift. `README.md` says 3010 and is **correct**. The defect is `vite.config.ts`, which falls back to **3009**: on a fresh clone (where the gitignored config does not exist) Vite proxies `/api` to 3009 while the server binds 3010 first. Fixed 2026-09-25. |
 | `src/components/` layout in `README.md` | Omits `Calendar/`, `Data/`, `Reports/`, `Team/`, `Time/`, `TestItFirst/`, and `GlobalComponents/AICopilot/` entirely. |
 
 Documentation that lies is worse than no documentation: it is the mechanism by which the next contributor re-introduces drift.
@@ -79,6 +98,8 @@ Documentation that lies is worse than no documentation: it is the mechanism by w
 - Shared UI instead accumulates in `src/components/GlobalComponents/` (a folder that also holds dev tooling, file explorer, and the AI Copilot) — so "shared" and "feature" are not distinguishable, and there is no obvious place for a new primitive to live.
 
 Consequence: 232 files each restyle buttons, inputs, popovers, and modals by hand. That is the drift engine.
+
+**Corroborated by the type-checker.** 5 of the 16 files failing `npm run lint` are TaskPage popovers — `ColumnHeaderMenu`, `DueDateDropdown`, `StatusConfigPopover`, `TaskCommentsPopover`, `TaskGroupOptionsMenu` — each passing `sideOffset` / `className` / `align` to `CellPopover`, whose `CellPopoverProps` type does not declare them (`TS2322`, `TS2769`). That is precisely the predicted symptom: every popover growing its own shell instead of sharing one. The `Popover` primitive in Phase 1 is therefore not cosmetic — it also removes five compile errors.
 
 ### 1.7 Duplicated and dead code
 
@@ -94,9 +115,10 @@ Consequence: 232 files each restyle buttons, inputs, popovers, and modals by han
 - **No** ESLint, Prettier, Biome, or `.editorconfig` config anywhere in the repo.
 - **No** CI workflow (`.yml`/`.yaml` — no matches).
 - `npm run lint` is just `tsc --noEmit` — it type-checks, it does not lint.
+- **And it currently fails.** `npm run lint` exits **2** with **27 type errors across 16 files** (measured 2026-09-25; codes: TS2322 ×11, TS2339 ×7, TS2769 ×3, TS2345 ×2, TS2367 ×2, TS2307 ×1, TS2741 ×1). None are in files this audit modified.
 - **59** `TODO` occurrences.
 
-The reason consistency decays is structural: nothing fails when it decays.
+The reason consistency decays is structural: **the one quality gate that exists is already red**, so nothing fails when it decays. A red build that everyone has learned to ignore is functionally identical to no build at all — which is how 27 errors and four competing palettes accumulated in the same tree.
 
 ### 1.9 Data honesty
 
@@ -121,7 +143,7 @@ The app is well-built. It needs consolidation, not reinvention.
 |---|---|---|
 | R1 | Two token files, neither authoritative (`tailwind.config.js` dead, `@theme` never documented) | Different primary colour per screen |
 | R2 | No `ui/` primitive layer | Same control styled 5 ways; new screens invent buttons |
-| R3 | Docs describe a system the code doesn't implement (dark mode, `#111111`, `rounded-lg`) | Contributors "fix" screens toward a system that doesn't exist |
+| R3 | Docs describe a system the code doesn't implement (`#111111`, `rounded-lg`, a dark mode that was never built) | Contributors "fix" screens toward a system that doesn't exist |
 | R4 | No enforcement (no lint, no CI, no visual regression) | Drift returns within weeks of any cleanup |
 | R5 | No state-coverage contract (empty/error/partial/first-run undefined) | Screens look designed with fake data, hollow with real data |
 
@@ -155,14 +177,17 @@ Screens failing #6 today: Notifications, Dashboard→Renewals, Files tab, Billin
 
 **0.2** Rewrite `src/index.css` `@theme` to be the *only* palette. Keep semantic names so intent is readable at the call site.
 
-> **Decision required before this step.** The code ships a blue brand primary (`#1978e5`, 32 raw uses + 159 `bg-primary`/`text-primary` call sites) while `Docs/DESIGN.md` specifies near-black (`#111111`). These produce visibly different products. Pick one deliberately — this is a brand call, not a refactor. The snippet below assumes the documented monochrome direction and should be adjusted if blue is the real brand.
+> **Decided 2026-09-25: monochrome main theme, blue accent.** `Docs/DESIGN.md` corrected to match. **This one is a visible change** — the 25 solid `bg-primary text-white` CTAs move from blue to near-black. The ~211 accent-role utilities (`text-`, `border-`, `ring-`, `shadow-`, `from-primary`, plus the `/5`–`/20` washes) were migrated to `accent` in the same pass, so they keep the identical blue and the diff stays reviewable. Five CTA shadow sites and five CTA hover sites that would otherwise have become "black button, blue glow / blue hover" were corrected to monochrome in the same commit.
 
 ```css
 @theme {
-  /* action layer — monochrome, per Docs/DESIGN.md */
+  /* Monochrome main theme — `primary` owns CTAs and active states */
   --color-primary: #111111;
-  --color-primary-active: #242424;
-  --color-accent: #3b82f6;
+  --color-primary-hover: #242424;
+
+  /* Blue is the accent — links, icon tints, rings, selection. Never the CTA. */
+  --color-accent: #1978e5;
+  --color-accent-hover: #1565c0;
 
   /* surfaces */
   --color-canvas: #ffffff;
@@ -188,13 +213,21 @@ Screens failing #6 today: Notifications, Dashboard→Renewals, Files tab, Billin
 }
 ```
 
-**0.3** Move the ClickUp purple `#7b68ee` (33 hits) and dashboard purple `#3713ec` (1 hit) into **named tokens** so their use is intentional and greppable — or delete them. `#7b68ee` is currently the drag/drop indicator colour, which is legitimate; it must simply stop being a raw hex.
+**Migration note.** The light tokens must be handled at their call sites before deletion: `--color-border-light` (3 uses) and `--color-background-light` (1 use) need renaming; `--color-surface-light` is unused (0). The three dark tokens (`--color-background-dark`, `--color-surface-dark`, `--color-border-dark`) are unused (0) and were deleted outright per §11 of `Docs/DESIGN.md`.
 
-**0.4** Fix the port contradiction: make `flowstudio.config.json` authoritative, delete the `3009` fallback in `vite.config.ts`, correct `README.md` to 3011.
+**Still outstanding — the 324 raw `blue-*` utilities (§1.1).** This is the largest single consistency item in the codebase and it is *not* mechanical: most are legitimate accent roles (icon tints, chips, links) that should become `accent`, but some are CTAs that should become monochrome `primary`, and `AddNewClientPage` (44 sites) needs a per-screen review rather than a blind replace. Sequence it as its own commit per screen group — Clients, Leads, Team, Files — so each is independently reviewable and revertible. `blue-500 #3b82f6`, `blue-600 #2563eb` and `blue-700 #1d4ed8` all collapse onto the single `accent` `#1978e5`.
 
-**0.5** Fix `Docs/DESIGN.md`: remove the false dark-mode claim (§11) or mark it "Planned — not implemented"; reconcile §4 button/input radii with the real distribution.
+**Separate open issue.** `Docs/DESIGN.md` §2 also defines a *second* blue, `Brand Accent #3b82f6`, which is visually near-identical to `Primary`. The code reaches for it only as a raw hex, never as a token. Recommendation: collapse it into `Primary` unless a genuinely distinct accent is wanted — dumbing down to one blue removes a whole class of "which blue is this?" decisions.
 
-**Exit criteria:** `grep -rn "#[0-9a-fA-F]\{6\}" src/` returns only `@theme` and intentional flag/status maps.
+**0.3** Move the ClickUp purple `#7b68ee` (33 hits) and dashboard purple `#3713ec` (1 hit) into **named tokens** so their use is intentional and greppable — or delete them. `#7b68ee` is currently the drag/drop indicator colour, which is legitimate; it must simply stop being a raw hex. Also delete the three dead dark-mode tokens (`--color-background-dark`, `--color-surface-dark`, `--color-border-dark`) — verified **0** references in `src/`, since dark mode is out of scope.
+
+**0.4** ~~Fix the port contradiction~~ **Done 2026-09-25.** The Vite proxy fallback was `3009` while `server.ts` binds `3010` first (`ports = [preferred, 3010, 3009, 3011, 3012]`), so a fresh clone — where the gitignored `flowstudio.config.json` is absent — proxied `/api` to a port the server would not use. Vite's fallback is now `3010`, matching the server's own default. `README.md` already said 3010 and was correct; it was left alone.
+
+**0.5** Fix `Docs/DESIGN.md`: §11 now carries an explicit light-theme-only statement (dark mode is out of scope — do not add `.dark` variants, dark tokens, or theme-toggle UI); still to do: reconcile §4 button/input radii with the real distribution.
+
+**0.6** Fix the four dead hover classes listed in §1.4 — rename `primary-dark` → `primary-hover`, or define the token. Then add a guard so the class of bug cannot return: assert that every `bg-`/`text-`/`border-`/`ring-` utility referencing a theme token resolves to a variable actually declared in `@theme`.
+
+**Exit criteria:** `grep -rn "#[0-9a-fA-F]\{6\}" src/` returns only `@theme` and intentional flag/status maps; and no utility class references an undeclared token.
 
 ---
 
@@ -270,6 +303,8 @@ So: swap `focus:` → `focus-visible:` on the pointer-driven controls (one sed p
 
 **3.3** Add CI (GitHub Actions) running: `tsc --noEmit` → `eslint` → `prettier --check` → `vite build`. Keep it to one job; the value is a red X on drift, not coverage theatre.
 
+> **Prerequisite — do this first.** Clear the 27 existing type errors (§1.8). Wiring up CI while `tsc` is already failing ships a red build on day one; the team learns to ignore it and the effort is wasted. Fix the 27, *then* turn the gate on. Five of them disappear for free when the `Popover` primitive lands (§1.6).
+
 **3.4** Rewrite repo-root `AGENTS.md`. It currently contains the *in-app AI Co-Pilot system protocol* (workflows A/B/C, moodboard JSON schemas), not contributor/agent instructions. Any tool or developer that reads `AGENTS.md` — including AI agents — gets the wrong context. Move that content to `Docs/COPILOT-PROTOCOL.md` and write a real `AGENTS.md` covering: build/test commands, where primitives live, token rules, and the §3 completeness contract.
 
 **3.5** Visual regression on the 8 highest-traffic screens (Dashboard, Projects, Project Details ×5 tabs, Clients, Leads, Tasks) via Playwright screenshots. Playwright is not currently a dependency; add it in this phase, not earlier.
@@ -286,7 +321,7 @@ Only once the above is in place:
 - One documented radius scale: pill controls `rounded-full`; inputs/buttons `rounded-lg`; cards `rounded-xl`. Decide what `rounded-2xl` (189 uses) is for, or remove it.
 - One "active pill" spec: pick `bg-slate-900` **or** `bg-slate-950`, update `Docs/DESIGN.md` to match reality, apply once.
 - Sidebar + page-header rhythm unified across the 8 top-level views (`Calendar`, `Data`, `Reports`, `Team`, `Time` are the least-consistent, being the newest).
-- Dark mode: implement for real (`.dark` class on `documentElement`, tokens already structured for it in Phase 0) or delete the section from the docs. Do not leave it half-documented.
+
 
 ---
 
@@ -295,16 +330,21 @@ Only once the above is in place:
 | Metric | Baseline (2026-09-25) | Target |
 |---|---|---|
 | Raw hex literals in `src/` (excl. `@theme` + status maps) | 275 (`#111111` 209 + `#7b68ee` 33 + `#1978e5` 32 + `#3713ec` 1) | 0 |
-| Distinct primary colours in use | 4 | 1 |
+| Raw Tailwind `blue-*` utilities | **324** across ~55 files | 0 (all on `accent`) |
+| Distinct blues in the codebase | 3 (`#1978e5`, `#2563eb`, `#3b82f6`) | 1 |
+| Distinct brand colours in use | monochrome primary + 1 accent; 2 unmanaged purples remain | 1 primary + 1 accent + tokenised purples |
 | Files in `src/components/ui/` | 3 | 15+ |
 | Duplicate component pairs | 2 | 0 |
 | Empty-state implementations | 4 | 1 |
 | Fabricated fallbacks reachable by a real user | 5+ | 0 |
 | Test files | 0 | >0 (smoke + visual) |
 | Lint/format/CI configs | 0 | 3 |
+| Type errors from `npm run lint` | **27** in 16 files | 0 |
 | `aria-` occurrences / files containing them | 29 / 6 of 232 | every popover, modal, icon button |
 | `focus-visible:` usages (vs `focus:` 622) | 0 | pointer controls migrated |
-| Docs statements contradicting code | 3 (dark mode, port, primary) | 0 |
+| Docs statements contradicting code | 2 (primary, dark mode) — **both resolved 2026-09-25** | 0 |
+| Dead token references (`primary-dark`) | 4 call sites — **fixed 2026-09-25** | 0 |
+| Vite proxy port ≠ server default | 3009 vs 3010 — **fixed 2026-09-25** | aligned, no drift |
 
 ---
 

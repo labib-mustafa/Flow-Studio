@@ -90,7 +90,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 relative flex flex-col items-start p-1.5 sm:p-2 border-b border-r border-slate-100
                 text-left transition-colors duration-150 cursor-pointer min-h-[80px] group
                 ${!inMonth ? 'bg-slate-50/40' : 'bg-white hover:bg-slate-50/60'}
-                ${selected ? 'ring-2 ring-inset ring-primary/30 bg-blue-50/30' : ''}
+                ${selected ? 'ring-2 ring-inset ring-accent/30 bg-blue-50/30' : ''}
               `}
             >
               {/* Day number */}

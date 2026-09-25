@@ -28,7 +28,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     label: opt.label,
     icon: opt.icon,
     onClick: () => onChange(opt.value),
-    className: opt.value === value ? 'bg-slate-50 text-primary' : ''
+    className: opt.value === value ? 'bg-slate-50 text-accent' : ''
   }));
 
   return (
@@ -42,7 +42,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:border-slate-300 transition-all focus:ring-2 focus:ring-primary/10 outline-none"
+        className="flex items-center justify-between w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:border-slate-300 transition-all focus:ring-2 focus:ring-accent/10 outline-none"
       >
         <div className="flex items-center gap-2">
           {selectedOption.icon && (

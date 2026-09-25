@@ -394,7 +394,7 @@ export const EditColorSidebar: React.FC<EditColorSidebarProps> = ({ isOpen, onCl
                   <div className="flex items-center">
                     <span className="bg-slate-50 border border-r-0 border-slate-200 text-slate-400 px-2.5 py-2 rounded-l-lg font-mono text-xs">#</span>
                     <input
-                      className="w-full border-l-0 border-slate-200 bg-slate-50 rounded-r-lg py-2 px-2 text-slate-700 font-mono focus:ring-primary focus:border-primary text-xs uppercase font-bold outline-none"
+                      className="w-full border-l-0 border-slate-200 bg-slate-50 rounded-r-lg py-2 px-2 text-slate-700 font-mono focus:ring-accent focus:border-accent text-xs uppercase font-bold outline-none"
                       type="text"
                       value={hex}
                       onChange={handleHexChange}
@@ -412,7 +412,7 @@ export const EditColorSidebar: React.FC<EditColorSidebarProps> = ({ isOpen, onCl
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 text-center">{key}</label>
                         <div className="relative">
                           <input
-                            className="w-full border border-slate-200 rounded-lg px-2 py-2.5 text-center text-sm font-mono text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                            className="w-full border border-slate-200 rounded-lg px-2 py-2.5 text-center text-sm font-mono text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-accent focus:border-accent"
                             type="number"
                             value={Math.round(hsv[key as keyof typeof hsv])}
                             onChange={(e) => {
@@ -439,7 +439,7 @@ export const EditColorSidebar: React.FC<EditColorSidebarProps> = ({ isOpen, onCl
                         <div key={label}>
                           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 text-center">{label}</label>
                           <input
-                            className="w-full border border-slate-200 rounded-lg px-2 py-2.5 text-center text-sm font-mono text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                            className="w-full border border-slate-200 rounded-lg px-2 py-2.5 text-center text-sm font-mono text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-accent focus:border-accent"
                             type="number"
                             value={val}
                             onChange={(e) => {
@@ -472,7 +472,7 @@ export const EditColorSidebar: React.FC<EditColorSidebarProps> = ({ isOpen, onCl
                           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 text-center">{label}</label>
                           <div className="relative">
                             <input
-                              className="w-full border border-slate-200 rounded-lg px-1 py-2.5 text-center text-sm font-mono text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                              className="w-full border border-slate-200 rounded-lg px-1 py-2.5 text-center text-sm font-mono text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-accent focus:border-accent"
                               type="number"
                               value={cmyk[label.toLowerCase() as keyof typeof cmyk]}
                               onChange={(e) => {
@@ -506,7 +506,7 @@ export const EditColorSidebar: React.FC<EditColorSidebarProps> = ({ isOpen, onCl
                   max="20"
                   value={borderWidth}
                   onChange={handleBorderWidthChange}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-accent"
                 />
               </div>
             )}
@@ -514,7 +514,7 @@ export const EditColorSidebar: React.FC<EditColorSidebarProps> = ({ isOpen, onCl
             <div className="mb-4">
               <div className="flex justify-between items-center mb-4">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Recent Colors</label>
-                <button className="text-[10px] font-bold text-primary hover:underline">Clear</button>
+                <button className="text-[10px] font-bold text-accent hover:underline">Clear</button>
               </div>
               <div className="flex gap-3 flex-wrap">
                 <button

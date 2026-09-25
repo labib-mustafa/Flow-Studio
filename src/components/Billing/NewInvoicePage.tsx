@@ -269,14 +269,14 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
             {/* Section 1: Client Details */}
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-sm text-primary">person</span> Client Details
+                <span className="material-symbols-outlined text-sm text-accent">person</span> Client Details
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="col-span-2 relative">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Select Client</label>
                   <div
                     onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-                    className="flex items-center gap-3 w-full p-3.5 border border-slate-200 rounded-2xl hover:border-primary focus-within:border-primary transition-all bg-white cursor-pointer shadow-sm select-none"
+                    className="flex items-center gap-3 w-full p-3.5 border border-slate-200 rounded-2xl hover:border-accent focus-within:border-accent transition-all bg-white cursor-pointer shadow-sm select-none"
                   >
                     <img src={selectedClient.initials} alt={selectedClient.name} className="size-10 rounded-full object-cover border border-slate-100" />
                     <div className="flex-1 overflow-hidden">
@@ -298,7 +298,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                             setIsClientDropdownOpen(false);
                           }}
                           className={`flex items-center gap-3 p-3.5 cursor-pointer transition-colors ${
-                            selectedClient.name === c.name ? 'bg-primary/5 font-semibold' : 'hover:bg-slate-50'
+                            selectedClient.name === c.name ? 'bg-accent/5 font-semibold' : 'hover:bg-slate-50'
                           }`}
                         >
                           {c.initials ? (
@@ -313,7 +313,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                             <p className="text-xs text-slate-500">{c.email}</p>
                           </div>
                           {selectedClient.name === c.name && (
-                            <span className="material-symbols-outlined text-primary text-sm">check</span>
+                            <span className="material-symbols-outlined text-accent text-sm">check</span>
                           )}
                         </div>
                       ))}
@@ -326,7 +326,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                   <textarea
                     value={billingAddress}
                     onChange={(e) => setBillingAddress(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm leading-relaxed"
+                    className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm leading-relaxed"
                     rows={3}
                   />
                 </div>
@@ -337,7 +337,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                     value={shippingAddress}
                     onChange={(e) => setShippingAddress(e.target.value)}
                     placeholder="Same as billing address"
-                    className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm leading-relaxed placeholder:text-slate-400"
+                    className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm leading-relaxed placeholder:text-slate-400"
                     rows={3}
                   />
                 </div>
@@ -347,7 +347,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
             {/* Section 2: Invoice Details */}
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-sm text-primary">receipt_long</span> Invoice Details
+                <span className="material-symbols-outlined text-sm text-accent">receipt_long</span> Invoice Details
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
@@ -358,7 +358,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                       type="text"
                       value={invoiceNumber}
                       onChange={(e) => setInvoiceNumber(e.target.value)}
-                      className="w-full pl-8 pr-3 py-3 rounded-2xl border border-slate-200 text-sm font-mono font-bold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                      className="w-full pl-8 pr-3 py-3 rounded-2xl border border-slate-200 text-sm font-mono font-bold focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm"
                     />
                   </div>
                 </div>
@@ -369,7 +369,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                     type="date"
                     value={issueDate}
                     onChange={(e) => setIssueDate(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 p-3 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                    className="w-full rounded-2xl border border-slate-200 p-3 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm"
                   />
                 </div>
 
@@ -379,7 +379,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 p-3 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                    className="w-full rounded-2xl border border-slate-200 p-3 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm"
                   />
                 </div>
 
@@ -389,7 +389,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                     type="text"
                     value={projectRef}
                     onChange={(e) => setProjectRef(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                    className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm font-medium focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm"
                   />
                 </div>
               </div>
@@ -398,7 +398,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
             {/* Section 3: Payment Methods */}
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-sm text-primary">payments</span> Payment Methods
+                <span className="material-symbols-outlined text-sm text-accent">payments</span> Payment Methods
               </h2>
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
                 <p className="text-xs text-slate-500 font-medium mb-3">Select available payment options to display on the client invoice:</p>
@@ -412,13 +412,13 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                         onClick={() => toggleMethod(m.id)}
                         className={`relative flex flex-col items-center justify-center p-4 border rounded-2xl cursor-pointer transition-all duration-200 select-none ${
                           isChecked
-                            ? 'border-primary bg-primary/5 shadow-sm font-bold text-primary ring-2 ring-primary/10'
+                            ? 'border-accent bg-accent/5 shadow-sm font-bold text-accent ring-2 ring-accent/10'
                             : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600 hover:bg-slate-50/50'
                         }`}
                       >
                         {/* Custom visual checkbox indicator */}
                         <div className={`absolute top-2.5 right-2.5 size-4 rounded-md border flex items-center justify-center transition-all ${
-                          isChecked ? 'bg-primary border-primary text-white scale-100' : 'border-slate-300 bg-white scale-90'
+                          isChecked ? 'bg-primary border-accent text-white scale-100' : 'border-slate-300 bg-white scale-90'
                         }`}>
                           {isChecked && (
                             <span className="material-symbols-outlined text-[10px] font-black">check</span>
@@ -439,12 +439,12 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-primary">list</span> Line Items Breakdown
+                  <span className="material-symbols-outlined text-sm text-accent">list</span> Line Items Breakdown
                 </h2>
                 <button
                   type="button"
                   onClick={handleBulkImport}
-                  className="text-primary hover:text-primary-dark text-xs font-bold flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-xl transition-colors"
+                  className="text-accent hover:text-accent-hover text-xs font-bold flex items-center gap-1 bg-accent/10 hover:bg-accent/20 px-3 py-1.5 rounded-xl transition-colors"
                 >
                   Bulk Import <span className="material-symbols-outlined text-[16px]">upload</span>
                 </button>
@@ -490,7 +490,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                             min="1"
                             value={item.quantity}
                             onChange={(e) => handleLineItemChange(item.id, 'quantity', Number(e.target.value))}
-                            className="w-16 text-right border border-slate-200 rounded-xl text-sm font-semibold p-1.5 focus:border-primary focus:outline-none"
+                            className="w-16 text-right border border-slate-200 rounded-xl text-sm font-semibold p-1.5 focus:border-accent focus:outline-none"
                           />
                         </td>
                         <td className="px-4 py-4 text-right">
@@ -502,7 +502,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                               step="0.01"
                               value={item.rate}
                               onChange={(e) => handleLineItemChange(item.id, 'rate', Number(e.target.value))}
-                              className="w-24 text-right border border-slate-200 rounded-xl text-sm font-semibold p-1.5 pl-6 focus:border-primary focus:outline-none"
+                              className="w-24 text-right border border-slate-200 rounded-xl text-sm font-semibold p-1.5 pl-6 focus:border-accent focus:outline-none"
                             />
                           </div>
                         </td>
@@ -527,7 +527,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="flex items-center justify-center gap-2 text-primary font-bold text-sm hover:text-primary-dark transition-colors px-4 py-2.5 rounded-xl hover:bg-primary/5 w-full border border-dashed border-primary/40 shadow-sm"
+                    className="flex items-center justify-center gap-2 text-accent font-bold text-sm hover:text-accent-hover transition-colors px-4 py-2.5 rounded-xl hover:bg-accent/5 w-full border border-dashed border-accent/40 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-[18px]">add</span> Add Line Item
                   </button>
@@ -541,7 +541,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 p-4 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-slate-600 shadow-sm leading-relaxed"
+                className="w-full rounded-2xl border border-slate-200 p-4 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 text-slate-600 shadow-sm leading-relaxed"
                 rows={3}
               />
             </section>
@@ -586,9 +586,9 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                         setIsSendMenuOpen(false);
                         handleCreateAndSave('Pending');
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-accent transition-colors text-left"
                     >
-                      <span className="material-symbols-outlined text-[20px] text-primary">mail</span>
+                      <span className="material-symbols-outlined text-[20px] text-accent">mail</span>
                       Send to Email
                     </button>
                     <button
@@ -597,7 +597,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                         setIsSendMenuOpen(false);
                         handleExportPDF();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-accent transition-colors text-left"
                     >
                       <span className="material-symbols-outlined text-[20px] text-slate-500">picture_as_pdf</span>
                       Export as PDF
@@ -608,7 +608,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                         setIsSendMenuOpen(false);
                         handleEmailPDF();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-accent transition-colors text-left"
                     >
                       <span className="material-symbols-outlined text-[20px] text-emerald-500">mark_email_read</span>
                       Email PDF
@@ -714,7 +714,7 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                   </div>
                   <div className="flex justify-between pt-2">
                     <span className="text-sm font-extrabold text-slate-900">Total Due</span>
-                    <span className="text-xl font-black text-primary font-mono">{currSym}{total.toFixed(2)}</span>
+                    <span className="text-xl font-black text-accent font-mono">{currSym}{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

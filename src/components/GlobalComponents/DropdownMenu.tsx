@@ -119,7 +119,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                   {option.label}
                 </span>
                 {option.badge && (
-                  <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                  <span className="px-1.5 py-0.5 rounded-md bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider">
                     {option.badge}
                   </span>
                 )}

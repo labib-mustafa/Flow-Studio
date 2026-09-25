@@ -56,7 +56,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ onCancel, onSubmit, pr
               type="text" 
               defaultValue={project ? project.title : ''}
               placeholder="Enter project title" 
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm text-slate-800 placeholder-slate-400"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all text-sm text-slate-800 placeholder-slate-400"
             />
           </div>
 
@@ -70,7 +70,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ onCancel, onSubmit, pr
               defaultValue={project ? project.description : ''}
               placeholder="Brief overview of the project goals..." 
               rows={4}
-              className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm text-slate-800 placeholder-slate-400 resize-none"
+              className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all text-sm text-slate-800 placeholder-slate-400 resize-none"
             ></textarea>
           </div>
 
@@ -81,7 +81,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ onCancel, onSubmit, pr
                 Status
               </label>
               <div className="relative">
-                <select name="status" defaultValue={project ? project.status : 'Planning'} className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm text-slate-800 appearance-none bg-white cursor-pointer">
+                <select name="status" defaultValue={project ? project.status : 'Planning'} className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all text-sm text-slate-800 appearance-none bg-white cursor-pointer">
                   <option>Planning</option>
                   <option>In Progress</option>
                   <option>Review</option>
@@ -98,7 +98,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ onCancel, onSubmit, pr
                 Client
               </label>
               <div className="relative">
-                <select name="client" defaultValue={project ? project.client : ''} className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm text-slate-800 appearance-none bg-white cursor-pointer">
+                <select name="client" defaultValue={project ? project.client : ''} className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all text-sm text-slate-800 appearance-none bg-white cursor-pointer">
                   <option value="">No Client</option>
                   {clients.map(c => (
                     <option key={c.id} value={c.name}>{c.name}</option>
@@ -198,7 +198,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ onCancel, onSubmit, pr
           </button>
           <button 
             onClick={handleSubmit}
-            className="px-8 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-lg shadow-lg shadow-primary/30 transition-all transform active:scale-95"
+            className="px-8 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-bold rounded-lg shadow-lg shadow-primary/30 transition-all transform active:scale-95"
           >
             {isEditing ? 'Save Changes' : 'Create Project'}
           </button>

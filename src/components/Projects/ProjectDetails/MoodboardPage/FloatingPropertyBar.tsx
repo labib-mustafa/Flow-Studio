@@ -238,7 +238,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
                     }}
                     className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
                       isActive
-                        ? 'bg-primary/10 border-primary text-primary shadow-xs'
+                        ? 'bg-accent/10 border-accent text-accent shadow-xs'
                         : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-800'
                     }`}
                     title={preset.label}
@@ -267,7 +267,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
                 const current = item?.cropMask || { mode: 'crop', maskShape: 'none', zoom: 1, panX: 0, panY: 0 };
                 handleUpdate({ cropMask: { ...current, zoom: zoomVal } });
               }}
-              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary"
+              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-accent"
             />
           </div>
         </div>
@@ -300,7 +300,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
                   handleAddCategory(newCategoryInput);
                 }
               }}
-              className="flex-1 px-2.5 py-1 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-primary"
+              className="flex-1 px-2.5 py-1 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-accent"
             />
             <button
               type="button"
@@ -319,7 +319,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
               (item?.categories || []).map((cat) => (
                 <span
                   key={cat}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 text-xs font-medium rounded-full"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent/10 text-accent border border-accent/20 text-xs font-medium rounded-full"
                 >
                   {cat}
                   <button
@@ -349,7 +349,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
                     className={`text-[11px] px-2 py-0.5 rounded-full border transition-all ${
                       isAdded
                         ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-primary/5 hover:text-primary hover:border-primary/30'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-accent/5 hover:text-accent hover:border-accent/30'
                     }`}
                   >
                     + {sug}
@@ -415,7 +415,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
             type="button"
             className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
               isCropPanelOpen
-                ? 'bg-primary/10 text-primary border border-primary/30'
+                ? 'bg-accent/10 text-accent border border-accent/30'
                 : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
             }`}
             onClick={() => setIsCropPanelOpen(!isCropPanelOpen)}
@@ -510,7 +510,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
           type="button"
           className={`h-9 px-2.5 flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all ${
             isTagPopoverOpen || activeTagCount > 0
-              ? 'bg-primary/10 text-primary border border-primary/30'
+              ? 'bg-accent/10 text-accent border border-accent/30'
               : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
           }`}
           onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}

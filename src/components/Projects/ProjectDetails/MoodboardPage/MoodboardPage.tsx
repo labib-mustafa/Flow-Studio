@@ -1846,7 +1846,7 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
                 max="100" 
                 value={pencilSmoothing} 
                 onChange={(e) => setPencilSmoothing(parseInt(e.target.value))}
-                className="w-full accent-primary"
+                className="w-full accent-accent"
               />
               <div className="flex justify-between text-[10px] text-slate-400">
                 <span>Raw</span>
@@ -1924,7 +1924,7 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
           <Palette size={20} />
         </button>
         <button 
-          className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center hover:bg-blue-600 shadow-lg shadow-primary/20 transition-all active:scale-95" 
+          className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all active:scale-95" 
           title="Add Styles"
           onClick={() => {
             if (containerRef.current) {

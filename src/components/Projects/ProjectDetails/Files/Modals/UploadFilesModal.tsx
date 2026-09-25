@@ -90,20 +90,20 @@ export const UploadFilesModal: React.FC<UploadFilesModalProps> = ({ isOpen, onCl
           <div className="flex h-full flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-100">
             <div className="p-6 md:w-5/12 flex flex-col gap-6 bg-slate-50/50 overflow-y-auto">
               <div 
-                className={`relative group cursor-pointer flex-1 min-h-[240px] ${isDragging ? 'border-primary' : ''}`}
+                className={`relative group cursor-pointer flex-1 min-h-[240px] ${isDragging ? 'border-accent' : ''}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
                 <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} multiple />
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <div className={`relative border-2 border-dashed rounded-xl h-full p-6 flex flex-col items-center justify-center text-center transition-colors bg-white/40 ${isDragging ? 'border-primary bg-blue-50' : 'border-primary/30 group-hover:border-primary'}`}>
+                <div className={`relative border-2 border-dashed rounded-xl h-full p-6 flex flex-col items-center justify-center text-center transition-colors bg-white/40 ${isDragging ? 'border-accent bg-blue-50' : 'border-accent/30 group-hover:border-accent'}`}>
                   <div className="size-16 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <span className="material-symbols-outlined text-3xl text-primary">cloud_upload</span>
+                    <span className="material-symbols-outlined text-3xl text-accent">cloud_upload</span>
                   </div>
                   <p className="text-sm font-bold text-slate-900">Drag and drop files here</p>
                   <p className="text-xs text-slate-500 mt-1 mb-4">or click to browse from your computer</p>
-                  <button onClick={handleBrowse} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm hover:border-primary hover:text-primary transition-colors">
+                  <button onClick={handleBrowse} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm hover:border-accent hover:text-accent transition-colors">
                     Browse Files
                   </button>
                 </div>
@@ -113,14 +113,14 @@ export const UploadFilesModal: React.FC<UploadFilesModalProps> = ({ isOpen, onCl
                 <div className="flex p-1 bg-slate-100 rounded-lg">
                   <button 
                     onClick={() => setTargetLocation('all')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md transition-all text-xs font-bold ${targetLocation === 'all' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md transition-all text-xs font-bold ${targetLocation === 'all' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     <span className="material-symbols-outlined text-[16px]">folder_open</span>
                     All Assets
                   </button>
                   <button 
                     onClick={() => setTargetLocation('ready')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md transition-all text-xs font-bold ${targetLocation === 'ready' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md transition-all text-xs font-bold ${targetLocation === 'ready' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     <span className="material-symbols-outlined text-[16px]">rocket_launch</span>
                     Ready to Ship
@@ -131,7 +131,7 @@ export const UploadFilesModal: React.FC<UploadFilesModalProps> = ({ isOpen, onCl
             <div className="p-6 md:w-7/12 flex flex-col overflow-hidden bg-white">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Selected Files ({filesList.length})</h4>
-                <button onClick={() => setFilesList([])} className="text-[10px] font-bold text-primary hover:underline">Clear All</button>
+                <button onClick={() => setFilesList([])} className="text-[10px] font-bold text-accent hover:underline">Clear All</button>
               </div>
               <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
                 {filesList.length > 0 ? (

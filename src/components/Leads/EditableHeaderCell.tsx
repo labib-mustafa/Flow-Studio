@@ -67,7 +67,7 @@ export const EditableHeaderCell: React.FC<EditableHeaderCellProps> = ({
           onChange={(e) => setValue(e.target.value)}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
-          className="bg-slate-50 border-none outline-none font-bold text-[11px] text-slate-800 tracking-wider uppercase px-2 py-1 rounded w-full focus:ring-1 focus:ring-primary/25 min-w-[70px] leading-none"
+          className="bg-slate-50 border-none outline-none font-bold text-[11px] text-slate-800 tracking-wider uppercase px-2 py-1 rounded w-full focus:ring-1 focus:ring-accent/25 min-w-[70px] leading-none"
         />
       </div>
     );
