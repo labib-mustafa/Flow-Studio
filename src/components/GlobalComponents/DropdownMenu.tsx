@@ -18,7 +18,7 @@ interface DropdownMenuProps {
   onClose: () => void;
   anchorRect: DOMRect | null;
   options: DropdownOption[];
-  align?: 'left' | 'right';
+  align?: 'left' | 'right' | 'right-sidebar';
   width?: number;
 }
  
@@ -49,10 +49,22 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
  
   if (!isOpen || !anchorRect) return null;
  
-  const top = anchorRect.bottom + 8;
-  const left = align === 'left' 
-    ? anchorRect.left 
-    : anchorRect.right - width;
+  const estimatedHeight = (options.length * 44) + 24;
+  let top: number;
+  let left: number;
+
+  if (align === 'right-sidebar') {
+    left = anchorRect.right + 12;
+    top = Math.max(12, Math.min(anchorRect.bottom - estimatedHeight / 2, window.innerHeight - estimatedHeight - 12));
+  } else {
+    top = anchorRect.bottom + 8;
+    if (top + estimatedHeight > window.innerHeight) {
+      top = Math.max(12, anchorRect.top - estimatedHeight - 8);
+    }
+    left = align === 'left' 
+      ? anchorRect.left 
+      : anchorRect.right - width;
+  }
  
   return createPortal(
     <AnimatePresence>
@@ -67,7 +79,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           top, 
           left, 
           width,
-          transformOrigin: align === 'left' ? 'top left' : 'top right'
+          transformOrigin: align === 'left' ? 'top left' : align === 'right-sidebar' ? 'bottom left' : 'top right'
         }}
         onPointerDown={(e) => e.stopPropagation()}
       >

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { CellPopover } from '../../../ui/CellPopover';
 import { Task, useTaskStore } from '../../../../stores/taskStore';
+import { formatLocalDate } from '../../../../lib/timezone';
 
 interface DueDateDropdownProps {
   task?: Task;
@@ -8,16 +9,26 @@ interface DueDateDropdownProps {
   onUpdateDates?: (startDate: Date | null, dueDate: Date | null) => void;
 }
 
-const SHORTCUTS = [
-  { id: 'today', label: 'Today', dayStr: 'Thu', daysAdded: 0 },
-  { id: 'later', label: 'Later', dayStr: '5:57 pm', daysAdded: 0 },
-  { id: 'tomorrow', label: 'Tomorrow', dayStr: 'Fri', daysAdded: 1 },
-  { id: 'this_weekend', label: 'This weekend', dayStr: 'Sat', daysAdded: 2 },
-  { id: 'next_week', label: 'Next week', dayStr: 'Mon', daysAdded: 4 },
-  { id: 'next_weekend', label: 'Next weekend', dayStr: '6 Jun', daysAdded: 9 },
-  { id: '2_weeks', label: '2 weeks', dayStr: '11 Jun', daysAdded: 14 },
-  { id: '4_weeks', label: '4 weeks', dayStr: '25 Jun', daysAdded: 28 },
-];
+const getDynamicShortcuts = () => {
+  const now = new Date();
+  const getDayLabel = (daysToAdd: number) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToAdd);
+    if (daysToAdd <= 2) {
+      return d.toLocaleDateString(undefined, { weekday: 'short' });
+    }
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  };
+
+  return [
+    { id: 'today', label: 'Today', dayStr: getDayLabel(0), daysAdded: 0 },
+    { id: 'later', label: 'Later', dayStr: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), daysAdded: 0 },
+    { id: 'tomorrow', label: 'Tomorrow', dayStr: getDayLabel(1), daysAdded: 1 },
+    { id: 'this_weekend', label: 'This weekend', dayStr: getDayLabel(2), daysAdded: 2 },
+    { id: 'next_week', label: 'Next week', dayStr: getDayLabel(7), daysAdded: 7 },
+    { id: '2_weeks', label: '2 weeks', dayStr: getDayLabel(14), daysAdded: 14 },
+    { id: '4_weeks', label: '4 weeks', dayStr: getDayLabel(28), daysAdded: 28 },
+  ];
+};
 
 const DAYS_OF_WEEK = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -89,8 +100,10 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = React.memo(({ tas
         return d;
       }
     }
-    return new Date(2026, 4, 28); // May 28, 2026 default
+    return new Date();
   });
+
+  const shortcuts = useMemo(() => getDynamicShortcuts(), [open]);
 
   const calendarDays = useMemo(() => {
     if (!open) return EMPTY_DAYS;
@@ -121,8 +134,8 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = React.memo(({ tas
 
   const selectedDateStr = activeInput === 'start' ? task?.startDate : task?.dueDate;
   
-  const handleSelectShortcut = (shortcut: typeof SHORTCUTS[0]) => {
-    const today = new Date(2026, 4, 28);
+  const handleSelectShortcut = (shortcut: ReturnType<typeof getDynamicShortcuts>[0]) => {
+    const today = new Date();
     today.setDate(today.getDate() + shortcut.daysAdded);
     if (activeInput === 'start') {
       handleUpdateDates(today, task?.dueDate ? new Date(task.dueDate) : null);
@@ -289,7 +302,7 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = React.memo(({ tas
       <div className="flex h-[320px]">
         {/* Left Sidebar */}
         <div className="w-[180px] border-r border-slate-100 flex flex-col py-2 overflow-y-auto">
-          {SHORTCUTS.map(sc => (
+          {shortcuts.map(sc => (
             <button 
               key={sc.id} 
               onClick={() => handleSelectShortcut(sc)}
@@ -345,9 +358,9 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = React.memo(({ tas
 
           <div className="grid grid-cols-7 gap-y-1">
              {calendarDays.map((d, index) => {
-               const cellDateStr = d.date.toISOString().split('T')[0];
+               const cellDateStr = formatLocalDate(d.date);
                const isSelected = cellDateStr === selectedDateStr;
-               const isToday = cellDateStr === '2026-05-28';
+               const isToday = cellDateStr === formatLocalDate(new Date());
                return (
                  <button
                    key={index}

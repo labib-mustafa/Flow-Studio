@@ -57,6 +57,16 @@ if (typeof window !== 'undefined') {
   });
 }
 
+export function getActiveWorkspaceId(): string {
+  if (typeof window === 'undefined') return 'default';
+  return localStorage.getItem('flow_active_workspace') || 'default';
+}
+
+export function setActiveWorkspaceId(id: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('flow_active_workspace', id);
+}
+
 let eventSource: EventSource | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -71,26 +81,25 @@ export function initRealtimeSync() {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'store_updated' && data.store) {
-          // Echo suppression: Ignore update events if THIS client initiated a write within the last 2.5 seconds
-          const lastWrite = lastClientWriteTimestamps.get(data.store) || 0;
-          if (Date.now() - lastWrite < 2500) {
+          // Ignore updates for other workspaces
+          if (data.workspaceId && data.workspaceId !== 'app' && data.workspaceId !== getActiveWorkspaceId()) {
             return;
           }
+
+          // Echo suppression: Ignore update events if THIS client wrote within 2.5s
+          const lastWrite = lastClientWriteTimestamps.get(data.store) || 0;
+          if (Date.now() - lastWrite < 2500) return;
 
           const cbs = rehydrateCallbacks.get(data.store);
           if (cbs && cbs.size > 0) {
             cbs.forEach((cb) => {
-              try {
-                cb();
-              } catch (e) {
+              try { cb(); } catch (e) {
                 console.error(`[FileStorage] Rehydrate error for ${data.store}:`, e);
               }
             });
           }
         }
-      } catch {
-        // Ignore non-json or ping messages
-      }
+      } catch {}
     };
 
     eventSource.onerror = () => {
@@ -113,19 +122,29 @@ if (typeof window !== 'undefined') {
   initRealtimeSync();
 }
 
+export function clearPendingStoreWrites() {
+  for (const item of pendingWrites.values()) {
+    if (item.timer) clearTimeout(item.timer);
+  }
+  pendingWrites.clear();
+}
+
 /**
  * Creates a file-based storage adapter for Zustand's persist middleware.
  * Routes reads/writes through the Express backend API with immediate localStorage fallback.
  * Writes are debounced to prevent excessive disk I/O, with beforeunload emergency flushing.
  */
 function createFileStorageEngine(storeName: string, debounceMs: number = 300): StateStorage {
-  const localBackupKey = `flow_backup_${storeName}`;
+  const isAppLevel = ['settings', 'notifications', 'dev', 'workspaces'].includes(storeName);
+  const getWs = () => (isAppLevel ? 'app' : getActiveWorkspaceId());
+  const getBackupKey = (ws: string) => `flow_backup_${storeName}_${ws}`;
 
-  const sendWrite = (value: string) => {
+  const sendWrite = (value: string, targetWs: string) => {
+    lastClientWriteTimestamps.set(`${targetWs}:${storeName}`, Date.now());
     lastClientWriteTimestamps.set(storeName, Date.now());
     fetch(`/api/store/${storeName}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-workspace-id': targetWs },
       body: value,
       keepalive: true,
     }).catch(() => {
@@ -135,13 +154,17 @@ function createFileStorageEngine(storeName: string, debounceMs: number = 300): S
 
   return {
     getItem: async (key: string): Promise<string | null> => {
+      const ws = getWs();
+      const backupKey = getBackupKey(ws);
       try {
-        const res = await fetch(`/api/store/${storeName}`);
+        const res = await fetch(`/api/store/${storeName}`, {
+          headers: { 'x-workspace-id': ws },
+        });
         if (res.ok) {
           const data = await res.text();
           if (data && data !== 'null' && data.trim() !== '') {
             try {
-              localStorage.setItem(localBackupKey, data);
+              localStorage.setItem(backupKey, data);
             } catch {}
             return data;
           }
@@ -152,7 +175,7 @@ function createFileStorageEngine(storeName: string, debounceMs: number = 300): S
 
       // Offline or API failure fallback
       try {
-        const cached = localStorage.getItem(localBackupKey);
+        const cached = localStorage.getItem(backupKey);
         if (cached && cached !== 'null') {
           return cached;
         }
@@ -162,23 +185,22 @@ function createFileStorageEngine(storeName: string, debounceMs: number = 300): S
     },
 
     setItem: (key: string, value: string): void => {
+      const activeWs = getWs();
       // 1. Immediately mirror to synchronous localStorage
       try {
-        localStorage.setItem(localBackupKey, value);
+        localStorage.setItem(getBackupKey(activeWs), value);
       } catch {}
 
-      // 2. Mark this client's active write timestamp for echo suppression
+      lastClientWriteTimestamps.set(`${activeWs}:${storeName}`, Date.now());
       lastClientWriteTimestamps.set(storeName, Date.now());
 
-      // 3. Clear any active debounce timer for this store
       const existing = pendingWrites.get(storeName);
       if (existing?.timer) {
         clearTimeout(existing.timer);
       }
 
-      // 4. Setup flush function and debounced timer
       const flush = () => {
-        sendWrite(value);
+        sendWrite(value, activeWs);
       };
 
       const timer = setTimeout(() => {
@@ -190,13 +212,18 @@ function createFileStorageEngine(storeName: string, debounceMs: number = 300): S
     },
 
     removeItem: (key: string): void => {
+      const ws = getWs();
       try {
-        localStorage.removeItem(localBackupKey);
+        localStorage.removeItem(getBackupKey(ws));
       } catch {}
       const existing = pendingWrites.get(storeName);
       if (existing?.timer) clearTimeout(existing.timer);
       pendingWrites.delete(storeName);
-      fetch(`/api/store/${storeName}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+      fetch(`/api/store/${storeName}`, {
+        method: 'DELETE',
+        headers: { 'x-workspace-id': ws },
+        keepalive: true
+      }).catch(() => {});
     },
   };
 }

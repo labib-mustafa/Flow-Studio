@@ -51,6 +51,7 @@ import { CommandPalette } from './components/GlobalComponents/CommandPalette/Com
 import { ShortcutsModal } from './components/GlobalComponents/ShortcutsModal';
 import { NavigationHud } from './components/GlobalComponents/NavigationHud';
 import { PageSkeletonRouter } from './components/GlobalComponents/Skeletons/PageSkeletonRouter';
+import { AICopilotModal } from './components/GlobalComponents/AICopilot/AICopilotModal';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -91,6 +92,25 @@ function AppContent() {
   const [editingProject, setEditingProject] = useState<any>(null);
   const [selectedMemberIdForDetails, setSelectedMemberIdForDetails] = useState<string | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isAICopilotOpen, setIsAICopilotOpen] = useState(false);
+
+  // Listen for global open-ai-copilot event
+  useEffect(() => {
+    const handleOpenCopilot = () => setIsAICopilotOpen(true);
+    window.addEventListener('open-ai-copilot', handleOpenCopilot);
+    return () => window.removeEventListener('open-ai-copilot', handleOpenCopilot);
+  }, []);
+
+  // Listen for global navigation requests (e.g. from AI Personal Agent)
+  useEffect(() => {
+    const handleNavigate = (e: any) => {
+      if (e.detail?.view) {
+        setCurrentView(e.detail.view);
+      }
+    };
+    window.addEventListener('navigate-to-view', handleNavigate);
+    return () => window.removeEventListener('navigate-to-view', handleNavigate);
+  }, []);
 
   // Sync currentView to localStorage whenever it changes
   useEffect(() => {
@@ -160,11 +180,17 @@ function AppContent() {
           setCurrentView('new-project');
         }
       }
-      
+
       // Cmd+, / Ctrl+, -> Settings
       if ((e.metaKey || e.ctrlKey) && e.key === ',') {
         e.preventDefault();
         setCurrentView('settings');
+      }
+
+      // Cmd+J / Ctrl+J -> AI Co-Pilot
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setIsAICopilotOpen(prev => !prev);
       }
 
       // Escape -> close modals, or go back if in full screen notes
@@ -174,7 +200,7 @@ function AppContent() {
         }
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isNotesFullScreen]);
@@ -193,7 +219,7 @@ function AppContent() {
     return (
       <div className="bg-[#f5f5f7] min-h-screen flex font-sans overflow-hidden h-screen select-none">
         <div className="h-full flex-shrink-0">
-          <Sidebar activeTab={currentView} onTabChange={() => {}} />
+          <Sidebar activeTab={currentView} onTabChange={() => { }} />
         </div>
         <main className="flex-1 h-full overflow-hidden relative">
           <PageSkeletonRouter view={currentView} />
@@ -343,9 +369,9 @@ function AppContent() {
             isSidebarExpanded={isProjectSidebarOpen}
             onSidebarToggle={handleManualSidebarToggle}
           >
-            <TaskPage 
+            <TaskPage
               projectId={currentProject?.id}
-              onTabChange={(tab) => setCurrentView(`project-${tab}`)} 
+              onTabChange={(tab) => setCurrentView(`project-${tab}`)}
             />
           </ProjectDetailsLayout>
         );
@@ -477,6 +503,8 @@ function AppContent() {
           activeTab={currentView.startsWith('project-') || currentView === 'new-project' ? 'projects' : currentView === 'member-details' ? 'team' : currentView}
           onTabChange={setCurrentView}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onOpenAICopilot={() => setIsAICopilotOpen(prev => !prev)}
+          isAICopilotOpen={isAICopilotOpen}
         />
       </div>
 
@@ -500,6 +528,12 @@ function AppContent() {
           setCurrentView('new-project');
         }}
       />
+      <AICopilotModal
+        isOpen={isAICopilotOpen}
+        onClose={() => setIsAICopilotOpen(false)}
+        currentView={currentView}
+      />
+
     </div>
   );
 }

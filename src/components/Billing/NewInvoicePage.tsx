@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useBillingStore, InvoiceLineItem } from '../../stores/billingStore';
 import { useClientStore } from '../../stores/clientStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { formatLocalDate } from '../../lib/timezone';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -56,6 +58,8 @@ export const PaymentLogo: React.FC<{ method: string; className?: string }> = ({ 
 
 export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }) => {
   const addInvoice = useBillingStore((state) => state.addInvoice);
+  const workspace = useWorkspaceStore();
+  const currSym = workspace.currencySymbol || '$';
 
   const { clients } = useClientStore();
   const [selectedClient, setSelectedClient] = useState<any>(clients.length > 0 ? clients[0] : null);
@@ -64,8 +68,8 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
   const [shippingAddress, setShippingAddress] = useState('');
 
   const [invoiceNumber, setInvoiceNumber] = useState(() => `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState(() => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [issueDate, setIssueDate] = useState(() => formatLocalDate(new Date()));
+  const [dueDate, setDueDate] = useState(() => formatLocalDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)));
   const [projectRef, setProjectRef] = useState('');
 
   const [selectedMethods, setSelectedMethods] = useState<string[]>(['Bank Transfer']);
@@ -171,8 +175,9 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
   };
 
   const handleEmailPDF = () => {
-    const subject = encodeURIComponent(`Invoice ${invoiceNumber} from Flow Studio`);
-    const body = encodeURIComponent(`Hi ${selectedClient.name},\n\nPlease find attached Invoice ${invoiceNumber} for our recent deliverables.\n\nTotal Due: $${total.toFixed(2)}\n\nThank you for your business!\n\nBest regards,\nFlow Studio`);
+    const senderName = workspace.name || 'Flow Studio';
+    const subject = encodeURIComponent(`Invoice ${invoiceNumber} from ${senderName}`);
+    const body = encodeURIComponent(`Hi ${selectedClient.name},\n\nPlease find attached Invoice ${invoiceNumber} for our recent deliverables.\n\nTotal Due: ${currSym}${total.toFixed(2)}\n\nThank you for your business!\n\nBest regards,\n${senderName}`);
     
     window.location.href = `mailto:${selectedClient.email}?subject=${subject}&body=${body}`;
     showToast(`Launching email client for ${selectedClient.email}...`);
@@ -622,10 +627,21 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
               {/* Header */}
               <div className="flex justify-between items-start mb-10 pb-6 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-white font-extrabold text-sm shadow-md shadow-primary/20">
-                    FS
+                  {workspace.logo ? (
+                    <img src={workspace.logo} alt={workspace.name} className="size-9 rounded-xl object-cover border border-slate-200 shadow-xs" />
+                  ) : (
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-zinc-950 text-white font-extrabold text-sm shadow-xs">
+                      {workspace.name ? workspace.name.substring(0, 2).toUpperCase() : 'FS'}
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-extrabold text-slate-900 text-base tracking-tight block leading-tight">
+                      {workspace.name || 'Flow Studio'}
+                    </span>
+                    {workspace.legalName && (
+                      <span className="text-[10px] text-slate-400 font-medium block">{workspace.legalName}</span>
+                    )}
                   </div>
-                  <span className="font-extrabold text-slate-900 text-lg tracking-tight">Flow Studio</span>
                 </div>
                 <div className="text-right">
                   <h1 className="text-2xl font-light text-slate-300 uppercase tracking-widest leading-none">Invoice</h1>
@@ -675,9 +691,9 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                           )}
                         </td>
                         <td className="py-3 text-right font-mono">{item.quantity}</td>
-                        <td className="py-3 text-right font-mono">${Number(item.rate).toFixed(2)}</td>
+                        <td className="py-3 text-right font-mono">{currSym}{Number(item.rate).toFixed(2)}</td>
                         <td className="py-3 text-right font-bold text-slate-800 font-mono">
-                          ${(item.quantity * item.rate).toFixed(2)}
+                          {currSym}{(item.quantity * item.rate).toFixed(2)}
                         </td>
                       </tr>
                     ))}
@@ -690,15 +706,15 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
                 <div className="w-7/12 space-y-2">
                   <div className="flex justify-between py-1.5 border-b border-slate-100 text-xs">
                     <span className="text-slate-500">Subtotal</span>
-                    <span className="font-bold text-slate-900 font-mono">${subtotal.toFixed(2)}</span>
+                    <span className="font-bold text-slate-900 font-mono">{currSym}{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 text-xs">
                     <span className="text-slate-500">Tax (0%)</span>
-                    <span className="font-bold text-slate-900 font-mono">$0.00</span>
+                    <span className="font-bold text-slate-900 font-mono">{currSym}0.00</span>
                   </div>
                   <div className="flex justify-between pt-2">
                     <span className="text-sm font-extrabold text-slate-900">Total Due</span>
-                    <span className="text-xl font-black text-primary font-mono">${total.toFixed(2)}</span>
+                    <span className="text-xl font-black text-primary font-mono">{currSym}{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -727,11 +743,15 @@ export const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ onBack, onSave }
 
               <div className="flex justify-between items-center text-[10px] text-slate-400">
                 <div>
-                  <p>Questions? Email us at</p>
-                  <p className="font-bold text-slate-700">billing@flowstudio.com</p>
+                  <p>Questions? Contact us at</p>
+                  <p className="font-bold text-slate-700">{workspace.email || 'billing@flowstudio.com'}</p>
+                  {workspace.taxId && <p className="text-[9px] text-slate-400 mt-0.5">Tax ID: {workspace.taxId}</p>}
                 </div>
-                <div className="px-3 py-1.5 rounded bg-slate-900 text-white font-bold uppercase tracking-wider text-[9px] opacity-40">
-                  Pay Online
+                <div className="text-right">
+                  <span className="text-[9px] text-slate-400 font-medium block">Powered by Flow Studio</span>
+                  <div className="mt-1 px-2.5 py-1 rounded bg-slate-900 text-white font-bold uppercase tracking-wider text-[8.5px] opacity-40 inline-block">
+                    Pay Online
+                  </div>
                 </div>
               </div>
             </div>

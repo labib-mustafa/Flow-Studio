@@ -15,6 +15,7 @@ import { TaskCommentsPopover } from './TaskCommentsPopover';
 import { CellPopover } from '../../../ui/CellPopover';
 import { StatusConfigPopover } from './StatusConfigPopover';
 import { MessagesSquare, Flag, ClipboardType, Plus } from 'lucide-react';
+import { formatLocalDate } from '../../../../lib/timezone';
 
 interface TaskListProps {
   onAddTask: (phase?: string) => void;
@@ -156,8 +157,8 @@ const CustomCellRenderer = React.memo(({ task, column }: { task: Task; column: a
         <input
           type="date"
           className="w-full bg-transparent outline-none text-slate-600 text-[13px] hover:bg-slate-100 focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 -ml-1 transition-all"
-          value={value ? new Date(value).toISOString().split('T')[0] : ''}
-          onChange={e => useTaskStore.getState().updateTask(task.id, { [column.id]: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+          value={value ? formatLocalDate(value) : ''}
+          onChange={e => useTaskStore.getState().updateTask(task.id, { [column.id]: e.target.value || '' })}
         />
       </div>
     );
@@ -549,14 +550,6 @@ const TaskRow: React.FC<{
       updateTask(id, { phase: 'done', status: 'Complete' });
       sound.success();
       triggerConfettiBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 7);
-      toast.success('Task completed', `"${title}" marked as complete`, {
-        actionText: 'Undo',
-        duration: 4500,
-        onAction: () => {
-          updateTask(id, { phase: 'todo', status: 'Incomplete' });
-          sound.tick();
-        },
-      });
     } else {
       updateTask(id, { phase: 'todo', status: 'Incomplete' });
       sound.tick();
@@ -1720,14 +1713,6 @@ export const TaskList: React.FC<TaskListProps> = ({
               } else {
                 triggerConfettiBurst(undefined, undefined, 7);
               }
-              toast.success('Task completed', `"${targetTask.title}" marked as complete`, {
-                actionText: 'Undo',
-                duration: 4500,
-                onAction: () => {
-                  useTaskStore.getState().updateTask(targetTask.id, { phase: 'todo', status: 'Incomplete' });
-                  sound.tick();
-                },
-              });
             } else {
               sound.tick();
             }

@@ -16,6 +16,7 @@ import { useMailStore } from '../../stores/mailStore';
 import { PillTab } from '../GlobalComponents/PillTab';
 import { formatDistanceToNow } from 'date-fns';
 import { Mail, Clock, ArrowRight, UserPlus, FileEdit, CheckSquare, MessageSquare, AlertCircle, Activity } from 'lucide-react';
+import { formatLocalDate } from '../../lib/timezone';
 
 type TimePeriod = 'week' | 'month' | 'quarter' | 'all';
 type ReportsTab = 'Overview' | 'Project' | 'Team' | 'Lead' | 'Client';
@@ -37,7 +38,7 @@ const containerVariants = {
 };
 const itemVariants = {
   hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const } },
 };
 
 /* ─── Custom Recharts Tooltip ────────────────────────────────────── */
@@ -76,7 +77,7 @@ const ActivityHeatmap: React.FC<{ activityCounts: Record<string, number> }> = ({
       const cellDate = new Date(startDate);
       cellDate.setDate(startDate.getDate() + w * 7 + d);
       if (cellDate > today) continue;
-      const dateStr = cellDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(cellDate);
       const count = activityCounts[dateStr] || 0;
       cells.push({ date: dateStr, count, week: w, day: d });
 

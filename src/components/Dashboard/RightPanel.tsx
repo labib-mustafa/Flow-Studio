@@ -21,12 +21,12 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
   const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
   const { getEventsByDate, events, isEventModalOpen, setEventModalOpen } = useEventStore();
-  
+
   const selectedDateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
   const dayEvents = getEventsByDate(selectedDateStr);
 
   const getEventStyle = (type: CalendarEvent['type']) => {
-    switch(type) {
+    switch (type) {
       case 'Call': return { bg: 'bg-blue-50/80', border: 'border-blue-100 hover:border-blue-200', text: 'text-blue-600', icon: 'videocam' };
       case 'Design': return { bg: 'bg-purple-50/80', border: 'border-purple-100 hover:border-purple-200', text: 'text-purple-600', icon: 'design_services' };
       case 'Team Sync': return { bg: 'bg-amber-50/80', border: 'border-amber-100 hover:border-amber-200', text: 'text-amber-600', icon: 'groups' };
@@ -37,17 +37,17 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
   return (
     <aside className="w-80 flex-shrink-0 bg-white border-l border-slate-100 hidden 2xl:flex flex-col p-6 overflow-y-auto h-full">
       <div className="flex items-center justify-between mb-6">
-        <button 
+        <button
           onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
           className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
         ><span className="material-symbols-outlined text-sm">arrow_back_ios</span></button>
         <h3 className="font-bold text-slate-800 tracking-tight">{currentMonthName}</h3>
-        <button 
+        <button
           onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
           className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
         ><span className="material-symbols-outlined text-sm">arrow_forward_ios</span></button>
       </div>
-      
+
       <div className="mb-6">
         <div className="grid grid-cols-7 gap-1.5 text-center mb-2">
           {weekDays.map(day => (
@@ -57,14 +57,13 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
         <div className="grid grid-cols-7 gap-1.5 text-center text-slate-600 font-medium text-xs">
           {Array.from({ length: startOffset }).map((_, i) => <span key={`empty-${i}`}></span>)}
           {days.map(day => (
-            <span 
-              key={day} 
+            <span
+              key={day}
               onClick={() => setSelectedDay(day)}
-              className={`p-1.5 rounded-full cursor-pointer transition-all ${
-                day === selectedDay 
-                  ? 'bg-black text-white font-bold shadow-md scale-105' 
-                  : 'hover:bg-slate-100 text-slate-700'
-              }`}
+              className={`p-1.5 rounded-full cursor-pointer transition-all ${day === selectedDay
+                ? 'bg-black text-white font-bold shadow-md scale-105'
+                : 'hover:bg-slate-100 text-slate-700'
+                }`}
             >
               {day}
             </span>
@@ -72,7 +71,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
         </div>
       </div>
 
-      <button 
+      <button
         onClick={() => setEventModalOpen(true)}
         className="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl mb-6 shadow hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
       >
@@ -83,17 +82,17 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-base text-slate-800">{viewDate.toLocaleString('default', { month: 'short' })} {selectedDay} Schedule</h3>
         <div className="flex gap-2 text-slate-400">
-          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors" onClick={() => {}}>refresh</span>
-          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors" onClick={() => {}}>edit_document</span>
+          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors" onClick={() => { }}>refresh</span>
+          <span className="material-symbols-outlined text-sm cursor-pointer hover:text-slate-600 transition-colors" onClick={() => { }}>edit_document</span>
         </div>
       </div>
 
       <div className="space-y-5 relative flex-1">
         <div className="absolute left-[34px] top-2 bottom-0 w-px bg-slate-100"></div>
-        
+
         {dayEvents.length === 0 ? (
           <div className="text-center py-6">
-            <p className="text-xs font-medium text-slate-400">No events scheduled for this day.</p>
+            <p className="text-xs font-medium text-slate-400">No events scheduled for today.</p>
           </div>
         ) : (
           dayEvents.map(evt => {
@@ -124,19 +123,9 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
         )}
       </div>
 
-      <div className="mt-6 flex justify-end pt-4 border-t border-slate-100">
-        <button 
-          onClick={onNewProject}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl text-xs font-bold shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
-        >
-          <span className="material-symbols-outlined text-sm">add</span>
-          New Project
-        </button>
-      </div>
-
-      <EventModal 
-        isOpen={isEventModalOpen} 
-        onClose={() => setEventModalOpen(false)} 
+      <EventModal
+        isOpen={isEventModalOpen}
+        onClose={() => setEventModalOpen(false)}
         defaultDate={selectedDateStr}
       />
     </aside>

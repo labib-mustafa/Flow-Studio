@@ -98,7 +98,7 @@ export const useClientStore = create<ClientState>()(
       _hasHydrated: false,
       clients: initialClients,
       notes: initialNotes,
-      selectedClientId: 'john-doe',
+      selectedClientId: '',
       searchQuery: '',
       statusFilter: 'All',
 

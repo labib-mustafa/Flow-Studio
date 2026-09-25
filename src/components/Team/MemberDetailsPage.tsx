@@ -174,7 +174,7 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
     updateMember(member.id, { assignedProjects: newAssigned });
   };
 
-  const cubicTransition = { type: 'tween', ease: [0.16, 1, 0.3, 1], duration: 0.08 };
+  const cubicTransition = { type: 'tween' as const, ease: [0.16, 1, 0.3, 1] as const, duration: 0.08 };
 
   const bannerGradient = member.department.toLowerCase().includes('design')
     ? 'from-indigo-100 via-purple-100 to-pink-100'

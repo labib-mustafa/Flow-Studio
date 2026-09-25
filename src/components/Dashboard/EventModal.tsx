@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar as CalendarIcon, Clock, Users, Tag, AlignLeft, Type } from 'lucide-react';
 import { useEventStore } from '../../stores/eventStore';
 import { DatePickerInput } from '../ui/DatePickerInput';
+import { formatLocalDate } from '../../lib/timezone';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, default
     if (isOpen) {
       setTitle('');
       setDescription('');
-      setDate(defaultDate || new Date().toISOString().split('T')[0]);
+      setDate(defaultDate || formatLocalDate(new Date()));
       setTime('09:00');
       setType('Call');
       setParticipants('');

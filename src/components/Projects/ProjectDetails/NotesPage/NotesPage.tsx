@@ -221,16 +221,41 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
       } catch {}
     });
 
+    const handleNotesUpdated = (e?: any) => {
+      if (e?.detail?.projectId && currentProject?.id && e.detail.projectId !== currentProject.id) {
+        return;
+      }
+      const saved = localStorage.getItem(notesKey);
+      let updatedNotes: Note[] = [];
+      if (saved) {
+        try {
+          updatedNotes = JSON.parse(saved);
+        } catch {}
+      }
+      setNotes(updatedNotes);
+      if (updatedNotes.length === 0) {
+        setActiveNoteId(null);
+        if (editorRef.current) editorRef.current.innerHTML = '';
+        if (titleRef.current) titleRef.current.innerText = '';
+      } else if (!updatedNotes.some(n => n.id === activeNoteId)) {
+        setActiveNoteId(updatedNotes[0].id);
+      }
+    };
+
+    window.addEventListener('flowstudio-notes-updated', handleNotesUpdated);
+
     return () => {
       isCancelled = true;
       unsub();
+      window.removeEventListener('flowstudio-notes-updated', handleNotesUpdated);
     };
   }, [notesKey, activeNoteIdKey, currentProject?.id]);
 
   const activeNote = notes.find(n => n.id === activeNoteId);
 
-  // Keep track of the currently loaded note ID to avoid resetting editor HTML while typing
+  // Keep track of the currently loaded note ID and baseline DOM content to avoid false edits on click/focus
   const loadedNoteIdRef = useRef<string | null>(null);
+  const activeNoteBaselineRef = useRef<{ id: string; title: string; content: string } | null>(null);
 
   useEffect(() => {
     if (activeNote && editorRef.current && titleRef.current) {
@@ -239,22 +264,58 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
         editorRef.current.innerHTML = activeNote.content;
         titleRef.current.innerText = activeNote.title;
         loadedNoteIdRef.current = activeNoteId;
+        activeNoteBaselineRef.current = {
+          id: activeNoteId,
+          title: titleRef.current.innerText,
+          content: editorRef.current.innerHTML,
+        };
       }
     }
   }, [activeNoteId, activeNote]);
 
   const saveContent = () => {
-    if (!activeNoteId) return;
+    if (!activeNoteId || !editorRef.current || !titleRef.current) return;
+
+    const currentTitle = titleRef.current.innerText;
+    const currentContent = editorRef.current.innerHTML;
+
+    // Check against baseline to detect actual modifications (typing, deleting, formatting, styling)
+    const baseline = activeNoteBaselineRef.current;
+    const hasBaseline = baseline && baseline.id === activeNoteId;
+
+    if (!hasBaseline) {
+      activeNoteBaselineRef.current = {
+        id: activeNoteId,
+        title: currentTitle,
+        content: currentContent,
+      };
+      return;
+    }
+
+    const isTitleChanged = currentTitle !== baseline.title;
+    const isContentChanged = currentContent !== baseline.content;
+
+    // Only update timestamp and save if actual text/style changes occurred
+    // Prevents simple click, focus, cursor movement, or blur from falsely updating 'Last edited'
+    if (!isTitleChanged && !isContentChanged) {
+      return;
+    }
 
     const now = new Date();
     const currentTimestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    activeNoteBaselineRef.current = {
+      id: activeNoteId,
+      title: currentTitle,
+      content: currentContent,
+    };
 
     const updatedNotes = notes.map(n => {
       if (n.id === activeNoteId) {
         return {
           ...n,
-          title: titleRef.current?.innerText || n.title,
-          content: editorRef.current?.innerHTML || n.content,
+          title: currentTitle || n.title,
+          content: currentContent || n.content,
           timestamp: currentTimestamp,
           time: 'Today'
         };

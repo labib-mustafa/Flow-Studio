@@ -20,12 +20,6 @@ export const TaskPage: React.FC<TaskPageProps> = ({ onTabChange, projectId }) =>
   const effectiveProjectId = projectId || currentProject?.id || fallbackProjectId;
 
   React.useEffect(() => {
-    if (!currentProject && projects.length > 0) {
-      setCurrentProject(projects[0]);
-    }
-  }, [currentProject, projects, setCurrentProject]);
-
-  React.useEffect(() => {
     if (effectiveProjectId) {
       setProject(effectiveProjectId);
     }

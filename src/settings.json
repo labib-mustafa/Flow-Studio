@@ -55,5 +55,12 @@
   },
   "trashSettings": {
     "retentionDays": 30
-  }
+  },
+  "aiSettings": {
+    "enabled": false,
+    "apiKey": "",
+    "model": "gemini-3.5-flash",
+    "apiKeys": []
+  },
+  "timeZone": "auto"
 }

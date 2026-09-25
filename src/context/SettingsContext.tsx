@@ -1,6 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import defaultSettings from '../settings.json';
 
+export interface ApiKeyEntry {
+  id: string;
+  name: string;
+  key: string;
+  provider: 'groq' | 'gemini' | 'openrouter' | 'unknown';
+  isActive: boolean;
+  isEnabled?: boolean;
+  createdAt: string;
+}
+
+export interface AISettings {
+  enabled: boolean;
+  apiKey: string;
+  model: string;
+  apiKeys?: ApiKeyEntry[];
+}
+
 export interface Settings {
   baseProjectPath: string;
   shipFolderName: string;
@@ -59,6 +76,8 @@ export interface Settings {
   trashSettings: {
     retentionDays: number;
   };
+  aiSettings?: AISettings;
+  timeZone?: string;
 }
 
 interface SettingsContextType {
@@ -74,6 +93,7 @@ function mergeWithDefaults(parsed: any): Settings {
   return {
     ...defaultSettings,
     ...parsed,
+    timeZone: parsed.timeZone || (defaultSettings as any).timeZone || 'auto',
     notifications: {
       app: { ...defaultSettings.notifications.app, ...(parsed.notifications?.app || {}) },
       email: { ...defaultSettings.notifications.email, ...(parsed.notifications?.email || {}) },
@@ -106,7 +126,29 @@ function mergeWithDefaults(parsed: any): Settings {
     trashSettings: {
       ...defaultSettings.trashSettings,
       ...(parsed.trashSettings || {})
-    }
+    },
+    aiSettings: (() => {
+      const baseAI = { ...(defaultSettings as any).aiSettings, ...(parsed.aiSettings || {}) };
+      let keys: ApiKeyEntry[] = Array.isArray(baseAI.apiKeys) ? baseAI.apiKeys : [];
+      if (baseAI.apiKey && keys.length === 0) {
+        const isGroq = baseAI.apiKey.startsWith('gsk_');
+        keys = [{
+          id: 'key-primary',
+          name: isGroq ? 'Groq Primary Key' : 'Gemini Primary Key',
+          key: baseAI.apiKey,
+          provider: isGroq ? 'groq' : 'gemini',
+          isActive: true,
+          isEnabled: true,
+          createdAt: new Date().toISOString()
+        }];
+      } else {
+        keys = keys.map(k => ({
+          ...k,
+          isEnabled: k.isEnabled !== undefined ? k.isEnabled : true
+        }));
+      }
+      return { ...baseAI, apiKeys: keys };
+    })()
   } as Settings;
 }
 

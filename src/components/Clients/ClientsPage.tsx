@@ -79,6 +79,21 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
   const [detailViewTab, setDetailViewTab] = useState<'overview' | 'tasks' | 'files' | 'financials' | 'notes' | 'projects'>('overview');
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
+  // Listen for AI navigation to specific client and tab
+  useEffect(() => {
+    const handleOpenClient = (e: any) => {
+      if (e.detail?.clientId) {
+        selectClient(e.detail.clientId);
+      }
+      if (e.detail?.tab) {
+        setDetailViewTab(e.detail.tab);
+      }
+      setIsDetailViewOpen(true);
+    };
+    window.addEventListener('open-client-details', handleOpenClient);
+    return () => window.removeEventListener('open-client-details', handleOpenClient);
+  }, [selectClient]);
+
   // Copy feedback state
   const [copyFeedback, setCopyFeedback] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
 
@@ -366,9 +381,9 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
       </header>
 
       {/* Main Multi-Column Split */}
-      <div className="flex-1 flex overflow-hidden relative px-8 py-6">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Left Side: Client Stack & Summary */}
-        <div className="flex-1 flex flex-col h-full min-h-0 bg-[#f5f5f7]">
+        <div className="flex-1 flex flex-col h-full min-h-0 bg-[#f5f5f7] px-8 py-6">
 
           {/* Status Filter Tabs */}
           <div className="flex flex-wrap items-center gap-2 shrink-0 mb-3">

@@ -7,6 +7,7 @@ import { useMoodboardStore } from '../../../../stores/moodboardStore';
 
 export type MoodboardItemType = 
   | 'note' 
+  | 'sticky'
   | 'text' 
   | 'image' 
   | 'color' 
@@ -118,7 +119,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (item.type === 'note' && textareaRef.current) {
+    if ((item.type === 'note' || item.type === 'sticky') && textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
@@ -135,6 +136,7 @@ export const MoodboardItem: React.FC<MoodboardItemProps> = ({ item, isSelected, 
   const renderContent = () => {
     switch (item.type) {
       case 'note':
+      case 'sticky':
         return (
           <div
             className="rounded-xl shadow-md border p-4 flex flex-col w-full h-full transition-colors"

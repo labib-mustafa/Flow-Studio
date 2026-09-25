@@ -59,7 +59,7 @@ export const FloatingPropertyBar: React.FC<FloatingPropertyBarProps> = ({
   const isSingleItem = items.length === 1;
   const item = isSingleItem ? items[0] : null;
   
-  const allNotesOrShapes = items.length > 0 && items.every(i => i.type === 'note' || i.type === 'shape');
+  const allNotesOrShapes = items.length > 0 && items.every(i => i.type === 'note' || (i.type as any) === 'sticky' || i.type === 'shape');
   const allArrowsOrPencils = items.length > 0 && items.every(i => i.type === 'arrow' || i.type === 'pencil');
   const allArrows = items.length > 0 && items.every(i => i.type === 'arrow');
   const allImages = items.length > 0 && items.every(i => i.type === 'image');

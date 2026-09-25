@@ -64,6 +64,14 @@ export interface MoodboardState {
   deleteCommentPin: (commentIdOrItemId: string | null, commentId?: string) => void;
   setGridConfig: (config: Partial<GridConfig> | ((prev: GridConfig) => GridConfig)) => void;
   duplicateItems: (itemIds?: string[], offset?: { x: number; y: number }) => string[];
+
+  // Stack level (z-order) control. Mirrors the inline implementations that
+  // previously lived only in MoodboardPage, so they are reachable without the
+  // UI. Follows toggleLockItems/duplicateItems: explicit ids, else selection.
+  bringToFront: (itemIds?: string[]) => void;
+  bringForward: (itemIds?: string[]) => void;
+  sendToBack: (itemIds?: string[]) => void;
+  sendBackward: (itemIds?: string[]) => void;
 }
 
 export const useMoodboardStore = create<MoodboardState>()(
@@ -642,6 +650,63 @@ export const useMoodboardStore = create<MoodboardState>()(
         get().saveToHistory(updatedItems);
         set({ selectedIds: newIds });
         return newIds;
+      },
+
+      // --- Stack level (z-order) control ---
+      // Item order in the array is the render order, so reordering the array is
+      // the z-order operation. Lifted out of MoodboardPage's inline handlers.
+      bringToFront: (itemIds) => {
+        const state = get();
+        const targetIds = itemIds && itemIds.length > 0 ? itemIds : state.selectedIds;
+        if (targetIds.length === 0) return;
+        const selected = state.items.filter((i) => targetIds.includes(i.id));
+        if (selected.length === 0) return;
+        const rest = state.items.filter((i) => !targetIds.includes(i.id));
+        get().saveToHistory([...rest, ...selected]);
+      },
+
+      sendToBack: (itemIds) => {
+        const state = get();
+        const targetIds = itemIds && itemIds.length > 0 ? itemIds : state.selectedIds;
+        if (targetIds.length === 0) return;
+        const selected = state.items.filter((i) => targetIds.includes(i.id));
+        if (selected.length === 0) return;
+        const rest = state.items.filter((i) => !targetIds.includes(i.id));
+        get().saveToHistory([...selected, ...rest]);
+      },
+
+      bringForward: (itemIds) => {
+        const state = get();
+        const targetIds = itemIds && itemIds.length > 0 ? itemIds : state.selectedIds;
+        if (targetIds.length === 0) return;
+        const next = [...state.items];
+        let changed = false;
+        for (let i = next.length - 2; i >= 0; i--) {
+          if (targetIds.includes(next[i].id) && !targetIds.includes(next[i + 1].id)) {
+            const swap = next[i];
+            next[i] = next[i + 1];
+            next[i + 1] = swap;
+            changed = true;
+          }
+        }
+        if (changed) get().saveToHistory(next);
+      },
+
+      sendBackward: (itemIds) => {
+        const state = get();
+        const targetIds = itemIds && itemIds.length > 0 ? itemIds : state.selectedIds;
+        if (targetIds.length === 0) return;
+        const next = [...state.items];
+        let changed = false;
+        for (let i = 1; i < next.length; i++) {
+          if (targetIds.includes(next[i].id) && !targetIds.includes(next[i - 1].id)) {
+            const swap = next[i];
+            next[i] = next[i - 1];
+            next[i - 1] = swap;
+            changed = true;
+          }
+        }
+        if (changed) get().saveToHistory(next);
       },
     }),
     {

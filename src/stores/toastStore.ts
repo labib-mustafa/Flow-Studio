@@ -29,11 +29,13 @@ interface ToastStoreState {
 
 export const useToastStore = create<ToastStoreState>((set, get) => ({
   toasts: [],
-  maxToasts: 4,
+  maxToasts: 2,
 
   addToast: (type, title, message = '', options = {}) => {
     const id = 'toast-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-    const duration = options.duration || 4000;
+    // Give actionable toasts (like Undo) 5s; errors 4.5s; standard confirmations a quick 2.6s
+    const defaultDuration = options.actionText ? 5000 : (type === 'error' ? 4500 : 2600);
+    const duration = options.duration || defaultDuration;
 
     const newToast: ToastItem = {
       id,

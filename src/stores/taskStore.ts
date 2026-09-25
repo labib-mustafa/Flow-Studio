@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createFileStorage, onStoreExternalUpdate } from '../lib/fileStorage';
+import { formatLocalDate } from '../lib/timezone';
 import { useActivityStore } from './activityStore';
 import { useTrashStore } from './trashStore';
 import { useTeamStore } from './teamStore';
@@ -227,13 +228,13 @@ export const useTaskStore = create<TaskState>()(
         })
       })),
       updateTaskDueDate: (id, date) => set((state) => ({
-        tasks: state.tasks.map((t) => (t.id === id ? { ...t, dueDate: date ? date.toISOString().split('T')[0] : '' } : t))
+        tasks: state.tasks.map((t) => (t.id === id ? { ...t, dueDate: date ? formatLocalDate(date) : '' } : t))
       })),
       updateTaskDates: (id, startDate, dueDate) => set((state) => ({
         tasks: state.tasks.map((t) => (t.id === id ? { 
           ...t, 
-          startDate: startDate ? startDate.toISOString().split('T')[0] : undefined,
-          dueDate: dueDate ? dueDate.toISOString().split('T')[0] : '' 
+          startDate: startDate ? formatLocalDate(startDate) : undefined,
+          dueDate: dueDate ? formatLocalDate(dueDate) : '' 
         } : t))
       })),
       deleteTask: (id) => {

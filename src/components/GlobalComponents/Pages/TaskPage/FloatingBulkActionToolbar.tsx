@@ -80,7 +80,6 @@ export const FloatingBulkActionToolbar: React.FC<FloatingBulkActionToolbarProps>
     } else {
       sound.tick();
     }
-    toast.success('Tasks updated', `Marked ${selectedCount} tasks as ${status}.`);
     setIsMoreOpen(false);
   };
 

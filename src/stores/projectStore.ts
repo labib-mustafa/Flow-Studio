@@ -30,7 +30,7 @@ export interface Project {
 interface ProjectState {
   _hasHydrated: boolean;
   projects: Project[];
-  currentProject: Project;
+  currentProject: Project | null;
   addProject: (project: Project) => void;
   updateProject: {
     (updates: Partial<Project>): void;
@@ -38,7 +38,7 @@ interface ProjectState {
   };
   deleteProject: (id: string) => void;
   duplicateProject: (id: string) => void;
-  setCurrentProject: (project: Project) => void;
+  setCurrentProject: (project: Project | null) => void;
   togglePinProject: (id: string) => void;
 }
 
@@ -87,7 +87,7 @@ export const useProjectStore = create<ProjectState>()(
                 completion: typeof updates.completion === 'number' ? updates.completion : (updates.progress !== undefined ? updates.progress : p.completion),
                 progress: typeof updates.progress === 'number' ? updates.progress : (updates.completion !== undefined ? updates.completion : p.progress),
               };
-              if (state.currentProject.id === id) {
+              if (state.currentProject?.id === id) {
                 nextCurrentProject = updated;
               }
               return updated;
@@ -97,9 +97,9 @@ export const useProjectStore = create<ProjectState>()(
         } else {
           // Signature: updateProject(updates)
           const updates = idOrUpdates || {};
-          const currentId = state.currentProject.id;
+          const currentId = state.currentProject?.id;
           
-          nextCurrentProject = {
+          nextCurrentProject = state.currentProject ? {
             ...state.currentProject,
             ...updates,
             name: updates.name || updates.title || state.currentProject.name,
@@ -108,9 +108,9 @@ export const useProjectStore = create<ProjectState>()(
             image: updates.image || updates.thumbnail || state.currentProject.image,
             completion: typeof updates.completion === 'number' ? updates.completion : (updates.progress !== undefined ? updates.progress : state.currentProject.completion),
             progress: typeof updates.progress === 'number' ? updates.progress : (updates.completion !== undefined ? updates.completion : state.currentProject.progress),
-          };
+          } : null;
 
-          updatedProjects = state.projects.map((p) => (p.id === currentId ? nextCurrentProject : p));
+          updatedProjects = state.projects.map((p) => (p.id === currentId ? (nextCurrentProject || p) : p));
         }
 
         return {
@@ -126,7 +126,7 @@ export const useProjectStore = create<ProjectState>()(
         }
         set((state) => ({
           projects: state.projects.filter((p) => p.id !== id),
-          currentProject: state.currentProject.id === id ? state.projects.filter(p => p.id !== id)[0] || state.currentProject : state.currentProject
+          currentProject: state.currentProject?.id === id ? state.projects.filter(p => p.id !== id)[0] || null : state.currentProject
         }));
       },
       duplicateProject: (id) => {
@@ -203,12 +203,17 @@ export const useProjectStore = create<ProjectState>()(
           merged.projects = currentState.projects;
         }
         if (merged.currentProject) {
-          merged.currentProject = {
-            tags: [],
-            ...merged.currentProject
-          };
+          const exists = merged.projects && Array.isArray(merged.projects) && merged.projects.some((p: any) => p.id === merged.currentProject?.id);
+          if (!exists) {
+            merged.currentProject = null;
+          } else {
+            merged.currentProject = {
+              tags: [],
+              ...merged.currentProject
+            };
+          }
         } else {
-          merged.currentProject = currentState.currentProject;
+          merged.currentProject = null;
         }
         return merged;
       }

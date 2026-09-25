@@ -1,11 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { useAuthStore } from '../../stores/authStore';
+import { getUserTimeZone, getUserTimeZoneDetails, COMMON_TIMEZONES } from '../../lib/timezone';
 
 export const GeneralTab: React.FC = () => {
   const { settings, updateSettings } = useSettings();
   const { user } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const detectedTz = useMemo(() => getUserTimeZone(), []);
+  const resolvedTz = settings.timeZone && settings.timeZone !== 'auto' ? settings.timeZone : detectedTz;
+  const timeZoneDetails = useMemo(() => getUserTimeZoneDetails(resolvedTz), [resolvedTz]);
 
   const avatarUrl = settings.profileImage && (settings.profileImage.startsWith('data:') || !settings.profileImage.includes('aida-public'))
     ? settings.profileImage
@@ -198,6 +203,71 @@ export const GeneralTab: React.FC = () => {
               <p className="text-xs text-[#6b7280] leading-relaxed">Automatically save your project changes every 5 minutes.</p>
             </div>
           </label>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-semibold text-[#111111] mb-6 flex items-center gap-2 px-2 font-display -tracking-[0.03em]">
+          <span className="material-symbols-outlined text-[#111111] text-xl">schedule</span>
+          Time & Regional Timezone
+        </h3>
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-xs flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-base font-semibold text-[#111111] font-display -tracking-[0.02em]">
+                  Device Timezone
+                </h4>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Auto-picked from Device
+                </span>
+              </div>
+              <p className="text-xs text-[#6b7280] mt-1 leading-relaxed">
+                Flow Studio automatically synchronizes calendar schedules, tasks, billable timers, and AI prompts with your device's local clock.
+              </p>
+            </div>
+
+            <div className="text-left sm:text-right shrink-0 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200/80">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Device Local Time</span>
+              <span className="text-sm font-bold text-slate-900 font-mono">
+                {timeZoneDetails.currentTime}
+              </span>
+              <span className="text-[10px] text-slate-500 block">
+                {timeZoneDetails.currentDate} • {timeZoneDetails.offset}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div className="flex flex-col gap-1.5">
+              <label className="block text-xs font-semibold text-[#6b7280] uppercase tracking-wider">
+                Active Timezone
+              </label>
+              <select
+                value={settings.timeZone || 'auto'}
+                onChange={(e) => updateSettings({ timeZone: e.target.value })}
+                className="h-10 px-3.5 text-xs font-medium bg-white border border-slate-200 focus:border-[#111111] focus:ring-1 focus:ring-[#111111] transition-all rounded-lg text-[#111111] outline-none cursor-pointer"
+              >
+                {COMMON_TIMEZONES.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.value === 'auto' ? `Auto (${detectedTz})` : tz.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-slate-400 mt-0.5">
+                Current resolved timezone: <strong className="text-slate-700">{timeZoneDetails.label}</strong>
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-purple-50/50 border border-purple-100 flex items-start gap-3">
+              <span className="material-symbols-outlined text-purple-600 text-xl shrink-0 mt-0.5">smart_toy</span>
+              <div className="text-xs text-purple-950 leading-relaxed">
+                <span className="font-bold block">AI Agent Grounding Active</span>
+                Nova uses this device timezone ({timeZoneDetails.offset}) so commands like "tomorrow" or "22 sep" always resolve to your exact local day without timezone shifts.
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
