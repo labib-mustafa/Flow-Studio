@@ -36,9 +36,11 @@ export function handleClientDetailsTools(call: AgentToolCall): AgentToolResult |
 
       useEventStore.getState().addEvent({
         title: `Appointment: ${client.name} (${topic})`,
+        description: '',
         date,
         time,
-        type: 'Call' as any
+        type: 'Call',
+        participants: ''
       });
 
       toast.success(`Booked appointment for ${client.name}!`);

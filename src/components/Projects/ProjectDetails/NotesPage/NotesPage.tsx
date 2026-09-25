@@ -585,7 +585,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({ onTabChange, onFullScreenT
       }
 
       const hexBg = rgbToHexStr(foundBg) || '#FFFFFF';
-      const caretColor = getReadableTextColor(hexBg);
+      const { color: caretColor } = getReadableTextColor(hexBg);
 
       if (editorRef.current.style.caretColor !== caretColor) {
         editorRef.current.style.caretColor = caretColor;

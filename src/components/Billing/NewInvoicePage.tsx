@@ -27,7 +27,7 @@ export const PaymentLogo: React.FC<{ method: string; className?: string }> = ({ 
   const normalized = method.toLowerCase();
   
   let src = "";
-  let alt = method;
+  const alt = method;
   
   if (normalized.includes('paypal')) {
     src = "/payment-logos/paypal.png";

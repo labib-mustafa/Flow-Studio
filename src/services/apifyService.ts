@@ -102,7 +102,7 @@ export async function fetchApifyUserUsage(apiKey: string): Promise<ApifyUserUsag
       const user = data.data || data;
 
       // Extract Usage USD from stats or root (excluding limits object)
-      let rawUsage =
+      const rawUsage =
         user.stats?.monthlyUsageUsd ??
         user.stats?.currentMonthUsageUsd ??
         user.stats?.usageUsd ??
@@ -113,10 +113,10 @@ export async function fetchApifyUserUsage(apiKey: string): Promise<ApifyUserUsag
         user.billing?.monthlyUsageUsd ??
         0;
 
-      let monthlyUsageUsd = Number(rawUsage);
+      const monthlyUsageUsd = Number(rawUsage);
 
       // Extract Limit USD from limits or plan
-      let rawLimit =
+      const rawLimit =
         user.limits?.monthlyUsageUsdLimit ??
         user.limits?.maxMonthlyUsageUsd ??
         user.limits?.monthlyUsageUsd ??
@@ -126,7 +126,7 @@ export async function fetchApifyUserUsage(apiKey: string): Promise<ApifyUserUsag
         user.plan?.monthlyUsageLimitUsd ??
         5;
 
-      let monthlyUsageLimitUsd = Number(rawLimit);
+      const monthlyUsageLimitUsd = Number(rawLimit);
 
       const planName = user.plan?.name || user.plan?.id || 'Free Plan';
       const remainingUsd = Math.max(0, monthlyUsageLimitUsd - monthlyUsageUsd);

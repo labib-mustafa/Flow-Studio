@@ -3226,7 +3226,7 @@ const candidateDistPaths = [
   path.resolve(cwdDir, '../dist')
 ];
 
-let distPath = candidateDistPaths.find(p => fs.existsSync(p)) || candidateDistPaths[0];
+const distPath = candidateDistPaths.find(p => fs.existsSync(p)) || candidateDistPaths[0];
 console.log('[FlowStudio Server] Resolved distPath:', distPath, 'exists:', fs.existsSync(distPath));
 
 if (fs.existsSync(distPath)) {

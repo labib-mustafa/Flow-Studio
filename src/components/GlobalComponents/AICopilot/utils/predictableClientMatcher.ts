@@ -51,9 +51,11 @@ export const matchPredictableClientAction = (
       });
       useEventStore.getState().addEvent({
         title: `Appointment: ${client.name}`,
+        description: '',
         date,
         time,
-        type: 'Call' as any
+        type: 'Call',
+        participants: ''
       });
       emitClientSuccess(
         text,

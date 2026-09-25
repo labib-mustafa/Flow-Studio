@@ -54,9 +54,10 @@ export const WithDevHoverBounds: React.FC<WithDevHoverBoundsProps> = ({
      devClass += 'outline outline-1 outline-blue-400/50 -outline-offset-1 ';
   }
 
-  const childClassName = children.props.className || '';
+  const childEl = children as React.ReactElement<{ className?: string }>;
+  const childClassName = childEl.props.className || '';
 
-  return React.cloneElement(children, {
+  return React.cloneElement(childEl, {
     className: `${childClassName} ${devClass} ${className}`.trim(),
   });
 };

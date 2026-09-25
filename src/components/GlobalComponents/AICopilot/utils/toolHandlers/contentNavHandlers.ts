@@ -139,7 +139,8 @@ export function handleContentNavTools(
       const [cardW, cardH, gap] = [240, 180, 20];
       const [gridW, gridH] = [cols * cardW + (cols - 1) * gap, Math.ceil(count / cols) * cardH + (Math.ceil(count / cols) - 1) * gap];
 
-      let [startX, startY] = [Math.round(centerX - gridW / 2), Math.round(centerY - gridH / 2)];
+      const startX = Math.round(centerX - gridW / 2);
+      let startY = Math.round(centerY - gridH / 2);
       if (currentItems.some(ci => Math.abs(ci.x - startX) < 180 && Math.abs(ci.y - startY) < 150)) {
         startY = (startY + 210 + gridH > maxY) ? Math.max(minY + 40, startY - 240) : startY + 210;
       }

@@ -417,7 +417,7 @@ const ResizableHeader: React.FC<{
       document.body.classList.add('resizing-column');
 
       const onMouseMove = (moveEvent: MouseEvent) => {
-        let deltaX = (moveEvent.pageX - startX) / zoom;
+        const deltaX = (moveEvent.pageX - startX) / zoom;
         let newWidth = startWidth + deltaX;
         if (newWidth < 60) newWidth = 60;
         if (newWidth > 800) newWidth = 800;
@@ -436,7 +436,7 @@ const ResizableHeader: React.FC<{
       };
 
       const onMouseUp = (moveEvent: MouseEvent) => {
-        let deltaX = (moveEvent.pageX - startX) / zoom;
+        const deltaX = (moveEvent.pageX - startX) / zoom;
         let finalWidth = startWidth + deltaX;
         if (finalWidth < 60) finalWidth = 60;
         if (finalWidth > 800) finalWidth = 800;

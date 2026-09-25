@@ -676,8 +676,8 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = React.mem
       triggerClassName="w-full h-full"
     >
       {children ? (
-        React.cloneElement(children as React.ReactElement, {
-          className: `${(children as React.ReactElement).props.className || ''} ${popoverOpen ? '!border-gray-300' : ''}`
+        React.cloneElement(children as React.ReactElement<{ className?: string }>, {
+          className: `${(children as React.ReactElement<{ className?: string }>).props.className || ''} ${popoverOpen ? '!border-gray-300' : ''}`
         })
       ) : (
         <div className="relative group/comments-trigger flex items-center justify-center">

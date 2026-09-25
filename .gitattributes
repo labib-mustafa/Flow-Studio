@@ -1,0 +1,29 @@
+# Normalise line endings to LF in the repository and in the working tree.
+# Without this, git rewrites CRLF on checkout and every `git add` prints
+# "LF will be replaced by CRLF" for the whole tree, which hides real warnings.
+* text=auto eol=lf
+
+# Never touch these as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.node binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# Lockfile: generated, and large diffs are noise in review
+package-lock.json -diff linguist-generated

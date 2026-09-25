@@ -58,7 +58,11 @@ export const useCopilotChat = (
 
   useEffect(() => {
     try {
-      inputPrompt ? localStorage.setItem(STORAGE_KEYS.DRAFT_PROMPT, inputPrompt) : localStorage.removeItem(STORAGE_KEYS.DRAFT_PROMPT);
+      if (inputPrompt) {
+        localStorage.setItem(STORAGE_KEYS.DRAFT_PROMPT, inputPrompt);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.DRAFT_PROMPT);
+      }
     } catch { }
   }, [inputPrompt]);
 

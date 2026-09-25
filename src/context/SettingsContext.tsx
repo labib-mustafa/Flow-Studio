@@ -25,6 +25,7 @@ export interface Settings {
   defaultProjectName: string;
   defaultAuthor: string;
   displayName: string;
+  companyName?: string;
   role: string;
   email: string;
   bio: string;

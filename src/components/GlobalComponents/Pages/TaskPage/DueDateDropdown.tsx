@@ -394,8 +394,8 @@ export const DueDateDropdown: React.FC<DueDateDropdownProps> = React.memo(({ tas
       side="bottom"
       triggerClassName="w-full h-full"
     >
-      {React.cloneElement(children as React.ReactElement, {
-        className: `${(children as React.ReactElement).props.className || ''} ${open ? '!border-gray-300' : ''}`
+      {React.cloneElement(children as React.ReactElement<{ className?: string }>, {
+        className: `${(children as React.ReactElement<{ className?: string }>).props.className || ''} ${open ? '!border-gray-300' : ''}`
       })}
     </CellPopover>
   );

@@ -435,7 +435,7 @@ export const OverviewPage: React.FC = () => {
                   {projectTasks.slice(0, 4).map(task => (
                     <div key={task.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/60 transition-colors">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`size-2.5 rounded-full shrink-0 ${task.phase === 'done' || task.status === 'Complete' ? 'bg-emerald-500' : task.phase === 'in_progress' ? 'bg-blue-500 animate-pulse' : 'bg-amber-500'}`} />
+                        <div className={`size-2.5 rounded-full shrink-0 ${task.phase === 'done' || task.status === 'Complete' ? 'bg-emerald-500' : task.phase === 'inprogress' ? 'bg-blue-500 animate-pulse' : 'bg-amber-500'}`} />
                         <span className={`text-xs font-semibold truncate ${task.phase === 'done' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                           {task.title}
                         </span>

@@ -17,15 +17,17 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ currentTab, onTabC
   const { tasks } = useTaskStore();
   const { items: moodboardItems } = useMoodboardStore();
 
-  if (!currentProject) {
-    return null;
-  }
-  const { name, client, status, deadline } = currentProject;
+  // All hooks must run before the early return below. Previously they ran after it,
+  // so the hook count changed between the "no project yet" render and the loaded
+  // render, which React reports as "Rendered more hooks than during the previous render".
+  const projectId = currentProject?.id;
 
   const [notesCount, setNotesCount] = React.useState(0);
   const [filesCount, setFilesCount] = React.useState(0);
 
   React.useEffect(() => {
+    if (!projectId) return;
+
     const updateCounts = () => {
       try {
         const savedNotes = localStorage.getItem('notes-list');
@@ -35,7 +37,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ currentTab, onTabC
       } catch (_) { }
 
       try {
-        const savedFiles = localStorage.getItem(`files-list-${currentProject.id}`);
+        const savedFiles = localStorage.getItem(`files-list-${projectId}`);
         if (savedFiles) {
           setFilesCount(JSON.parse(savedFiles).length);
         } else {
@@ -48,11 +50,17 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ currentTab, onTabC
 
     const interval = setInterval(updateCounts, 1000);
     return () => clearInterval(interval);
-  }, [currentProject.id, currentTab]);
+  }, [projectId, currentTab]);
 
   const tasksCount = React.useMemo(() => {
-    return tasks.filter((t) => t.projectId === currentProject.id).length;
-  }, [tasks, currentProject.id]);
+    if (!projectId) return 0;
+    return tasks.filter((t) => t.projectId === projectId).length;
+  }, [tasks, projectId]);
+
+  if (!currentProject) {
+    return null;
+  }
+  const { name, client, status, deadline } = currentProject;
 
   return (
     <header id="project-header" className="bg-white shrink-0 border-b border-slate-100 px-10">

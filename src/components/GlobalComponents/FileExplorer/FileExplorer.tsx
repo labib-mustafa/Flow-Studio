@@ -241,10 +241,7 @@ export const AsyncThumbnail: React.FC<{
   className?: string;
   alt?: string;
 }> = React.memo(({ path, name = '', mode, isGlobal, size = 48, className, alt }) => {
-  // Fast path: Immediately render standard icon for non-image files with 0 IPC overhead
-  if (name && !isImageFile(name)) {
-    return <>{getFileIcon(name, size)}</>;
-  }
+  const isNonImage = Boolean(name && !isImageFile(name));
 
   const effectiveMode = mode || (isGlobal ? 'global' : undefined);
   const cacheKey = `${effectiveMode || 'local'}:${path}`;
@@ -256,7 +253,9 @@ export const AsyncThumbnail: React.FC<{
   const [isVisible, setIsVisible] = useState(Boolean(initialSrc));
 
   useEffect(() => {
-    if (initialSrc) return;
+    // Non-image files take the fast path further down; guarding here keeps the
+    // hook count identical for every render of this component.
+    if (isNonImage || initialSrc) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting) {
         setIsVisible(true);
@@ -266,10 +265,10 @@ export const AsyncThumbnail: React.FC<{
 
     if (imgRef.current) observer.observe(imgRef.current);
     return () => observer.disconnect();
-  }, [initialSrc, path]);
+  }, [initialSrc, path, isNonImage]);
 
   useEffect(() => {
-    if (!isVisible || initialSrc || loadFailed) return;
+    if (isNonImage || !isVisible || initialSrc || loadFailed) return;
     let active = true;
     const isDesktop = (window as any).electronAPI?.isDesktop;
 
@@ -295,7 +294,13 @@ export const AsyncThumbnail: React.FC<{
     }
 
     return () => { active = false; };
-  }, [path, effectiveMode, isVisible, initialSrc, cacheKey, loadFailed]);
+  }, [path, effectiveMode, isVisible, initialSrc, cacheKey, loadFailed, isNonImage]);
+
+  // Fast path: standard icon for non-image files, with 0 IPC overhead.
+  // Rendered after the hooks so the hook count stays constant across renders.
+  if (isNonImage) {
+    return <>{getFileIcon(name, size)}</>;
+  }
 
   if (loadFailed) {
     return <>{getFileIcon(name, size)}</>;
@@ -1218,7 +1223,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
   }, [files, debouncedSearch, showHidden]);
 
   const sortedFiles = useMemo(() => {
-    let arr = [...displayedFiles];
+    const arr = [...displayedFiles];
     if (inlineEdit?.isCreating) {
       arr.unshift({
         name: inlineEdit.id,
@@ -1286,7 +1291,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ rootPath, initialPat
   useEffect(() => {
     if (!scrollContainerRef.current) return;
     const observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         setContentWidth(entry.contentRect.width);
       }
     });

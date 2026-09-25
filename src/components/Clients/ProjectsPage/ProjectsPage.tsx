@@ -61,7 +61,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
             return (
               <ProjectCard
                 key={project.id || index}
-                {...project}
+                image={project.image || project.thumbnail || ''}
+                category={project.category || ''}
+                status={project.status}
+                statusColor={project.statusColor || ''}
+                client={project.client}
+                deadline={project.deadline}
+                isPortfolio={project.isPortfolio}
+                commentsCount={project.commentsCount}
+                isPinned={project.isPinned}
                 title={project.title || project.name || 'Untitled Project'}
                 progress={computedProgress}
                 tasksCount={totalTasks}

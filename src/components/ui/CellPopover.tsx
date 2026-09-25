@@ -7,6 +7,7 @@ interface CellPopoverProps {
   content: React.ReactNode;
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'bottom' | 'left' | 'right';
+  sideOffset?: number;
   triggerClassName?: string;
   children: React.ReactNode;
 }
@@ -17,6 +18,7 @@ export const CellPopover: React.FC<CellPopoverProps> = ({
   content,
   align = 'start',
   side = 'bottom',
+  sideOffset = 5,
   triggerClassName = '',
   children,
 }) => {
@@ -30,7 +32,7 @@ export const CellPopover: React.FC<CellPopoverProps> = ({
           <Popover.Content
             align={align}
             side={side}
-            sideOffset={5}
+            sideOffset={sideOffset}
             className="z-50 min-w-[220px] rounded-xl border border-slate-200 bg-white p-2 shadow-xl outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
           >
             {content}

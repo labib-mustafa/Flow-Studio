@@ -1,0 +1,20 @@
+# Build output and packaging artifacts
+dist
+dist-server
+release
+build-release
+FlowStudio-Production
+Flow-Studio-Windows-x64
+
+# Dependencies
+node_modules
+
+# Lockfile is managed by npm, not Prettier
+package-lock.json
+
+# Docs use intentional hand-authored tables and layout; Prettier would reflow them
+*.md
+
+# Generated / vendored
+public
+*.min.js

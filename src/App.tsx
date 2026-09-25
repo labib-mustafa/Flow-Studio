@@ -70,7 +70,10 @@ export default function App() {
     );
   }
 
-  // Temporarily disabled login page by user request
+  // Temporarily disabled login page by user request.
+  // Deliberately kept as a constant so it can be flipped back on; without the
+  // disable below, the dead branch is flagged as a constant condition.
+  // eslint-disable-next-line no-constant-binary-expression
   if (false && !user && !disableLogin) {
     return <LoginPage />;
   }
@@ -267,6 +270,7 @@ function AppContent() {
           />
         );
       case 'projects':
+      default:
         return <Projects
           onNewProject={() => {
             setEditingProject(null);
@@ -482,16 +486,12 @@ function AppContent() {
         );
       case 'reports':
         return (
-          <ComingSoon
-            title="Analytics & Reports"
-            description="We are crafting beautiful, actionable insights for your agency. Advanced reporting is coming in the next major update."
-          />
+          <ComingSoon />
         );
-      default:
-        return <Projects
-          onNewProject={() => setCurrentView('new-project')}
-          onProjectClick={() => setCurrentView('project-overview')}
-        />;
+      // No trailing default: unrecognised views fall through to the 'projects' case above,
+      // which passes the complete handler set. The old fallback omitted onEditProject,
+      // which Projects calls unconditionally and would have thrown at runtime.
+
     }
   };
 

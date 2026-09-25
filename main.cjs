@@ -258,6 +258,15 @@ if (isDev) {
       fs.writeFileSync(dest, Buffer.from(arrayBuffer));
       invalidateCache(parentDir);
       return { success: true };
+    },
+
+    async createFile(targetPath, name, mode) {
+      const destDir = resolveFsPath(targetPath, mode);
+      const destFile = path.join(destDir, name);
+      if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+      fs.writeFileSync(destFile, '');
+      invalidateCache(destDir);
+      return { success: true };
     }
   };
 }
@@ -428,14 +437,10 @@ ipcMain.handle('fs:delete', async (event, delPath, mode) => await FileSystemServ
 ipcMain.handle('fs:trash', async (event, delPath, mode) => await FileSystemService.trash(delPath, mode));
 ipcMain.handle('fs:openDefault', async (event, reqPath, mode) => await FileSystemService.openDefault(reqPath, mode));
 ipcMain.handle('fs:getProperties', async (event, reqPath, mode) => await FileSystemService.getProperties(reqPath, mode));
-ipcMain.handle('fs:createFile', async (event, targetPath, name, mode) => {
-  const destDir = resolveFsPath(targetPath, mode);
-  const destFile = path.join(destDir, name);
-  if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
-  fs.writeFileSync(destFile, '');
-  invalidateCache(destDir);
-  return { success: true };
-});
+// resolveFsPath / invalidateCache are scoped inside the FileSystemService closure, so this
+// handler delegates to the service instead of calling them directly. Calling them from here
+// threw "resolveFsPath is not defined" on every create-file action in the desktop app.
+ipcMain.handle('fs:createFile', async (event, targetPath, name, mode) => await FileSystemService.createFile(targetPath, name, mode));
 ipcMain.handle('fs:upload', async (event, targetPath, mode, arrayBuffer) => await FileSystemService.upload(targetPath, mode, arrayBuffer));
 ipcMain.handle('fs:selectFolder', async (event, defaultPath) => {
   const result = await dialog.showOpenDialog(mainWindow, {

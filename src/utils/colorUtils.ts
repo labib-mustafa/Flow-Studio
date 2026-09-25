@@ -101,7 +101,7 @@ export function getReadableTextColor(bgHex: string): { color: string; contrast: 
     const adjust = (val: number, amount: number) =>
       Math.min(1, Math.max(0, val + amount));
 
-    let step = luminance > 0.5 ? -0.1 : 0.1;
+    const step = luminance > 0.5 ? -0.1 : 0.1;
     let newL = luminance;
 
     while (bestContrast < 4.5 && Math.abs(newL) <= 1) {
@@ -177,14 +177,15 @@ export function generateColorScale(baseColor: string): Array<{ bg: string; text:
   if (!rgb) return [];
 
   // Convert to HSL
-  let r = rgb.r / 255, g = rgb.g / 255, b = rgb.b / 255;
-  let max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s, l = (max + min) / 2;
+  const r = rgb.r / 255, g = rgb.g / 255, b = rgb.b / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s;
+  const l = (max + min) / 2;
 
   if (max === min) {
     h = s = 0;
   } else {
-    let d = max - min;
+    const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
       case r: h = (g - b) / d + (g < b ? 6 : 0); break;
@@ -212,7 +213,8 @@ export function generateColorScale(baseColor: string): Array<{ bg: string; text:
 export function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s, l = (max + min) / 2;
+  let h = 0, s;
+  const l = (max + min) / 2;
 
   if (max === min) {
     h = s = 0;

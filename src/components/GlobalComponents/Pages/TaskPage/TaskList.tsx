@@ -21,6 +21,8 @@ interface TaskListProps {
   onAddTask: (phase?: string) => void;
   onTaskClick: (task: Task) => void;
   tasks: Task[];
+  selectedTaskIds?: string[];
+  setSelectedTaskIds?: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 import { TaskGroupOptionsMenu } from './TaskGroupOptionsMenu';

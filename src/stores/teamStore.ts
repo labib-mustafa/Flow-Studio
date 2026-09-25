@@ -186,9 +186,7 @@ export const useTeamStore = create<TeamState>()(
         } else {
           merged.members = currentState.members;
         }
-        if (merged.invites && Array.isArray(merged.invites)) {
-          merged.invites = merged.invites;
-        } else {
+        if (!merged.invites || !Array.isArray(merged.invites)) {
           merged.invites = currentState.invites;
         }
         if (!merged.customRoles || !Array.isArray(merged.customRoles)) {

@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/magnified-doc";
+} from "@/components/uilayouts/magnified-doc";
 import {
   type MotionValue,
   motion,
