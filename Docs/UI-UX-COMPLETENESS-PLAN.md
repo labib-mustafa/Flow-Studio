@@ -179,7 +179,14 @@ A screen is **complete** only when all seven hold:
 6. **Honest data** — never shows fabricated content on a real user's screen.
 7. **Consistent shell** — same tokens, radius, motion curve, and feedback as every other screen.
 
-Screens failing #6 today: Notifications, Dashboard→Renewals, Files tab, Billing, Team (per §1.9).
+**Screens failing #6 — re-verified 2026-09-26.** The original list (Notifications, Dashboard→Renewals, Files tab, Billing, Team) came from `MOCK_DATA_REPORT.md`, which is **partially stale** and must not be used as a worklist without re-checking each entry. Re-verification so far:
+
+- `billingStore.ts` is **clean** — `balance: 0`, `nextPaymentDate: ''`, `savedCard` all empty strings, `paymentHistory: []`. The report's "Bruce Wayne" entry no longer exists.
+- `Dashboard/Renewals.tsx` reads the real `paymentHistory`; no Adobe/Figma/Slack fallback was found.
+- Team's `John Doe` is a form `placeholder` in `EditMemberModal.tsx:581` — correct UX, not fabricated data.
+- **The one confirmed real failure was `BillingPage.tsx`** (see §1.4): it generated a random masked card number, defaulted the brand to `Mastercard`, and stamped an expiry three years out on mount, then persisted all of it. **Fixed 2026-09-26** — the fabrication was removed, because every card field already renders a neutral placeholder.
+
+Notifications and the Files tab remain **unverified** — check before changing them.
 
 ---
 
@@ -187,7 +194,7 @@ Screens failing #6 today: Notifications, Dashboard→Renewals, Files tab, Billin
 
 ### Phase 0 — Freeze one source of truth (½ day)
 
-**0.1** Delete `tailwind.config.js` (it is dead code under Tailwind v4 + no `@config`) **or** convert it to the real config and add `@config "../tailwind.config.js"`. Pick one; do not leave both.
+**0.1** ~~Delete `tailwind.config.js`~~ — **Done 2026-09-26.** Deleted (sent to the Recycle Bin) as dead code: under Tailwind v4 with no `@config` directive it was never read, which is why contributors kept "fixing" screens against a palette that had no effect. The now-dangling `"config"` key in `components.json` was removed in the same change.
 
 **0.2** Rewrite `src/index.css` `@theme` to be the *only* palette. Keep semantic names so intent is readable at the call site.
 
@@ -203,21 +210,17 @@ Screens failing #6 today: Notifications, Dashboard→Renewals, Files tab, Billin
   --color-accent: #1978e5;
   --color-accent-hover: #1565c0;
 
-  /* surfaces */
-  --color-canvas: #ffffff;
-  --color-surface-soft: #f8f9fa;
-  --color-surface-card: #f5f5f5;
-  --color-surface-dark: #101010;   /* the ONE dark surface */
-  --color-hairline: #e5e7eb;
+  /* surfaces — IMPLEMENTED 2026-09-26. Values deliberately kept identical to the
+     previous light tokens, so this rename was visually a no-op. */
+  --color-surface-soft: #f6f7f8;   /* was --color-background-light */
+  --color-hairline: #e2e8f0;       /* was --color-border-light */
+  /* --color-surface-light (#ffffff, 0 references) deleted. */
 
-  /* text */
-  --color-ink: #111111;
-  --color-body: #6b7280;
-
-  /* semantic */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  /* NOT YET IMPLEMENTED — proposed only. Do not assume these exist: */
+  /*  --color-canvas: #ffffff;  --color-surface-card: #f5f5f5;
+      --color-surface-dark: #101010;  --color-ink: #111111;  --color-body: #6b7280;
+      --color-success / --color-warning / --color-danger;
+      Raw #111111 (209 uses) and the semantic hexes are still literals at call sites. */
 
   /* priority flags (keep — already correct in Docs/DESIGN.md §2) */
   --color-priority-urgent: #f04f5e;

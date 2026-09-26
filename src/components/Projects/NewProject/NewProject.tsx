@@ -13,9 +13,9 @@ export const NewProject: React.FC<NewProjectProps> = ({ onBack, onSave, project 
   const [selectedTemplate, setSelectedTemplate] = React.useState('Start from scratch');
 
   return (
-    <div className="flex flex-col h-full bg-background-light overflow-hidden">
+    <div className="flex flex-col h-full bg-surface-soft overflow-hidden">
       {/* Header */}
-      <header className="p-4 min-h-11 bg-white/85 backdrop-blur-md border-b border-border-light/50 shrink-0 z-20 sticky top-0">
+      <header className="p-4 min-h-11 bg-white/85 backdrop-blur-md border-b border-hairline/50 shrink-0 z-20 sticky top-0">
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-4">

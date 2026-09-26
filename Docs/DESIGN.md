@@ -127,6 +127,21 @@ Aa  Inter / Cal Sans
 
 Standard components to be used throughout the application:
 
+### 4.0 Radius Scale (single source of truth)
+
+Measured across `src/` on 2026-09-26: `rounded-xl` 549, `rounded-lg` 381, `rounded-md` 209, `rounded-2xl` 189. Four competing radii with no stated rule is itself a consistency smell, so the scale is now explicit:
+
+| Radius | Use for |
+|---|---|
+| `rounded-full` | Pills, tabs, avatars, circular icon buttons, badges |
+| `rounded-md` | Small inline surfaces: table-cell highlights, skeletons, chips |
+| `rounded-lg` | Buttons, inputs, selects — the standard control radius |
+| `rounded-xl` | Cards, panels, popovers, dropdown menus |
+| `rounded-2xl` | Large containers: modals, hero/summary cards, the credit-card flip panel |
+| `rounded-3xl` | Top-level bento/section containers only |
+
+Anything outside this table is a defect. A new radius requires a new row here first.
+
 ### 4.1 Buttons
 * **Primary Button:** Solid dark fill (`bg-[#111111] text-white hover:bg-[#242424] active:scale-95 px-4 py-2 rounded-lg text-sm font-semibold transition-all`).
 * **Secondary Button:** White surface with hairline border (`bg-white text-[#111111] border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-all`).

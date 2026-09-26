@@ -43,66 +43,15 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
     setAddressLine2Input(billingAddress.addressLine2 || '');
   }, [billingAddress, settings, user]);
 
-  // Card Number masking and suffix validation
-  useEffect(() => {
-    const currentNumber = savedCard.cardNumber || '';
-    const hasAsterisks = currentNumber.startsWith('**** **** ****');
-    const suffix = currentNumber.replace(/[\s*]/g, '');
-    const hasValidSuffix = suffix.length === 4 && !isNaN(Number(suffix));
-
-    if (!hasAsterisks || !hasValidSuffix) {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
-      updateSavedCard({
-        cardNumber: `**** **** **** ${randomSuffix}`,
-        brand: savedCard.brand || 'Mastercard'
-      });
-    }
-  }, [savedCard.cardNumber, savedCard.brand, updateSavedCard]);
-
-  // Expiration date (validThru) validation logic
-  useEffect(() => {
-    const checkValidThru = () => {
-      const currentValidThru = savedCard.validThru || '';
-      const regex = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
-      const match = currentValidThru.match(regex);
-
-      let needsReset = false;
-      const today = new Date();
-
-      if (!match) {
-        needsReset = true;
-      } else {
-        const month = parseInt(match[1], 10);
-        const year = 2000 + parseInt(match[2], 10);
-
-        const expirationDate = new Date(year, month, 0);
-        const dayBeforeLastDay = new Date(expirationDate);
-        dayBeforeLastDay.setDate(dayBeforeLastDay.getDate() - 1);
-
-        if (today >= dayBeforeLastDay || expirationDate < today) {
-          needsReset = true;
-        }
-      }
-
-      if (needsReset) {
-        const newExpDate = new Date();
-        newExpDate.setFullYear(newExpDate.getFullYear() + 3);
-
-        const newMonthStr = String(newExpDate.getMonth() + 1).padStart(2, '0');
-        const newYearStr = String(newExpDate.getFullYear()).slice(-2);
-        const newValidThru = `${newMonthStr}/${newYearStr}`;
-
-        const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
-        updateSavedCard({
-          validThru: newValidThru,
-          cardNumber: `**** **** **** ${randomSuffix}`,
-          brand: savedCard.brand || 'Mastercard'
-        });
-      }
-    };
-
-    checkValidThru();
-  }, [savedCard.validThru, savedCard.brand, updateSavedCard]);
+  // NOTE: two effects used to live here. On mount they generated a random masked card
+  // number, defaulted the brand to 'Mastercard', and stamped an expiry three years out,
+  // then persisted all of it via updateSavedCard. That fabricated a payment method the
+  // user had never added, and it was indistinguishable from real saved-card data.
+  //
+  // They were not needed: every field in the card panel already renders a neutral
+  // placeholder when nothing is stored — `savedCard.cardNumber || '•••• •••• •••• ••••'`,
+  // `savedCard.brand || 'CARD'`, `savedCard.validThru || '--/--'`. So removing the
+  // fabrication leaves an honest empty card rather than a broken one.
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -218,70 +167,69 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
           <div className="mb-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             {/* 3D Flip Credit Card (Left Bento - 5 cols) */}
             <div className="lg:col-span-5 flex flex-col justify-center">
-              <div className="w-full flex justify-center md:justify-start">
-                <div className="group w-full max-w-[380px] aspect-[1.586] [perspective:1000px] cursor-pointer">
-                  <div className="relative w-full h-full rounded-2xl transition-all duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)] shadow-2xl">
+              <div className="group w-full max-w-[380px] aspect-[1.586] [perspective:1000px] cursor-pointer">
+                <div className="relative w-full h-full rounded-2xl transition-all duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)] shadow-2xl">
 
-                    {/* Front Side */}
-                    <div className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-[#1c1c1e] via-[#09090b] to-[#171719] p-6 text-white [backface-visibility:hidden] border border-white/10 overflow-hidden flex flex-col justify-between shadow-xl">
-                      {/* Glowing background shapes */}
-                      <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-accent/20 blur-3xl pointer-events-none"></div>
-                      <div className="absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
+                  {/* Front Side */}
+                  <div className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-[#1c1c1e] via-[#09090b] to-[#171719] p-6 text-white [backface-visibility:hidden] border border-white/10 overflow-hidden flex flex-col justify-between shadow-xl">
+                    {/* Glowing background shapes */}
+                    <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-accent/20 blur-3xl pointer-events-none"></div>
+                    <div className="absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
 
-                      <div className="flex items-start justify-between relative z-10">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-11 rounded bg-gradient-to-br from-amber-200/40 to-amber-500/40 border border-amber-300/40 flex items-center justify-center backdrop-blur-md shadow-inner">
-                            <div className="h-5 w-8 rounded border border-amber-900/30 bg-gradient-to-br from-yellow-200 to-yellow-500 opacity-90 grid grid-cols-3"></div>
-                          </div>
-                          <span className="text-[10px] uppercase tracking-widest text-slate-400 font-mono ml-1">Debit</span>
+                    <div className="flex items-start justify-between relative z-10">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-11 rounded bg-gradient-to-br from-amber-200/40 to-amber-500/40 border border-amber-300/40 flex items-center justify-center backdrop-blur-md shadow-inner">
+                          <div className="h-5 w-8 rounded border border-amber-900/30 bg-gradient-to-br from-yellow-200 to-yellow-500 opacity-90 grid grid-cols-3"></div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-white/80 text-[18px] rotate-90">rss_feed</span>
-                          <span className="text-white font-black tracking-widest uppercase text-xs">{savedCard.brand || 'CARD'}</span>
-                        </div>
+                        <span className="text-[10px] uppercase tracking-widest text-slate-400 font-mono ml-1">Debit</span>
                       </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-white/80 text-[18px] rotate-90">rss_feed</span>
+                        <span className="text-white font-black tracking-widest uppercase text-xs">{savedCard.brand || 'CARD'}</span>
+                      </div>
+                    </div>
 
-                      <div className="relative z-10 my-2">
-                        <p className="font-mono text-lg sm:text-xl font-bold tracking-[0.2em] text-white drop-shadow-md text-center">
-                          {savedCard.cardNumber || '•••• •••• •••• ••••'}
+                    <div className="relative z-10 my-2">
+                      <p className="font-mono text-lg sm:text-xl font-bold tracking-[0.2em] text-white drop-shadow-md text-center">
+                        {savedCard.cardNumber || '•••• •••• •••• ••••'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-end justify-between relative z-10">
+                      <div>
+                        <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Card Holder</p>
+                        <p className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-white mt-0.5">
+                          {settings?.displayName || user?.displayName || savedCard.cardHolder || 'Account Holder'}
                         </p>
                       </div>
-
-                      <div className="flex items-end justify-between relative z-10">
-                        <div>
-                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Card Holder</p>
-                          <p className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-white mt-0.5">
-                            {settings?.displayName || user?.displayName || savedCard.cardHolder || 'Account Holder'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Valid Thru</p>
-                          <p className="font-mono text-xs font-bold text-white mt-0.5">{savedCard.validThru || '--/--'}</p>
-                        </div>
-                        <div className="flex items-center -space-x-3">
-                          <div className="h-7 w-7 rounded-full bg-[#EB001B] opacity-90 mix-blend-screen shadow-md"></div>
-                          <div className="h-7 w-7 rounded-full bg-[#F79E1B] opacity-90 mix-blend-screen shadow-md"></div>
-                        </div>
+                      <div>
+                        <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Valid Thru</p>
+                        <p className="font-mono text-xs font-bold text-white mt-0.5">{savedCard.validThru || '--/--'}</p>
+                      </div>
+                      <div className="flex items-center -space-x-3">
+                        <div className="h-7 w-7 rounded-full bg-[#EB001B] opacity-90 mix-blend-screen shadow-md"></div>
+                        <div className="h-7 w-7 rounded-full bg-[#F79E1B] opacity-90 mix-blend-screen shadow-md"></div>
                       </div>
                     </div>
-
-                    {/* Back Side */}
-                    <div className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-[#1c1c1e] via-[#09090b] to-[#121214] text-white [backface-visibility:hidden] [transform:rotateY(180deg)] border border-white/10 overflow-hidden flex flex-col items-center justify-center p-6 shadow-xl">
-                      {/* Glowing ambient colors */}
-                      <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
-                      <div className="absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-accent/10 blur-3xl pointer-events-none"></div>
-
-                      <div className="relative z-10 text-center">
-                        <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">Total Payments Cleared</p>
-                        <h3 className="text-3xl font-black tracking-tight text-white mt-2 font-mono drop-shadow-md">
-                          ${totalPaymentsCleared.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </h3>
-                      </div>
-                    </div>
-
                   </div>
+
+                  {/* Back Side */}
+                  <div className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-[#1c1c1e] via-[#09090b] to-[#121214] text-white [backface-visibility:hidden] [transform:rotateY(180deg)] border border-white/10 overflow-hidden flex flex-col items-center justify-center p-6 shadow-xl">
+                    {/* Glowing ambient colors */}
+                    <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+                    <div className="absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-accent/10 blur-3xl pointer-events-none"></div>
+
+                    <div className="relative z-10 text-center">
+                      <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">Total Payments Cleared</p>
+                      <h3 className="text-3xl font-black tracking-tight text-white mt-2 font-mono drop-shadow-md">
+                        ${totalPaymentsCleared.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </h3>
+                    </div>
+                  </div>
+
                 </div>
               </div>
+
             </div>
 
             {/* Next Scheduled Payment Card (Right Bento - 7 cols) */}
@@ -632,30 +580,6 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onNewInvoice }) => {
             </div>
 
 
-
-            {/* Official Billing Address */}
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Verified Tax Address</h4>
-                <button
-                  onClick={() => setIsEditAddressOpen(true)}
-                  className="text-accent hover:text-accent/80 transition-colors flex items-center"
-                >
-                  <span className="material-symbols-outlined text-[18px]">edit</span>
-                </button>
-              </div>
-
-              <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm space-y-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-extrabold text-slate-900">{billingAddress.name}</p>
-                  <span className="material-symbols-outlined text-emerald-500 text-[16px]" title="Verified Tax Identity">verified</span>
-                </div>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {billingAddress.addressLine1}<br />
-                  {billingAddress.addressLine2}
-                </p>
-              </div>
-            </div>
 
             {/* Compliance & Tax Documents */}
             <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">

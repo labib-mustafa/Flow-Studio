@@ -31,7 +31,7 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
         ? 'border-blue-500 shadow-md ring-2 ring-blue-500/20' 
         : isStartFromScratch 
           ? 'border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent' 
-          : 'border-border-light bg-white hover:border-accent/30 hover:shadow-soft-hover'
+          : 'border-hairline bg-white hover:border-accent/30 hover:shadow-soft-hover'
     }`}>
       {isBuiltIn && (
         <span className="absolute top-3 right-3 z-10 text-[9px] font-bold bg-white/90 backdrop-blur-sm text-slate-600 px-1.5 py-0.5 rounded uppercase tracking-wide shadow-sm border border-slate-100">

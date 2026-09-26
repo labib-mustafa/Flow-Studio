@@ -44,7 +44,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ onCancel, onSubmit, pr
         Project Details <span className="text-slate-400 font-normal text-xs">(REQUIRED)</span>
       </h3>
       
-      <div className="bg-white rounded-2xl border border-border-light p-6 shadow-sm flex-1 flex flex-col">
+      <div className="bg-white rounded-2xl border border-hairline p-6 shadow-sm flex-1 flex flex-col">
         <div className="space-y-6 flex-1">
           {/* Project Name */}
           <div className="space-y-1.5">
