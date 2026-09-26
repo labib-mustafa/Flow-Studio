@@ -631,7 +631,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                     <div className="space-y-3">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Volume indexes</h4>
                       <div className="space-y-3">
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-150 flex flex-col justify-center h-[76px]">
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-hairline flex flex-col justify-center h-[76px]">
                           <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider mb-1">Total billing volume</p>
                           <p className="text-2xl font-black text-slate-900">{formatCurrency(selectedClient.totalVolume)}</p>
                         </div>
@@ -734,7 +734,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                           <div
                             key={idx}
                             onClick={() => handleCopyToClipboard(f.fontName, f.style)}
-                            className="bg-slate-50 border border-slate-150 rounded-xl px-4 py-3 flex flex-col justify-center items-start text-left cursor-pointer hover:bg-slate-100 active:scale-95 transition-all min-w-[100px]"
+                            className="bg-slate-50 border border-hairline rounded-xl px-4 py-3 flex flex-col justify-center items-start text-left cursor-pointer hover:bg-slate-100 active:scale-95 transition-all min-w-[100px]"
                             title={`${f.style}: ${f.fontName} (Click to copy)`}
                           >
                             <span
@@ -764,7 +764,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                     </div>
 
                     {(!selectedClient.projectHistory || selectedClient.projectHistory.length === 0) ? (
-                      <p className="text-xs text-slate-400 font-medium bg-slate-50 border border-dashed border-slate-250 p-4 rounded-xl text-center">
+                      <p className="text-xs text-slate-400 font-medium bg-slate-50 border border-dashed border-slate-300 p-4 rounded-xl text-center">
                         No active history trails loaded for this entity.
                       </p>
                     ) : (

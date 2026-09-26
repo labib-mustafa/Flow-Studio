@@ -275,7 +275,26 @@ The three dead dark tokens were deleted as planned. `--color-background-light` �
 
 **0.6** Fix the four dead hover classes listed in §1.4 — rename `primary-dark` → `primary-hover`, or define the token. Then add a guard so the class of bug cannot return: assert that every `bg-`/`text-`/`border-`/`ring-` utility referencing a theme token resolves to a variable actually declared in `@theme`.
 
-**Exit criteria:** `grep -rn "#[0-9a-fA-F]\{6\}" src/` returns only `@theme` and intentional flag/status maps; and no utility class references an undeclared token.
+**Done 2026-09-26 — and the guard immediately paid for itself.** `scripts/check-design-tokens.cjs` now runs as the third step of `npm run lint` (`lint:tokens` to run alone). It reads the real token list out of `@theme` rather than a hardcoded copy, and catches three things:
+
+| Check | Catches | Real examples found |
+|---|---|---|
+| Nonexistent shade | A colour family followed by a number Tailwind never generates | `border-slate-250`, `text-slate-650`, `bg-zinc-850` |
+| Malformed opacity | Two `/` segments in one utility | `bg-accent/50/10` (my own regex bug) |
+| Token drift | A declared token extended by a suffix that does not exist | `bg-hairline-soft`; the `primary-dark` family fixed 2026-09-25 |
+
+**Writing the guard was cheaper than auditing by hand.** It found **28 dead colour classes across 12 files** that repeated passes had missed, and the *symptom* explains why they survived so long — a dead class does not look broken, it looks slightly wrong:
+
+- A dead `border-*` falls back to `currentColor`, so 5 "light hairline" dividers were rendering as **dark** borders.
+- A dead `hover:bg-*` gives **no hover feedback**, so the three Copilot header tabs felt unresponsive.
+- `bg-hairline-soft` ×4 was a 1px divider with **no background at all** — four invisible separators in the dev settings panel.
+- The worst: `OverviewPage.getStatusBadgeStyle()` returned `bg-slate-850 text-slate-100` for "plan" status. The background did not render while the near-white text did, so that badge was **white text on white**.
+
+Fixed by whole-token replacement to the nearest existing shade, except where a semantic token was the honest answer (`border-hairline`, `bg-hairline`). The three `hover:bg-zinc-850` cases became `hover:bg-zinc-800/60` rather than solid `zinc-800`, because `zinc-800` is that component's *selected* fill and a solid hover would have made hover indistinguishable from active.
+
+**The guard's own first draft had two false positives** — `accent-accent` (prefix `accent` + token `accent`) and a truncated `accent-` produced by splitting on `[`. A guard that cries wolf gets ignored, which is the same failure as a red build, so both were fixed before wiring it in. It now reports 28 real findings and 0 false ones.
+
+**Exit criteria:** `grep -rn "#[0-9a-fA-F]\{6\}" src/` returns only `@theme` and intentional flag/status maps; and no utility class references an undeclared token. **Both now enforced by `npm run lint`** rather than by review.
 
 ---
 

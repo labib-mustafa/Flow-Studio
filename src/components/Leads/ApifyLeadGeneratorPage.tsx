@@ -384,7 +384,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="flex items-start gap-4 max-w-md">
               <div className="p-3 bg-slate-50 rounded-2xl text-slate-700 border border-slate-200/50 shrink-0 shadow-sm">
-                <Key className="size-5 text-slate-650" />
+                <Key className="size-5 text-slate-600" />
               </div>
               <div>
                 <h3 className="text-sm font-extrabold tracking-tight text-slate-800">Apify Platform Connection</h3>
@@ -401,7 +401,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   placeholder="Enter Apify API Token (apify_api_...)"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full pl-4 pr-10 py-3 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-850 outline-none font-mono transition-all font-semibold"
+                  className="w-full pl-4 pr-10 py-3 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-mono transition-all font-semibold"
                 />
                 <button
                   type="button"
@@ -488,7 +488,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-soft space-y-6">
           
           {/* Channel Selector Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-150 pb-4.5 flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-hairline pb-4.5 flex-wrap gap-4">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Sparkles className="size-4 text-accent" /> Select Prospect Channel
             </h3>
@@ -770,7 +770,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                       isSelected
                         ? 'bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/10'
-                        : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
                     <span className={isSelected ? 'text-white' : 'text-slate-400'}>{filt.icon}</span>
@@ -859,7 +859,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       >
                         {log.level}
                       </span>
-                      <span className="text-slate-350">{log.message}</span>
+                      <span className="text-slate-400">{log.message}</span>
                     </div>
                   ))}
                 </div>
@@ -958,7 +958,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   onClick={handleExportCSV}
                   className="px-4 py-2.5 text-xs font-bold bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm hover:shadow"
                 >
-                  <Download className="size-4 text-slate-550" />
+                  <Download className="size-4 text-slate-500" />
                   CSV
                 </button>
 
@@ -970,7 +970,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   }}
                   className="px-4 py-2.5 text-xs font-bold bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm hover:shadow"
                 >
-                  <Copy className="size-4 text-slate-550" />
+                  <Copy className="size-4 text-slate-500" />
                   Copy JSON
                 </button>
               </div>
@@ -981,7 +981,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
               <div className="max-h-[550px] overflow-y-auto custom-scrollbar">
                 <table className="w-full text-left border-collapse table-fixed">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold text-slate-450 uppercase tracking-wider sticky top-0 bg-slate-50 z-10">
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider sticky top-0 bg-slate-50 z-10">
                       <th className="p-4 w-12 text-center select-none">
                         <input
                           type="checkbox"
@@ -1037,7 +1037,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                             <td className="p-4 text-slate-900 font-extrabold truncate" title={lead.name}>{lead.name}</td>
                             <td className="p-4 text-slate-700 font-bold truncate" title={lead.company}>{lead.company}</td>
                             <td className="p-4 text-center">
-                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-650 border border-slate-200">
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
                                 {lead.type}
                               </span>
                             </td>

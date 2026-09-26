@@ -106,7 +106,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
       {/* Queued Messages Chip Stack */}
       {queuedMessages && queuedMessages.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 text-[11px]">
-          <span className="text-[10px] font-medium text-zinc-300 bg-zinc-900 border border-zinc-750 px-2 py-0.5 rounded flex items-center gap-1 shrink-0">
+          <span className="text-[10px] font-medium text-zinc-300 bg-zinc-900 border border-zinc-700 px-2 py-0.5 rounded flex items-center gap-1 shrink-0">
             <Clock className="w-2.5 h-2.5 text-zinc-400" />
             Queued ({queuedMessages.length})
           </span>

@@ -230,7 +230,7 @@ export const OverviewPage: React.FC = () => {
   const getStatusBadgeStyle = (status: string = '') => {
     const s = status.toLowerCase();
     if (s.includes('plan')) {
-      return { bg: 'bg-slate-850 text-slate-100', dot: 'bg-slate-400' };
+      return { bg: 'bg-slate-800 text-slate-100', dot: 'bg-slate-400' };
     }
     if (s.includes('progress') || s.includes('active')) {
       return { bg: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500 animate-pulse' };

@@ -140,7 +140,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-300 leading-relaxed break-words font-mono text-[11px] bg-[#101012] p-2 rounded-lg border border-zinc-850">
+                  <p className="text-xs text-zinc-300 leading-relaxed break-words font-mono text-[11px] bg-[#101012] p-2 rounded-lg border border-zinc-800">
                     {rule.response}
                   </p>
                 </div>

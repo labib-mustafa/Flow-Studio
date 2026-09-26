@@ -58,7 +58,7 @@ export const CopilotHeader: React.FC<CopilotHeaderProps> = ({
           <button
             type="button"
             onClick={() => setMainView('chat')}
-            className={`px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${mainView === 'chat' ? 'bg-zinc-800 text-white shadow-2xs border border-zinc-700/60' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+            className={`px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${mainView === 'chat' ? 'bg-zinc-800 text-white shadow-2xs border border-zinc-700/60' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
               }`}
             title="Chat with Personal Agent"
           >
@@ -69,7 +69,7 @@ export const CopilotHeader: React.FC<CopilotHeaderProps> = ({
           <button
             type="button"
             onClick={() => setMainView('tools')}
-            className={`px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${mainView === 'tools' ? 'bg-zinc-800 text-white shadow-2xs border border-zinc-700/60' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+            className={`px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${mainView === 'tools' ? 'bg-zinc-800 text-white shadow-2xs border border-zinc-700/60' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
               }`}
             title="Generator Tools (Tasks, Brief, Moodboard)"
           >
@@ -80,7 +80,7 @@ export const CopilotHeader: React.FC<CopilotHeaderProps> = ({
           <button
             type="button"
             onClick={() => setMainView('train')}
-            className={`px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${mainView === 'train' ? 'bg-zinc-800 text-white shadow-2xs border border-zinc-700/60' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+            className={`px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${mainView === 'train' ? 'bg-zinc-800 text-white shadow-2xs border border-zinc-700/60' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
               }`}
             title="Nova Training Studio (Custom Rules & Truths)"
           >

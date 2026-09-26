@@ -67,7 +67,7 @@ export const DevSettingsWorkspace: React.FC = () => {
               </button>
             </div>
 
-            <div className="h-px bg-hairline-soft w-full" />
+            <div className="h-px bg-hairline w-full" />
 
             <div className="flex items-center justify-between">
               <div>
@@ -82,7 +82,7 @@ export const DevSettingsWorkspace: React.FC = () => {
               </button>
             </div>
 
-            <div className="h-px bg-hairline-soft w-full" />
+            <div className="h-px bg-hairline w-full" />
 
             <div className="flex items-center justify-between">
               <div>
@@ -97,7 +97,7 @@ export const DevSettingsWorkspace: React.FC = () => {
               </button>
             </div>
 
-            <div className="h-px bg-hairline-soft w-full" />
+            <div className="h-px bg-hairline w-full" />
 
             <div className="flex items-center justify-between">
               <div>
@@ -112,7 +112,7 @@ export const DevSettingsWorkspace: React.FC = () => {
               </button>
             </div>
 
-            <div className="h-px bg-hairline-soft w-full" />
+            <div className="h-px bg-hairline w-full" />
 
             <div className="flex items-center justify-between">
               <div>

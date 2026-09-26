@@ -88,7 +88,7 @@ export const ProjectCard = React.memo(({
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 group-hover:bg-slate-150 transition-colors duration-300">
+          <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 group-hover:bg-slate-200 transition-colors duration-300">
             <Image className="size-8 text-slate-400/80 mb-1.5" />
             <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
               {imageError ? 'Failed to Load Image' : 'No Banner Image'}

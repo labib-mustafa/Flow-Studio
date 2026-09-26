@@ -1344,7 +1344,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                           setIsAddFontDropdownVisible(false);
                                         }, 200);
                                       }}
-                                      className="w-full text-xs bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-accent focus:outline-none placeholder-slate-400"
+                                      className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-accent focus:outline-none placeholder-slate-400"
                                     />                                     {/* Autocomplete Menu Dropdown for Adding Font */}
                                     {isAddFontDropdownVisible && (
                                       <div className="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 divide-y divide-slate-50 custom-scrollbar">

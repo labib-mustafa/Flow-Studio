@@ -539,7 +539,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = React.mem
                   className={`text-[12.5px] py-0.5 font-semibold select-none focus:outline-none transition-all border-b-2 whitespace-nowrap cursor-pointer hover:text-slate-900 ${
                     mentionActiveTab === tab.id 
                       ? 'text-accent border-accent' 
-                      : 'text-slate-400 border-transparent hover:border-slate-250'
+                      : 'text-slate-400 border-transparent hover:border-slate-300'
                   }`}
                 >
                   {tab.label}

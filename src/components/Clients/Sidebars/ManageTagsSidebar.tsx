@@ -185,7 +185,7 @@ export const ManageTagsSidebar: React.FC<ManageTagsSidebarProps> = ({
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
                     {listTitle}
                   </label>
-                  <span className="text-[9px] font-bold bg-slate-50 text-slate-500 border border-slate-150 px-2 py-0.5 rounded-full">
+                  <span className="text-[9px] font-bold bg-slate-50 text-slate-500 border border-hairline px-2 py-0.5 rounded-full">
                     {filteredLabels.length} items
                   </span>
                 </div>
@@ -198,7 +198,7 @@ export const ManageTagsSidebar: React.FC<ManageTagsSidebarProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={searchPlaceholder}
-                    className="w-full rounded-lg py-2.5 pl-9 pr-3 text-xs bg-white border border-gray-200 focus:border-slate-800 focus:ring-4 focus:ring-slate-800/5 transition-all duration-200 outline-none placeholder:text-gray-350"
+                    className="w-full rounded-lg py-2.5 pl-9 pr-3 text-xs bg-white border border-gray-200 focus:border-slate-800 focus:ring-4 focus:ring-slate-800/5 transition-all duration-200 outline-none placeholder:text-gray-400"
                   />
                 </div>
 

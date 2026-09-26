@@ -1305,7 +1305,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
 
                         <div className="overflow-x-auto">
                           <table className="w-full text-left text-xs text-slate-500">
-                            <thead className="text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-150">
+                            <thead className="text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-hairline">
                               <tr>
                                 <th className="pb-3">Transaction</th>
                                 <th className="pb-3">Type</th>
