@@ -309,7 +309,7 @@ So: swap `focus:` → `focus-visible:` on the pointer-driven controls (one sed p
 
 ### Phase 3 — Make it enforceable (R4; ~2 days, prevents regression)
 
-> **Status 2026-09-25: 3.1, 3.2 and 3.3 are in place.** `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.editorconfig`, `.gitattributes` and the CI workflow now exist, and `npm run lint` is green. 3.4 (`AGENTS.md` split), 3.5 (visual regression) and 3.6 (repo hygiene) remain. One caveat: the CI workflow file is committed locally but **not yet on the remote** — GitHub rejects pushes containing workflow files unless the token carries the `workflow` scope. Add the scope, then push it.
+> **Status 2026-09-25: 3.1, 3.2 and 3.3 are in place.** `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.editorconfig`, `.gitattributes` and the CI workflow now exist, and `npm run lint` is green. 3.4 (`AGENTS.md` split) landed 2026-09-26; 3.5 (visual regression) and 3.6 (repo hygiene) remain. One caveat: the CI workflow file is committed locally but **not yet on the remote** — GitHub rejects pushes containing workflow files unless the token carries the `workflow` scope. Add the scope, then push it.
 
 **3.1** Add ESLint (`eslint-config-next`-style flat config is not applicable — use `typescript-eslint` + `eslint-plugin-react-hooks`) with two custom guardrails:
 - `no-restricted-syntax` / a small custom rule flagging hex literals (`#[0-9a-fA-F]{3,8}`) in `className` outside `src/index.css` and designated status maps.
@@ -321,7 +321,19 @@ So: swap `focus:` → `focus-visible:` on the pointer-driven controls (one sed p
 
 > **Prerequisite — do this first.** Clear the 27 existing type errors (§1.8). Wiring up CI while `tsc` is already failing ships a red build on day one; the team learns to ignore it and the effort is wasted. Fix the 27, *then* turn the gate on. Five of them disappear for free when the `Popover` primitive lands (§1.6).
 
-**3.4** Rewrite repo-root `AGENTS.md`. It currently contains the *in-app AI Co-Pilot system protocol* (workflows A/B/C, moodboard JSON schemas), not contributor/agent instructions. Any tool or developer that reads `AGENTS.md` — including AI agents — gets the wrong context. Move that content to `Docs/COPILOT-PROTOCOL.md` and write a real `AGENTS.md` covering: build/test commands, where primitives live, token rules, and the §3 completeness contract.
+**3.4** ~~Rewrite repo-root `AGENTS.md`~~ — **Done 2026-09-26, with a deliberate deviation from the plan above.** `AGENTS.md` now contains real contributor/agent instructions: commands, the backend-port contract, "read before you edit" pointers, the enforced token rules, the §3 completeness contract, the quality gate, and a pointer to the Copilot protocol.
+
+The deviation: **`Docs/COPILOT-PROTOCOL.md` was deliberately *not* created.** Reading the tree first showed the protocol already exists in three places, so moving it would have produced a *fourth* copy — the same duplication failure mode as the three blues:
+
+| Copy | Location | Status |
+|---|---|---|
+| 1–3. Runtime truth | `server.ts` `systemInstruction` at ~2473, ~2574, ~2644 | **Three separate inline copies of the same Co-Pilot persona** |
+| 4. Documentation | `Docs/RULES.md` §2 (context resolution, workflows A/B/C, task schema, moodboard schemas) | Already complete |
+| 5. Standards | `Docs/RULES.md` §3 (UI/animation) | `AGENTS.md` §4 was duplicating this |
+
+So `AGENTS.md` now *points* to `Docs/RULES.md` §2/§3 and to `server.ts` as the runtime source of truth. The `graft:` block is preserved verbatim (note: it is duplicated between `AGENTS.md` and `GEMINI.md`).
+
+**New finding:** the three `systemInstruction` blocks in `server.ts` should be consolidated into one shared constant. Three drifting copies of one persona will diverge exactly the way three blues did.
 
 **3.5** Visual regression on the 8 highest-traffic screens (Dashboard, Projects, Project Details ×5 tabs, Clients, Leads, Tasks) via Playwright screenshots. Playwright is not currently a dependency; add it in this phase, not earlier.
 

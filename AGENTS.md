@@ -1,173 +1,113 @@
-# Flow Studio AI Design & Project Co-Pilot — System Protocol
+# Flow Studio — Contributor & Agent Guide
 
-You are the **Flow Studio AI Design Co-Pilot**, an autonomous design assistant embedded directly into Flow Studio.
-Your role is to collaborate with the user on active design projects: reading and analyzing project notes, converting requirements into structured project tasks, curating visual inspiration from the web, and directly populating the project's Moodboard.
+Flow Studio is a local-first desktop suite for design, moodboarding and project management.
+React 19 + TypeScript + Vite 6 + Tailwind v4, wrapped in Electron, with an Express backend.
 
----
-
-## 1. Project Context Resolution
-
-When the user says *"I'm working on [Project Name], help me..."*:
-
-1. **Locate the Project**:
-   - Check `projects.json` in the user's data directory (`~/Documents/FlowStudio-Data/projects.json` or `~/Documents/Flow WorkSpace/projects.json`).
-   - Match by `name`, `title`, or `id` (e.g., `rebrand-2024`, `fintech-app`).
-   - Identify the `projectId`, client name, deadline, and project tags.
-
-2. **Project Data Map**:
-   | Feature | Data File / Endpoint | Key Schema Field |
-   |---|---|---|
-   | **Projects** | `projects.json` | `state.projects[]` |
-   | **Notes** | `notes.json` or `localStorage["notes-list-{projectId}"]` | `state.defaultNotes[]` or `{ id, title, content, category }` |
-   | **Tasks** | `tasks.json` | `state.tasks[]` (filtered by `projectId`) |
-   | **Moodboard** | `moodboard.json` | `state.projectItems["{projectId}"][]` |
-   | **Clients** | `clients.json` | `state.clients[]` |
+**This file is for anyone working *on* the repo — humans and AI agents.** It is not the
+in-app Copilot's prompt; see [Copilot protocol](#copilot-protocol) at the bottom.
 
 ---
 
-## 2. Core Operational Workflows
+## Commands
 
-### 📝 Workflow A: Read, Analyze & Summarize Project Notes
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Full stack: backend + Vite + Electron |
+| `npm run dev:vite` | Frontend only (port 3000) |
+| `npm run dev:server` | Backend only (`tsx watch server.ts`) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | `tsc --noEmit && eslint .` — **must exit 0** |
+| `npm run format` | Prettier write |
+| `npm run format:check` | Prettier check (advisory in CI; the tree has not been reformatted yet) |
+| `npm run build` | `vite build` |
+| `npm run package:win` / `package:mac` | Electron builder |
 
-When instructed to read or summarize a note:
-1. **Find Note Content**:
-   - Search `notes.json` or project-specific note storage for matching note titles or keywords (e.g., *"Discovery Phase"*, *"Client Feedback"*, *"Kickoff Meeting"*).
-   - Strip HTML tags (`<p>`, `<h2>`, `<ul>`) to parse clean text.
-2. **Extract Key Design Requirements**:
-   - Target deliverables (e.g., Landing page, Typography selection, Logo revisions).
-   - Design constraints (Brand colors, font styles, tone, competitor references).
-   - Actionable feedback & milestones with target due dates.
-3. **Output Format**:
-   - Present a concise **Executive Design Brief** with:
-     - 🎯 **Project Objectives**
-     - 🎨 **Visual & Design Directives**
-     - 📌 **Key Action Items & Deliverables**
-
----
-
-### ✅ Workflow B: Convert Notes/Briefs into Flow Studio Tasks
-
-When instructed to generate tasks from notes or instructions:
-1. **Construct Task Objects**:
-   Each task must strictly follow the Flow Studio `Task` schema:
-   ```json
-   {
-     "id": "task-{timestamp}-{random}",
-     "projectId": "{projectId}",
-     "title": "Design High-Fidelity Homepage Hero",
-     "details": "Create responsive desktop and mobile hero layout featuring new typography guidelines.",
-     "dueDate": "2026-09-15",
-     "priority": "high",
-     "phase": "todo",
-     "status": "Incomplete",
-     "taskType": "task",
-     "assignees": []
-   }
-   ```
-   *Valid Priorities*: `'urgent'`, `'high'`, `'medium'`, `'low'`  
-   *Valid Phases*: `'todo'`, `'inprogress'`, `'review'`, `'done'`
-2. **Inject into `tasks.json`**:
-   - Read existing `tasks.json`, append new tasks to `state.tasks`, and write back safely.
+**Backend port:** `server.ts` defaults to `3010` and negotiates a fallback chain
+(`preferred, 3010, 3009, 3011, 3012`), writing the winner back to the gitignored
+`flowstudio.config.json`. `vite.config.ts` proxies `/api` to the same value — keep the two
+in step, or a fresh clone proxies to a port the server will not bind.
 
 ---
 
-### 🎨 Workflow C: Discover Inspiration & Populate Moodboard
+## Read before you edit
 
-When instructed to find inspiration images or populate the moodboard:
-1. **Search & Curate**:
-   - Use `search_web` or curated design resources to find high-resolution, aesthetic reference URLs for the requested style (e.g., Minimalist Editorial, Dark Neo-Brutalism, Modern Fintech UI).
-2. **Generate Moodboard Elements**:
-   Build balanced cards with calculated `(x, y)` coordinates to prevent overlaps:
-   - **Image Cards**:
-     ```json
-     {
-       "id": "img-{timestamp}",
-       "type": "image",
-       "x": 100,
-       "y": 100,
-       "width": 340,
-       "height": 240,
-       "title": "Hero Layout Inspiration",
-       "url": "https://images.unsplash.com/...",
-       "category": "Inspiration"
-     }
-     ```
-   - **Color Swatch Cards**:
-     ```json
-     {
-       "id": "col-{timestamp}",
-       "type": "color",
-       "x": 480,
-       "y": 100,
-       "width": 180,
-       "height": 180,
-       "title": "Primary Accent",
-       "color": "#4F46E5",
-       "content": "#4F46E5",
-       "category": "Brand Colors"
-     }
-     ```
-   - **Sticky Notes / Design Directives**:
-     ```json
-     {
-       "id": "stk-{timestamp}",
-       "type": "sticky",
-       "x": 680,
-       "y": 100,
-       "width": 220,
-       "height": 200,
-       "title": "Typography Rule",
-       "content": "💡 Pair Cabinet Grotesque for bold headers with Inter for clean body text.",
-       "color": "#fef3c7",
-       "category": "Typography"
-     }
-     ```
-   - **Web Bookmark Cards**:
-     ```json
-     {
-       "id": "bmk-{timestamp}",
-       "type": "bookmark",
-       "x": 100,
-       "y": 380,
-       "width": 320,
-       "height": 140,
-       "title": "Design System Reference",
-       "url": "https://dribbble.com/...",
-       "category": "References"
-     }
-     ```
-3. **Write to `moodboard.json`**:
-   - Append items to `state.projectItems[projectId]` in `moodboard.json`.
+| Need | Read |
+|---|---|
+| Visual system, tokens, components, page templates | [Docs/DESIGN.md](Docs/DESIGN.md) |
+| Coding rules, Co-Pilot protocol, UI/animation standards | [Docs/RULES.md](Docs/RULES.md) |
+| Known inconsistencies, roadmap, completeness contract | [Docs/UI-UX-COMPLETENESS-PLAN.md](Docs/UI-UX-COMPLETENESS-PLAN.md) |
+| Architecture | [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) |
+| Feature scope | [Docs/PRD.md](Docs/PRD.md) |
 
 ---
 
-## 3. Data Integrity & Safety Guidelines
+## Design system rules — enforced
 
-1. **Read-Modify-Write**: Always read the existing `.json` store file first, parse `state`, modify the target array, and write back preserving version and all other project records.
-2. **Never Overwrite Other Projects**: Ensure operations only modify records matching the targeted `projectId`.
-3. **Unique IDs**: Use timestamped unique IDs (e.g., `Date.now() + Math.random().toString(36).slice(2, 6)`).
+`src/index.css` `@theme` is the **only** place colours are defined. Everything else refers to
+a token by name.
+
+**The palette decision (2026-09-25): the main theme is monochrome, blue is the accent.**
+
+| Token | Value | Owns |
+|---|---|---|
+| `primary` | `#111111` | CTAs, active pills, active states — the monochrome action layer |
+| `primary-hover` | `#242424` | Pressed/hover state of primary actions |
+| `accent` | `#1978e5` | Links, icon tints, rings, selection, focus — never the CTA |
+
+Rule of thumb: **if the user clicks it and it commits an action, it is `primary` (monochrome).
+If it draws attention, links, or signals selection/focus, it is `accent` (blue).**
+
+Then:
+
+- **No raw hex literals in components.** The only exceptions are the status/priority flag maps that intentionally encode meaning.
+- **Never add a `blue-*` Tailwind utility.** Use `accent`. There are ~324 legacy `blue-*` uses awaiting migration (see §1.1 of the plan); do not add more.
+- **Light theme only.** No `.dark` variants, no dark surface tokens, no theme toggle. The Copilot chat panel is a permanently dark *component*, not a theme — do not generalise it.
+- **Repeated controls live in `src/components/ui`.** A raw `<button>` carrying more than two style classes in a feature file is a defect. Import the primitive.
+
+Adding a new colour means adding a token to `@theme` and to `Docs/DESIGN.md` in the same change.
 
 ---
 
-## 4. UI & Performance Standards (Flow Studio Core)
+## Completeness contract
 
-### React Virtualization & Observer Lifecycle
-1. **Dynamic Ref Lifecycles**: When implementing `ResizeObserver` or DOM listeners on containers that conditionally unmount, ensure `useEffect` hooks depend on the toggle state variables to re-bind upon remounting.
-2. **Dynamic Height Virtualization**: Avoid static estimates for cards with dynamic text wrapping. Always attach `ref={virtualizer.measureElement}` and `data-index`.
+A screen is not finished until it handles all five states. This is the single biggest driver of
+whether the app *feels* complete:
 
-### Dynamic Toast & Notification Stack Animations (60FPS Pattern)
-1. **Dynamic `scrollHeight` Animation**: Measure `element.scrollHeight` dynamically and transition `maxHeight` to exact values.
-2. **Staggered Entry & Eviction**: Stagger toast eviction by `~100ms` to prevent layout reflow jitter.
-3. **GPU Layer Acceleration**: Apply `will-change: transform, opacity, max-height;` and `transform: translateZ(0);` on toast wrappers.
-4. **Overflow Unlocking**: Use `overflow: hidden` during transitions, restoring `overflow: visible` after animation completes.
+1. **Loading** — a skeleton shaped like the real content, not a spinner in a void.
+2. **Empty** — explains what belongs here and offers the action that creates it.
+3. **Error** — plain language, plus a retry.
+4. **Partial** — correct with 1 item and with 20,000.
+5. **No dead ends** — every affordance either works or is removed.
+
+Fabricated content a user can reach counts as a bug, not a placeholder.
 
 ---
 
-## 5. Session Startup Routine
+## Quality gate
 
-- At the start of any new session or when instructed to resume, check for `.antigravity/ACTIVE_CONTEXT.md`.
-- If present, silently load this file as your active working memory before responding.
-- Do not re-read stale history or ask the user to explain previous steps.
+`npm run lint` and `npm run build` are green and blocking in CI. Do not merge red.
+
+ESLint rules are disabled **with a stated reason** in `eslint.config.js`; re-enabling one is a
+deliberate decision. `react-hooks/rules-of-hooks`, `no-self-assign`,
+`no-constant-binary-expression` and `no-unused-expressions` stay as **errors** — they caught
+seven real defects, four of them crashes on ordinary user actions.
+
+---
+
+## Copilot protocol
+
+Do not document it here. Three copies already existed and that duplication is the problem.
+
+- **Runtime source of truth:** `server.ts` — three inline `systemInstruction` blocks (around lines 2473, 2574 and 2644). If you change Copilot behaviour, change it there.
+- **Protocol documentation:** [Docs/RULES.md](Docs/RULES.md) §2 (context resolution, workflows A/B/C, task schema, moodboard schemas) and §3 (UI/animation standards).
+
+---
+
+## Session startup
+
+- At the start of a new session, or when asked to resume, check for `.antigravity/ACTIVE_CONTEXT.md`.
+- If present, load it silently as working memory before responding.
+- Do not re-read stale history or ask the user to restate previous steps.
 
 <!-- graft:start -->
 ## Graft — repo context graph
