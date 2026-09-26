@@ -18,7 +18,7 @@ export const OngoingProjects: React.FC<OngoingProjectsProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'In Progress':
-        return <span className="px-2 py-1 bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold rounded uppercase tracking-wider">In Progress</span>;
+        return <span className="px-2 py-1 bg-accent/5 text-accent border border-accent/20 text-[10px] font-bold rounded uppercase tracking-wider">In Progress</span>;
       case 'Review':
         return <span className="px-2 py-1 bg-purple-50 text-purple-600 border border-purple-100 text-[10px] font-bold rounded uppercase tracking-wider">Review</span>;
       case 'Planning':
@@ -34,7 +34,7 @@ export const OngoingProjects: React.FC<OngoingProjectsProps> = ({
   const getIcon = (category?: string, index: number = 0) => {
     const icons = ['web', 'smartphone', 'palette', 'campaign', 'brand_family'];
     const colors = [
-      'bg-blue-50 text-blue-600 border-blue-100',
+      'bg-accent/5 text-accent border-accent/20',
       'bg-purple-50 text-purple-600 border-purple-100',
       'bg-emerald-50 text-emerald-600 border-emerald-100',
       'bg-orange-50 text-orange-600 border-orange-100',
@@ -101,7 +101,7 @@ export const OngoingProjects: React.FC<OngoingProjectsProps> = ({
                 >
                   {getIcon(proj.category, idx)}
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                    <h4 className="font-bold text-sm text-slate-900 truncate group-hover:text-accent transition-colors">
                       {proj.name || proj.title || 'Untitled Project'}
                     </h4>
                     <p className="text-xs text-slate-500 truncate font-medium mt-0.5">
@@ -116,7 +116,7 @@ export const OngoingProjects: React.FC<OngoingProjectsProps> = ({
                     <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 shadow-inner">
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${
-                          progress < 30 ? 'bg-amber-500' : progress < 70 ? 'bg-blue-600' : 'bg-emerald-500'
+                          progress < 30 ? 'bg-amber-500' : progress < 70 ? 'bg-accent' : 'bg-emerald-500'
                         }`} 
                         style={{ width: `${progress}%` }}
                       ></div>

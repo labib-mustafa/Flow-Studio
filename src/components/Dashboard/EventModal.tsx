@@ -160,14 +160,14 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, default
                   const getBadgeStyle = () => {
                     if (type === t) {
                       switch (t) {
-                        case 'Call': return 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 scale-105';
+                        case 'Call': return 'bg-accent text-white border-accent shadow-md shadow-accent/20 scale-105';
                         case 'Design': return 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20 scale-105';
                         case 'Team Sync': return 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20 scale-105';
                         default: return 'bg-zinc-950 text-white border-zinc-950 shadow-md shadow-zinc-950/20 scale-105';
                       }
                     } else {
                       switch (t) {
-                        case 'Call': return 'bg-blue-50/60 text-blue-700 border-blue-200/60 hover:bg-blue-100/60';
+                        case 'Call': return 'bg-accent/5 text-accent border-accent/20 hover:bg-accent/10';
                         case 'Design': return 'bg-purple-50/60 text-purple-700 border-purple-200/60 hover:bg-purple-100/60';
                         case 'Team Sync': return 'bg-amber-50/60 text-amber-700 border-amber-200/60 hover:bg-amber-100/60';
                         default: return 'bg-slate-100 text-slate-700 border-slate-200/60 hover:bg-slate-200/60';

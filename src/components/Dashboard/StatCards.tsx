@@ -1,7 +1,6 @@
 import React from 'react';
 import { useStatCardsData } from './statCardsHelpers';
 import {
-  ClientActivityChart,
   RevenueTrendChart,
   PipelineFunnelChart,
   ProjectMilestoneTrack
@@ -20,7 +19,6 @@ export const StatCards: React.FC<StatCardsProps> = ({ onNavigate }) => {
     activeClients,
     prospectClients,
     activeRatio,
-    clientBars,
     formattedCollected,
     formattedBalance,
     collectionRate,
@@ -82,7 +80,14 @@ export const StatCards: React.FC<StatCardsProps> = ({ onNavigate }) => {
           </div>
         </div>
         <div className="mt-3">
-          <ClientActivityChart bars={clientBars} />
+          <div className="flex justify-between text-[10px] font-bold uppercase opacity-60 tracking-wider mb-1.5">
+            <span>Active Ratio</span>
+            <span>{activeRatio}%</span>
+          </div>
+          <div className="w-full h-1.5 rounded-full overflow-hidden flex bg-black/10">
+            <div className="h-full bg-black/70 transition-all duration-500" style={{ width: `${activeRatio}%` }} />
+            <div className="h-full bg-black/25 flex-1" />
+          </div>
         </div>
       </div>
 

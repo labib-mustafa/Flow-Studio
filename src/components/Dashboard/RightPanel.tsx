@@ -27,7 +27,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({ onNavigate, onNewProject
 
   const getEventStyle = (type: CalendarEvent['type']) => {
     switch (type) {
-      case 'Call': return { bg: 'bg-blue-50/80', border: 'border-blue-100 hover:border-blue-200', text: 'text-blue-600', icon: 'videocam' };
+      case 'Call': return { bg: 'bg-accent/5', border: 'border-accent/20 hover:border-accent/40', text: 'text-accent', icon: 'videocam' };
       case 'Design': return { bg: 'bg-purple-50/80', border: 'border-purple-100 hover:border-purple-200', text: 'text-purple-600', icon: 'design_services' };
       case 'Team Sync': return { bg: 'bg-amber-50/80', border: 'border-amber-100 hover:border-amber-200', text: 'text-amber-600', icon: 'groups' };
       default: return { bg: 'bg-slate-50/80', border: 'border-slate-200 hover:border-slate-300', text: 'text-slate-600', icon: 'event' };

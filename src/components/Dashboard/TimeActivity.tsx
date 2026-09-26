@@ -73,10 +73,10 @@ export const TimeActivity: React.FC = () => {
   const getColorClass = (count: number, max: number) => {
     if (count === 0) return 'bg-slate-100 border-slate-200/60';
     const ratio = count / max;
-    if (ratio < 0.25) return 'bg-blue-200 border-blue-300';
-    if (ratio < 0.5) return 'bg-blue-400 border-blue-500';
-    if (ratio < 0.75) return 'bg-blue-600 border-blue-700';
-    return 'bg-blue-800 border-blue-900';
+    if (ratio < 0.25) return 'bg-accent/20 border-accent/30';
+    if (ratio < 0.5) return 'bg-accent/40 border-accent/50';
+    if (ratio < 0.75) return 'bg-accent/60 border-accent/70';
+    return 'bg-accent/80 border-accent/90';
   };
 
   const handleMouseEnter = (e: React.MouseEvent, count: number, dateStr: string) => {
@@ -111,10 +111,10 @@ export const TimeActivity: React.FC = () => {
           <span>Less</span>
           <div className="flex gap-1">
             <div className="size-3 rounded-sm bg-slate-100 border border-slate-200/60"></div>
-            <div className="size-3 rounded-sm bg-blue-200  "></div>
-            <div className="size-3 rounded-sm bg-blue-400  "></div>
-            <div className="size-3 rounded-sm bg-blue-600  "></div>
-            <div className="size-3 rounded-sm bg-blue-800  "></div>
+            <div className="size-3 rounded-sm bg-accent/20"></div>
+            <div className="size-3 rounded-sm bg-accent/40"></div>
+            <div className="size-3 rounded-sm bg-accent/60"></div>
+            <div className="size-3 rounded-sm bg-accent/80"></div>
           </div>
           <span>More</span>
         </div>

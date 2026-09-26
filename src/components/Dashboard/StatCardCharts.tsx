@@ -24,44 +24,6 @@ export interface ProjectPhaseItem {
   count: number;
 }
 
-/* ─── Client Activity / Workload Mini Chart ─────────────────────── */
-export const ClientActivityChart: React.FC<{ bars: ClientBarItem[] }> = ({ bars }) => {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const maxCount = Math.max(...bars.map(b => b.count), 1);
-
-  const activeSubtitle = hoveredIdx !== null && bars[hoveredIdx]
-    ? bars[hoveredIdx].subtitle
-    : 'Weekly Activity';
-
-  return (
-    <div className="w-full mt-2" onMouseLeave={() => setHoveredIdx(null)}>
-      <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-slate-800/70 mb-1.5">
-        <span>Load / Touchpoints</span>
-        <span className="text-slate-900 font-extrabold truncate max-w-[130px] text-right">{activeSubtitle}</span>
-      </div>
-      <div className="flex items-end gap-1.5 h-8 w-full">
-        {bars.map((bar, idx) => {
-          const heightPct = bar.count > 0 ? Math.max(Math.round((bar.count / maxCount) * 100), 22) : 12;
-          const isHovered = hoveredIdx === idx;
-          return (
-            <div
-              key={idx}
-              onMouseEnter={() => setHoveredIdx(idx)}
-              className="flex-1 flex flex-col items-center h-full justify-end cursor-pointer group"
-            >
-              <div
-                className={`w-full rounded-t-sm transition-all duration-200 ${isHovered ? 'bg-black scale-y-105 shadow-sm' : bar.count > 0 ? 'bg-black/75 group-hover:bg-black' : 'bg-black/20 group-hover:bg-black/35'
-                  }`}
-                style={{ height: `${heightPct}%` }}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 /* ─── 6-Month Historical Revenue Mini Chart ─────────────────────── */
 export const RevenueTrendChart: React.FC<{ months: RevenueMonthItem[] }> = ({ months }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -128,6 +90,7 @@ export const PipelineFunnelChart: React.FC<{ stages: PipelineStageItem[] }> = ({
   return (
     <div className="w-full mt-2" onMouseLeave={() => setHoveredIdx(null)}>
       <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-emerald-800/80 mb-1.5">
+        <span>Pipeline Stages</span>
         <span className="text-emerald-950 font-extrabold truncate max-w-[130px] text-right">{activeSubtitle}</span>
       </div>
     </div>

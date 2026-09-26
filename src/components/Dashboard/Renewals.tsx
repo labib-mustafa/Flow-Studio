@@ -82,7 +82,7 @@ export const Renewals: React.FC<RenewalsProps> = ({ onNavigate, onProjectClick }
                   className="flex justify-between items-center group cursor-pointer p-2.5 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-all"
                 >
                   <div>
-                    <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{inv.recipientName}</p>
+                    <p className="text-xs font-bold text-slate-900 group-hover:text-accent transition-colors">{inv.recipientName}</p>
                     <p className="text-[10px] text-slate-500 font-medium">Inv #{inv.invoiceNumber}</p>
                   </div>
                   <div className="text-right">
@@ -111,7 +111,7 @@ export const Renewals: React.FC<RenewalsProps> = ({ onNavigate, onProjectClick }
                   className="flex justify-between items-center group cursor-pointer p-2.5 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-all"
                 >
                   <div className="min-w-0 pr-2">
-                    <p className="text-xs font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{proj.name || proj.title}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate group-hover:text-accent transition-colors">{proj.name || proj.title}</p>
                     <p className="text-[10px] text-slate-500 truncate">{proj.client}</p>
                   </div>
                   <div className="text-right shrink-0">
