@@ -94,11 +94,11 @@ export const RevenueTrendChart: React.FC<{ months: RevenueMonthItem[] }> = ({ mo
                     ? 'bg-blue-600'
                     : m.revenue > 0
                       ? 'bg-blue-500/80 group-hover:bg-blue-600'
-                      : 'bg-blue-200/80 group-hover:bg-blue-300'
+                      : 'bg-blue-900/15 group-hover:bg-blue-900/25'
                   }`}
                 style={{ height: `${heightPct}%` }}
               />
-              <span className={`text-[8px] font-bold mt-1 tracking-tight ${m.isCurrent ? 'text-blue-900 font-extrabold' : 'text-blue-600/80'}`}>
+              <span className={`text-[8px] font-bold mt-1 tracking-tight ${m.isCurrent ? 'text-blue-900 font-extrabold' : 'text-blue-800/80'}`}>
                 {m.month}
               </span>
             </div>
