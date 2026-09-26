@@ -236,11 +236,18 @@ Notifications and the Files tab remain **unverified** — check before changing 
 
 **Separate open issue.** `Docs/DESIGN.md` §2 also defines a *second* blue, `Brand Accent #3b82f6`, which is visually near-identical to `Primary`. The code reaches for it only as a raw hex, never as a token. Recommendation: collapse it into `Primary` unless a genuinely distinct accent is wanted — dumbing down to one blue removes a whole class of "which blue is this?" decisions.
 
-**0.3** Move the ClickUp purple `#7b68ee` (33 hits) and dashboard purple `#3713ec` (1 hit) into **named tokens** so their use is intentional and greppable — or delete them. `#7b68ee` is currently the drag/drop indicator colour, which is legitimate; it must simply stop being a raw hex. Also delete the three dead dark-mode tokens (`--color-background-dark`, `--color-surface-dark`, `--color-border-dark`) — verified **0** references in `src/`, since dark mode is out of scope.
+**0.3** ~~Move the purples into named tokens~~ — **Done 2026-09-26, with a deliberate deviation.** The plan above said to give `#7b68ee` a named token because "the drag/drop indicator colour is legitimate". That was the wrong call: the standing rule is that **blue is the sole accent**, so enshrining a purple token would have entrenched a fourth accent instead of removing it. All 33 uses (confined to `TaskPage`) were migrated instead:
+
+- the solid button `bg-[#7b68ee] text-white hover:bg-[#6c5bc7]` → `bg-primary` / `hover:bg-primary-hover` — monochrome, per the action-layer rule;
+- toggle-on states (`FieldsSidebar` ×6), links, drag-over indicators, focus rings and mention chips → `accent`.
+
+Verified **0** remaining references to `7b68ee` in `src/`. **`#3713ec` was left deliberately**: its single use is the `indigo` entry in the Reports chart palette — data (a series colour), not a UI token — which falls under the "status/flag maps that intentionally encode meaning" exception.
+
+The three dead dark tokens were deleted as planned. `--color-background-light` → `--color-surface-soft` and `--color-border-light` → `--color-hairline` (values unchanged, so the rename is visually a no-op), and the unused `--color-surface-light` was removed.
 
 **0.4** ~~Fix the port contradiction~~ **Done 2026-09-25.** The Vite proxy fallback was `3009` while `server.ts` binds `3010` first (`ports = [preferred, 3010, 3009, 3011, 3012]`), so a fresh clone — where the gitignored `flowstudio.config.json` is absent — proxied `/api` to a port the server would not use. Vite's fallback is now `3010`, matching the server's own default. `README.md` already said 3010 and was correct; it was left alone.
 
-**0.5** Fix `Docs/DESIGN.md`: §11 now carries an explicit light-theme-only statement (dark mode is out of scope — do not add `.dark` variants, dark tokens, or theme-toggle UI); still to do: reconcile §4 button/input radii with the real distribution.
+**0.5** ~~Fix `Docs/DESIGN.md`~~ — **Done 2026-09-26.** §11 carries an explicit light-theme-only statement (dark mode is out of scope — do not add `.dark` variants, dark tokens, or theme-toggle UI), and §4 gained a **4.0 Radius Scale** table documenting all six radii in use (`rounded-full` / `md` / `lg` / `xl` / `2xl` / `3xl`) against the measured distribution, so `rounded-2xl` (189 uses) is no longer undocumented.
 
 **0.6** Fix the four dead hover classes listed in §1.4 — rename `primary-dark` → `primary-hover`, or define the token. Then add a guard so the class of bug cannot return: assert that every `bg-`/`text-`/`border-`/`ring-` utility referencing a theme token resolves to a variable actually declared in `@theme`.
 

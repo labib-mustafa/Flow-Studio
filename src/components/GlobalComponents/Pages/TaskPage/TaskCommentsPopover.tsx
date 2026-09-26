@@ -450,7 +450,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = React.mem
         <div className="flex flex-col gap-0.5">
           <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 select-none uppercase tracking-wider flex justify-between items-center">
             <span>Recent</span>
-            <span className="text-[11px] text-[#7b68ee] font-medium cursor-pointer hover:underline normal-case">Browse tasks</span>
+            <span className="text-[11px] text-accent font-medium cursor-pointer hover:underline normal-case">Browse tasks</span>
           </div>
           {flatItems.map(item => {
             const globalIndex = flatItems.findIndex(x => x.id === item.id);
@@ -491,12 +491,12 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = React.mem
                   <span className="text-[11px] text-slate-400">{calculateRelativeTime(comment.createdAt)}</span>
                 </div>
                 {isFileAttachment ? (
-                  <div className="mt-2.5 p-2 border border-slate-200 rounded-[8px] bg-slate-50 flex items-center gap-2.5 max-w-[310px] shadow-sm hover:border-[#7b68ee] transition-colors group">
+                  <div className="mt-2.5 p-2 border border-slate-200 rounded-[8px] bg-slate-50 flex items-center gap-2.5 max-w-[310px] shadow-sm hover:border-accent transition-colors group">
                     <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                       <span className="material-symbols-outlined text-[18px]">insert_drive_file</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[12px] font-semibold text-slate-700 truncate group-hover:text-[#7b68ee] transition-colors">{fileName}</div>
+                      <div className="text-[12px] font-semibold text-slate-700 truncate group-hover:text-accent transition-colors">{fileName}</div>
                       <div className="text-[10px] text-slate-400">Click to preview</div>
                     </div>
                   </div>
@@ -538,7 +538,7 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = React.mem
                   }}
                   className={`text-[12.5px] py-0.5 font-semibold select-none focus:outline-none transition-all border-b-2 whitespace-nowrap cursor-pointer hover:text-slate-900 ${
                     mentionActiveTab === tab.id 
-                      ? 'text-[#7b68ee] border-[#7b68ee]' 
+                      ? 'text-accent border-accent' 
                       : 'text-slate-400 border-transparent hover:border-slate-250'
                   }`}
                 >
@@ -555,27 +555,27 @@ export const TaskCommentsPopover: React.FC<TaskCommentsPopoverProps> = React.mem
             {/* Help Shortcut Keyboard Footer */}
             <div className="px-3.5 py-2.5 border-t border-slate-100 bg-slate-50 text-[10.5px] text-slate-400 font-semibold tracking-wide whitespace-nowrap overflow-x-auto no-scrollbar select-none flex items-center gap-3">
               <div>
-                <span className="text-[#7b68ee] font-bold bg-[#7b68ee]/10 px-1 py-0.5 rounded mr-1">@</span> People
+                <span className="text-accent font-bold bg-accent/10 px-1 py-0.5 rounded mr-1">@</span> People
               </div>
               <div className="w-[1px] h-3 bg-slate-200" />
               <div>
-                <span className="text-[#7b68ee] font-bold bg-[#7b68ee]/10 px-1 py-0.5 rounded mr-1">@@</span> Tasks
+                <span className="text-accent font-bold bg-accent/10 px-1 py-0.5 rounded mr-1">@@</span> Tasks
               </div>
               <div className="w-[1px] h-3 bg-slate-200" />
               <div>
-                <span className="text-[#7b68ee] font-bold bg-[#7b68ee]/10 px-1 py-0.5 rounded mr-1">@@@</span> Docs
+                <span className="text-accent font-bold bg-accent/10 px-1 py-0.5 rounded mr-1">@@@</span> Docs
               </div>
               <div className="w-[1px] h-3 bg-slate-200" />
               <div>
-                <span className="text-[#7b68ee] font-bold bg-[#7b68ee]/10 px-1 py-0.5 rounded mr-1">#</span> Channels
+                <span className="text-accent font-bold bg-accent/10 px-1 py-0.5 rounded mr-1">#</span> Channels
               </div>
             </div>
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 rounded-[10px] shadow-sm relative focus-within:ring-1 focus-within:ring-[#7b68ee] focus-within:border-[#7b68ee] transition-all">
+        <div className="bg-white border border-slate-200 rounded-[10px] shadow-sm relative focus-within:ring-1 focus-within:ring-accent focus-within:border-accent transition-all">
           {isAiMode && (
-            <div className="px-3 py-1.5 bg-[#7b68ee]/10 text-[#7b68ee] text-[12px] font-medium flex items-center gap-1.5 border-b border-[#7b68ee]/10 rounded-t-[9px]">
+            <div className="px-3 py-1.5 bg-accent/10 text-accent text-[12px] font-medium flex items-center gap-1.5 border-b border-accent/10 rounded-t-[9px]">
               <span className="material-symbols-outlined text-[14px]">smart_toy</span>
               Ai Generation Mode Active
             </div>

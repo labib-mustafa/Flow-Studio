@@ -148,7 +148,7 @@ const CustomCellRenderer = React.memo(({ task, column }: { task: Task; column: a
           type="checkbox"
           checked={!!value}
           onChange={e => useTaskStore.getState().updateTask(task.id, { [column.id]: e.target.checked })}
-          className="w-4 h-4 rounded border-gray-300 text-[#7b68ee] focus:ring-[#7b68ee]"
+          className="w-4 h-4 rounded border-gray-300 text-accent focus:ring-accent"
         />
       </div>
     );
@@ -566,7 +566,7 @@ const TaskRow: React.FC<{
       <div
         id={`task-row-${id}`}
         data-task-id={id}
-        className={`group/row grid items-stretch border-t border-slate-100 hover:bg-[#f6f7f9] text-[13px] transition-all duration-150 ${completed ? 'opacity-55' : ''} ${isDraggedOver ? 'border-t-2 border-t-[#7b68ee] bg-[#7b68ee]/5' : ''} ${isBeingDragged ? 'opacity-30 bg-slate-50' : ''} ${isSelected ? 'bg-blue-50/40' : ''} ${isActive ? 'ring-1 ring-inset ring-blue-500/80 bg-blue-50/50 shadow-xs' : ''}`}
+        className={`group/row grid items-stretch border-t border-slate-100 hover:bg-[#f6f7f9] text-[13px] transition-all duration-150 ${completed ? 'opacity-55' : ''} ${isDraggedOver ? 'border-t-2 border-t-accent bg-accent/5' : ''} ${isBeingDragged ? 'opacity-30 bg-slate-50' : ''} ${isSelected ? 'bg-blue-50/40' : ''} ${isActive ? 'ring-1 ring-inset ring-blue-500/80 bg-blue-50/50 shadow-xs' : ''}`}
         draggable={isDraggable}
         onDragStart={(e) => {
           setIsDraggingThis(true);
@@ -600,7 +600,7 @@ const TaskRow: React.FC<{
                 <div className="flex items-center w-[76px] pr-2 flex-shrink-0">
                   <div className={`flex items-center justify-between w-full transition-opacity duration-150 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'}`}>
                     <span
-                      className="material-symbols-outlined text-[14px] text-slate-300 cursor-grab px-0.5 active:cursor-grabbing hover:text-[#7b68ee] flex-shrink-0"
+                      className="material-symbols-outlined text-[14px] text-slate-300 cursor-grab px-0.5 active:cursor-grabbing hover:text-accent flex-shrink-0"
                       onMouseEnter={() => !isDraggable && setIsDraggable(true)}
                       onMouseLeave={() => {
                         if (isDraggable && !isDraggingThis) setIsDraggable(false);
@@ -1019,7 +1019,7 @@ const TaskRow: React.FC<{
             <div className="flex flex-col gap-2">
               <textarea
                 autoFocus
-                className="w-full text-[13px] text-slate-800 bg-white border border-slate-200 hover:border-slate-300 focus:border-[#7b68ee] focus:ring-1 focus:ring-[#7b68ee] rounded-md p-2.5 outline-none font-sans leading-relaxed resize-y min-h-[85px] shadow-sm"
+                className="w-full text-[13px] text-slate-800 bg-white border border-slate-200 hover:border-slate-300 focus:border-accent focus:ring-1 focus:ring-accent rounded-md p-2.5 outline-none font-sans leading-relaxed resize-y min-h-[85px] shadow-sm"
                 placeholder="Add details / description for this task..."
                 value={tempDetails}
                 onChange={(e) => setTempDetails(e.target.value)}
@@ -1028,7 +1028,7 @@ const TaskRow: React.FC<{
                 <button
                   type="button"
                   onClick={handleDetailsSubmit}
-                  className="px-3 py-1.5 bg-[#7b68ee] text-white hover:bg-[#6c5bc7] rounded-md text-[12px] font-semibold transition-colors cursor-pointer shadow-sm outline-[#7b68ee]"
+                  className="px-3 py-1.5 bg-primary text-white hover:bg-primary-hover rounded-md text-[12px] font-semibold transition-colors cursor-pointer shadow-sm outline-accent"
                 >
                   Save
                 </button>

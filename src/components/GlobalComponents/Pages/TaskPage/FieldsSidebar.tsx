@@ -215,7 +215,7 @@ export default function FieldsSidebar({ onClose }: { onClose?: () => void }) {
                 <Type className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 <span className="text-sm text-gray-500">Task Name</span>
               </div>
-              <div className="w-8 h-4 bg-[#7b68ee] rounded-full relative opacity-50 cursor-not-allowed">
+              <div className="w-8 h-4 bg-accent rounded-full relative opacity-50 cursor-not-allowed">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function FieldsSidebar({ onClose }: { onClose?: () => void }) {
                 <Users className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 <span className="text-sm text-gray-700">Assignee</span>
               </div>
-              <div className="w-8 h-4 bg-[#7b68ee] rounded-full relative transition-colors">
+              <div className="w-8 h-4 bg-accent rounded-full relative transition-colors">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
@@ -235,7 +235,7 @@ export default function FieldsSidebar({ onClose }: { onClose?: () => void }) {
                 <Calendar className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 <span className="text-sm text-gray-700">Due date</span>
               </div>
-              <div className="w-8 h-4 bg-[#7b68ee] rounded-full relative transition-colors">
+              <div className="w-8 h-4 bg-accent rounded-full relative transition-colors">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function FieldsSidebar({ onClose }: { onClose?: () => void }) {
                 <Target className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 <span className="text-sm text-gray-700">Status</span>
               </div>
-              <div className="w-8 h-4 bg-[#7b68ee] rounded-full relative transition-colors">
+              <div className="w-8 h-4 bg-accent rounded-full relative transition-colors">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
@@ -255,7 +255,7 @@ export default function FieldsSidebar({ onClose }: { onClose?: () => void }) {
                 <MessageSquare className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 <span className="text-sm text-gray-700">Comments</span>
               </div>
-              <div className="w-8 h-4 bg-[#7b68ee] rounded-full relative transition-colors">
+              <div className="w-8 h-4 bg-accent rounded-full relative transition-colors">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
@@ -265,7 +265,7 @@ export default function FieldsSidebar({ onClose }: { onClose?: () => void }) {
                 <Flag className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 <span className="text-sm text-gray-700">Priority</span>
               </div>
-              <div className="w-8 h-4 bg-[#7b68ee] rounded-full relative transition-colors">
+              <div className="w-8 h-4 bg-accent rounded-full relative transition-colors">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
