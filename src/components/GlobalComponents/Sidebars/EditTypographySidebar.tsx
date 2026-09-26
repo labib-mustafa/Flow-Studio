@@ -86,7 +86,7 @@ export const EditTypographySidebar: React.FC<EditTypographySidebarProps> = ({ is
               <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => setFormData(defaultData)}
-                  className="text-slate-400 hover:text-[#1978e5] transition-colors bg-white rounded-md p-1 shadow-sm border border-slate-100"
+                  className="text-slate-400 hover:text-accent transition-colors bg-white rounded-md p-1 shadow-sm border border-slate-100"
                   title="Reset to Default"
                 >
                   <span className="material-symbols-outlined text-lg">refresh</span>
@@ -116,7 +116,7 @@ export const EditTypographySidebar: React.FC<EditTypographySidebarProps> = ({ is
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">Style Name</label>
                 <input 
-                  className="w-full border border-slate-200 rounded-lg text-sm font-semibold text-slate-900 focus:border-[#1978e5] focus:ring-1 focus:ring-[#1978e5] py-2.5 px-3 bg-white outline-none transition-all" 
+                  className="w-full border border-slate-200 rounded-lg text-sm font-semibold text-slate-900 focus:border-accent focus:ring-1 focus:ring-accent py-2.5 px-3 bg-white outline-none transition-all" 
                   placeholder="e.g. Body Large" 
                   type="text" 
                   value={formData.styleName}
@@ -143,7 +143,7 @@ export const EditTypographySidebar: React.FC<EditTypographySidebarProps> = ({ is
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">Size</label>
-                  <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-[#1978e5] focus-within:border-[#1978e5] transition-all">
+                  <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-accent focus-within:border-accent transition-all">
                     <input 
                       className="w-full border-0 text-sm font-medium text-slate-700 focus:ring-0 py-2.5 px-3 outline-none" 
                       type="number" 
@@ -155,7 +155,7 @@ export const EditTypographySidebar: React.FC<EditTypographySidebarProps> = ({ is
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">Line Height</label>
-                  <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-[#1978e5] focus-within:border-[#1978e5] transition-all">
+                  <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-accent focus-within:border-accent transition-all">
                     <input 
                       className="w-full border-0 text-sm font-medium text-slate-700 focus:ring-0 py-2.5 px-3 outline-none" 
                       step="0.1" 
@@ -170,7 +170,7 @@ export const EditTypographySidebar: React.FC<EditTypographySidebarProps> = ({ is
               
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">Letter Spacing</label>
-                <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-[#1978e5] focus-within:border-[#1978e5] transition-all">
+                <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-accent focus-within:border-accent transition-all">
                   <input 
                     className="w-full border-0 text-sm font-medium text-slate-700 focus:ring-0 py-2.5 px-3 outline-none" 
                     step="0.01" 
@@ -193,7 +193,7 @@ export const EditTypographySidebar: React.FC<EditTypographySidebarProps> = ({ is
             </button>
             <button 
               onClick={handleSave}
-              className="flex-1 px-5 py-2.5 bg-[#1978e5] hover:bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+              className="flex-1 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined text-lg">check</span>
               Save Changes

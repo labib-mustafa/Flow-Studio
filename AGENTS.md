@@ -52,7 +52,12 @@ a token by name.
 |---|---|---|
 | `primary` | `#111111` | CTAs, active pills, active states — the monochrome action layer |
 | `primary-hover` | `#242424` | Pressed/hover state of primary actions |
-| `accent` | `#1978e5` | Links, icon tints, rings, selection, focus — never the CTA |
+| `accent` | `#0789fd` | Links, icon tints, rings, selection, focus — never the CTA |
+
+`accent` is brighter than the value it replaced, so keep it off small body copy: `text-accent` on
+white, and white on `bg-accent`, are both 3.53:1 — under the 4.5:1 AA floor. Links, icons, rings and
+tints are unaffected. **A filled accent surface with small white text should use `accent-hover`
+(`#0673d5`, 4.75:1 with white).**
 
 Rule of thumb: **if the user clicks it and it commits an action, it is `primary` (monochrome).
 If it draws attention, links, or signals selection/focus, it is `accent` (blue).**

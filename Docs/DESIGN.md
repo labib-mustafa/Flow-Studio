@@ -61,7 +61,7 @@ Primary colors used across the application:
 | Primary | Accent / Link | Success | Warning | Error / Urgent | Canvas | Surface Card | Dark Floor | Muted Text |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | ![Primary](./assets/colors/primary.svg) | ![Accent](./assets/colors/brand-accent.svg) | ![Success](./assets/colors/success.svg) | ![Warning](./assets/colors/warning.svg) | ![Error](./assets/colors/error.svg) | ![Canvas](./assets/colors/background.svg) | ![Card](./assets/colors/surface-card.svg) | ![Dark](./assets/colors/surface-dark.svg) | ![Muted](./assets/colors/text-secondary.svg) |
-| **`#111111`** | **`#1978e5`** | **`#10b981`** | **`#f59e0b`** | **`#ef4444`** | **`#ffffff`** | **`#f5f5f5`** | **`#101010`** | **`#6b7280`** |
+| **`#111111`** | **`#0789fd`** | **`#10b981`** | **`#f59e0b`** | **`#ef4444`** | **`#ffffff`** | **`#f5f5f5`** | **`#101010`** | **`#6b7280`** |
 | Primary CTAs | Brand Links | Completed | Review Stage | Overdue Alerts | Main Floor | Card Bodies | Deep Footer | Secondary Text |
 
 ---
@@ -72,7 +72,7 @@ Primary colors used across the application:
 |:---|:---|:---:|:---|
 | **Primary** | `#111111` | ![Primary](./assets/colors/primary-dot.svg) | Primary CTAs, active pills, active states. **Decision (2026-09-25): the app's main theme is monochrome** — `primary` owns the action layer. |
 | **Primary Active** | `#242424` | ![Primary Active](./assets/colors/primary-active-dot.svg) | Button press state and hover feedback. Matches `--color-primary-hover` in `@theme`. |
-| **Accent (Blue)** | `#1978e5` | ![Accent](./assets/colors/brand-accent-dot.svg) | Inline links, icon tints, selection rings, focus, focal badges. **Blue is the accent — never the primary CTA.** Matches `--color-accent` in `@theme`. |
+| **Accent (Blue)** | `#0789fd` | ![Accent](./assets/colors/brand-accent-dot.svg) | Inline links, icon tints, selection rings, focus, focal badges. **Blue is the accent — never the primary CTA.** Matches `--color-accent` in `@theme`. Hover step `accent-hover` `#0673d5`. |
 | **Success** | `#10b981` | ![Success](./assets/colors/success-dot.svg) | Completed tasks, active client status, paid invoice badges |
 | **Warning** | `#f59e0b` | ![Warning](./assets/colors/warning-dot.svg) | Review stage, approaching deadlines, stagnant lead warnings |
 | **Error / Urgent** | `#ef4444` | ![Error](./assets/colors/error-dot.svg) | Overdue deliverables, destructive delete actions, error alerts |
@@ -84,15 +84,17 @@ Primary colors used across the application:
 | **Text Primary (Ink)** | `#111111` | ![Text Primary](./assets/colors/text-primary-dot.svg) | Main headline copy, modal titles, high-contrast labels |
 | **Text Secondary (Body)**| `#6b7280`| ![Text Secondary](./assets/colors/text-secondary-dot.svg) | Running body paragraphs, dates, breadcrumbs, column headers |
 
-> **Resolved — one monochrome action layer, one blue accent.** The app's main theme is **monochrome** (`Primary` `#111111`) with **blue as the accent** (`#1978e5`). The former documented `Brand Accent` `#3b82f6` is **retired from the spec**: in code, `--color-primary` now carries monochrome ink (CTAs, active states) and `--color-accent` carries blue (links, icon tints, rings, selection).
+> **Resolved — one monochrome action layer, one blue accent.** The app's main theme is **monochrome** (`Primary` `#111111`) with **blue as the accent** (`#0789fd`). The former documented `Brand Accent` `#3b82f6` is **retired from the spec**: in code, `--color-primary` now carries monochrome ink (CTAs, active states) and `--color-accent` carries blue (links, icon tints, rings, selection).
 >
 > **Rule of thumb:** if a user clicks it and it commits an action, it is `primary` (monochrome). If it draws attention, links, or indicates selection/focus, it is `accent` (blue).
 >
 > **Dark-surface exception.** `primary` (`#111111`) has no contrast against dark chrome (the `bg-slate-950` bulk-action toolbars, the permanently-dark Copilot panel). There the action layer **inverts to white**: `bg-white hover:bg-white/90 text-black`. Blue does *not* return to the action layer on dark surfaces — `accent` stays reserved for count badges, selection and status, which is why the selection-count badge in those toolbars is `bg-accent text-white` while the buttons beside it are white.
 >
-> **Tone ramps are not collapsible.** `accent` is a single value, so it cannot express a *scale*. Where a hue is used as ordered steps it stays a ramp, because flattening it destroys the encoding: the Time Activity calendar uses four steps to mean "how busy was this day" (that one is written as `bg-accent/20 → /80`, so it is a ramp *and* a token), and the Revenue Summary card uses a range of darker blues for its 10px labels because `accent` `#1978e5` only manages 4.0:1 on that card's `#d4e4ff` fill — under the 4.5:1 floor for small text. **A pastel-filled card therefore keeps a tone ramp of its own hue; it does not take `accent`.**
+> **Tone ramps are not collapsible.** `accent` is a single value, so it cannot express a *scale*. Where a hue is used as ordered steps it stays a ramp, because flattening it destroys the encoding: the Time Activity calendar uses four steps to mean "how busy was this day" (that one is written as `bg-accent/20 → /80`, so it is a ramp *and* a token), and the Revenue Summary card uses a range of darker blues for its 10px labels because `accent` `#0789fd` only manages 2.8:1 on that card's `#d4e4ff` fill — far under the 4.5:1 floor for small text (the previous `#1978e5` managed 4.0:1, itself already short). **A pastel-filled card therefore keeps a tone ramp of its own hue; it does not take `accent`.**
 >
-> **⚠️ Settled in the spec, not yet true in the code.** `--color-accent` is presently the *token* blue only. The codebase still contains **334 raw Tailwind `blue-*` utilities across 55 files**, so the app still ships **two blues in practice** — the token `#1978e5` and Tailwind's `#2563eb`. Consolidating the rest onto `accent` is Phase 1 work; **Clients (116 sites) and Leads (108 sites) are migrated** as of 2026-09-26. The 10 surviving `#3b82f6` references are all **data**, not UI — the moodboard shape/stroke palettes, the task-status colour config, and category dots — and are in scope for the "intentional flag/status map" exception. Until the remaining groups land: **do not add new `blue-*` utilities** — use `accent`.
+> **Accent retuned 2026-09-26: `#1978e5` → `#0789fd`** (hover `#1565c0` → `#0673d5`, keeping the established 0.84× channel relationship). The new blue is brighter, and that costs contrast against white: `text-accent` on white is **3.53:1** (was 4.36:1), and white on `bg-accent` is the same **3.53:1** — both under the 4.5:1 floor for normal text. Accent therefore stays safe for links, icons, rings and tints, but **a filled accent surface carrying small white text should use `accent-hover`** (`#0673d5` → 4.75:1 with white), and the accent should stay off body copy at small sizes.
+>
+> **⚠️ Settled in the spec, not yet true in the code.** `--color-accent` is presently the *token* blue only. The codebase still contains **334 raw Tailwind `blue-*` utilities across 55 files**, so the app still ships **two blues in practice** — the token `#0789fd` and Tailwind's `#2563eb`. Consolidating the rest onto `accent` is Phase 1 work; **Clients (116 sites) and Leads (108 sites) are migrated** as of 2026-09-26. The 10 surviving `#3b82f6` references are all **data**, not UI — the moodboard shape/stroke palettes, the task-status colour config, and category dots — and are in scope for the "intentional flag/status map" exception. Until the remaining groups land: **do not add new `blue-*` utilities** — use `accent`.
 
 ---
 

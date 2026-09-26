@@ -1679,7 +1679,7 @@ export const MoodboardPage: React.FC<MoodboardPageProps> = ({ onTabChange, onEdi
           <Minus size={18} />
         </button>
         <span 
-          className="text-xs font-bold text-slate-700 min-w-[4ch] text-center cursor-pointer hover:text-[#1978e5] transition-colors select-none" 
+          className="text-xs font-bold text-slate-700 min-w-[4ch] text-center cursor-pointer hover:text-accent transition-colors select-none" 
           onClick={() => { 
             if (containerRef.current) {
               const rect = containerRef.current.getBoundingClientRect();

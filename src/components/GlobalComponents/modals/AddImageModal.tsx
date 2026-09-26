@@ -144,12 +144,12 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
               <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
             ) : (
               <>
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-50/0 to-blue-50/50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-accent/0 to-accent/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="w-14 h-14 bg-white rounded-full shadow-sm flex items-center justify-center border border-slate-100 group-hover:scale-110 transition-transform duration-300 z-10">
-                  <span className="material-symbols-outlined text-[#1978e5] text-3xl">cloud_upload</span>
+                  <span className="material-symbols-outlined text-accent text-3xl">cloud_upload</span>
                 </div>
                 <div className="text-center z-10">
-                  <p className="text-sm font-bold text-slate-700 group-hover:text-[#1978e5] transition-colors">Click to upload</p>
+                  <p className="text-sm font-bold text-slate-700 group-hover:text-accent transition-colors">Click to upload</p>
                   <p className="text-xs text-slate-400 mt-1">or drag and drop SVG, PNG, JPG</p>
                 </div>
               </>
@@ -163,7 +163,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
               Image Title <span className="font-normal text-slate-400 normal-case ml-1">(Optional)</span>
             </label>
             <input 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#1978e5] focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-medium text-slate-800 placeholder-slate-400" 
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-accent focus:ring-4 focus:ring-accent/10 outline-none transition-all text-sm font-medium text-slate-800 placeholder-slate-400" 
               id="imageTitle" 
               placeholder="e.g. Modern Lobby Concept" 
               type="text"
@@ -175,7 +175,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2" htmlFor="category">Category</label>
             <div className="relative">
               <select 
-                className="w-full appearance-none px-4 py-3 rounded-xl border border-slate-200 bg-white focus:border-[#1978e5] focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-medium text-slate-800 cursor-pointer" 
+                className="w-full appearance-none px-4 py-3 rounded-xl border border-slate-200 bg-white focus:border-accent focus:ring-4 focus:ring-accent/10 outline-none transition-all text-sm font-medium text-slate-800 cursor-pointer" 
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -203,7 +203,7 @@ export const AddImageModal: React.FC<AddImageModalProps> = ({
           </button>
           <button 
             onClick={handleSubmit}
-            className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-[#1978e5] shadow-lg shadow-blue-200 hover:bg-blue-600 hover:shadow-blue-300 transition-all active:scale-95 flex items-center gap-2"
+            className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-accent shadow-lg shadow-accent/20 hover:bg-accent-hover hover:shadow-accent/30 transition-all active:scale-95 flex items-center gap-2"
           >
             Add to Moodboard
           </button>

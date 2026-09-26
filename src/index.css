@@ -14,8 +14,8 @@
   --color-primary-hover: #242424;
 
   /* Blue is the accent — links, icon tints, rings, selection, focus. Never the primary CTA. */
-  --color-accent: #1978e5;
-  --color-accent-hover: #1565c0;
+  --color-accent: #0789fd;
+  --color-accent-hover: #0673d5;
 
   /* Surfaces & hairlines. Role-named; values unchanged from the previous
      --color-background-light / --color-border-light, so this is a pure rename.
@@ -203,7 +203,7 @@
 }
 
 .prose a {
-  color: #1978e5;
+  color: var(--color-accent);
   text-decoration: underline;
 }
 

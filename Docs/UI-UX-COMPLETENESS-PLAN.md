@@ -2,6 +2,7 @@
 
 > Audit date: 2026-09-25 · Scope: `src/` (232 TS/TSX files) + repo config
 > Goal: make the app *feel* complete, and make consistency enforceable instead of aspirational.
+> **Accent retuned 2026-09-26:** `--color-accent` `#1978e5` → `#0789fd`, hover `#1565c0` → `#0673d5`. Every `#1978e5` below is the pre-retune value and is left as the **audit record** — it is what was measured on 2026-09-25, not what ships today.
 
 ---
 
@@ -11,7 +12,7 @@ The app does not feel incomplete because features are missing. It feels incomple
 
 So the work is not "add more UI". It is three things, in this order:
 
-1. **Collapse the competing palettes into 1 enforced token layer** — the main theme is **monochrome** (`primary` `#111111`, owning CTAs and active states) with **blue as the single accent** (`--color-accent` `#1978e5`, owning links, icon tints, rings and selection). This removes the inconsistency the user can feel.
+1. **Collapse the competing palettes into 1 enforced token layer** — the main theme is **monochrome** (`primary` `#111111`, owning CTAs and active states) with **blue as the single accent** (`--color-accent` `#0789fd`, owning links, icon tints, rings and selection). This removes the inconsistency the user can feel.
 2. **Build the ~12 missing primitives** so new screens can't invent their own button (stops the drift from re-accumulating).
 3. **Close the state-coverage and honesty gaps** (empty / loading / error / partial / first-run) — this is what actually converts "demo" into "complete".
 
@@ -206,9 +207,11 @@ Notifications and the Files tab remain **unverified** — check before changing 
   --color-primary: #111111;
   --color-primary-hover: #242424;
 
-  /* Blue is the accent — links, icon tints, rings, selection. Never the CTA. */
-  --color-accent: #1978e5;
-  --color-accent-hover: #1565c0;
+  /* Blue is the accent — links, icon tints, rings, selection. Never the CTA.
+     Retuned 2026-09-26: accent #1978e5 -> #0789fd, hover #1565c0 -> #0673d5
+     (hover keeps the established 0.84x channel relationship). */
+  --color-accent: #0789fd;
+  --color-accent-hover: #0673d5;
 
   /* surfaces — IMPLEMENTED 2026-09-26. Values deliberately kept identical to the
      previous light tokens, so this rename was visually a no-op. */
@@ -232,7 +235,7 @@ Notifications and the Files tab remain **unverified** — check before changing 
 
 **Migration note.** The light tokens must be handled at their call sites before deletion: `--color-border-light` (3 uses) and `--color-background-light` (1 use) need renaming; `--color-surface-light` is unused (0). The three dark tokens (`--color-background-dark`, `--color-surface-dark`, `--color-border-dark`) are unused (0) and were deleted outright per §11 of `Docs/DESIGN.md`.
 
-**Still outstanding — the raw `blue-*` utilities (§1.1).** This is the largest single consistency item in the codebase and it is *not* mechanical: most are legitimate accent roles (icon tints, chips, links) that should become `accent`, but some are CTAs that should become monochrome `primary`. Sequence it as its own commit per screen group so each is independently reviewable and revertible. `blue-500 #3b82f6`, `blue-600 #2563eb` and `blue-700 #1d4ed8` all collapse onto the single `accent` `#1978e5`.
+**Still outstanding — the raw `blue-*` utilities (§1.1).** This is the largest single consistency item in the codebase and it is *not* mechanical: most are legitimate accent roles (icon tints, chips, links) that should become `accent`, but some are CTAs that should become monochrome `primary`. Sequence it as its own commit per screen group so each is independently reviewable and revertible. `blue-500 #3b82f6`, `blue-600 #2563eb` and `blue-700 #1d4ed8` all collapse onto the single `accent` token (now `#0789fd`).
 
 **Progress — re-measured 2026-09-26.**
 
