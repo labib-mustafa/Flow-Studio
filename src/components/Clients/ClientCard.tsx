@@ -61,7 +61,7 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
       onClick={() => onSelect(client.id)}
       onDoubleClick={() => onOpenDetails(client.id)}
       className={`relative bg-white rounded-2xl border p-5 flex flex-col justify-between transition-all duration-200 cursor-pointer select-none group w-full ${isSelected
-        ? 'border-blue-600 ring-2 ring-blue-500/20 shadow-md bg-blue-50/10'
+        ? 'border-accent ring-2 ring-accent/20 shadow-md bg-accent/10'
         : 'border-slate-200/80 hover:border-slate-300 hover:shadow-lg shadow-xs'
         }`}
     >
@@ -93,7 +93,7 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
                 className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white ${client.status === 'Active'
                   ? 'bg-emerald-500'
                   : client.status === 'Prospect'
-                    ? 'bg-blue-500'
+                    ? 'bg-accent'
                     : 'bg-slate-400'
                   }`}
               />
@@ -102,11 +102,11 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
             {/* Name & Company */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                <h3 className="text-sm font-bold text-slate-900 truncate group-hover:text-accent transition-colors">
                   {client.name}
                 </h3>
                 {client.status === 'Active' && (
-                  <CheckCircle2 className="size-3.5 text-blue-600 shrink-0" />
+                  <CheckCircle2 className="size-3.5 text-accent shrink-0" />
                 )}
               </div>
               <p className="text-xs text-slate-500 truncate mt-0.5 font-medium">
@@ -122,7 +122,7 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
               className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${client.status === 'Active'
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
                 : client.status === 'Prospect'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                  ? 'bg-accent/5 text-accent border border-accent/20'
                   : 'bg-slate-100 text-slate-600 border border-slate-200/60'
                 }`}
             >
@@ -189,7 +189,7 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
             <a
               href={`mailto:${client.email}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 truncate hover:text-blue-600 transition-colors"
+              className="flex items-center gap-1.5 truncate hover:text-accent transition-colors"
               title={client.email}
             >
               <Mail className="size-3 text-slate-400 shrink-0" />
@@ -271,10 +271,10 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
             sound.tick();
             onOpenDetails(client.id);
           }}
-          className="text-xs font-bold text-slate-700 hover:text-blue-600 flex items-center gap-1 group-hover:translate-x-0.5 transition-all"
+          className="text-xs font-bold text-slate-700 hover:text-accent flex items-center gap-1 group-hover:translate-x-0.5 transition-all"
         >
           <span>View Details</span>
-          <ArrowUpRight className="size-3 text-slate-400 group-hover:text-blue-600" />
+          <ArrowUpRight className="size-3 text-slate-400 group-hover:text-accent" />
         </button>
       </div>
     </motion.div>

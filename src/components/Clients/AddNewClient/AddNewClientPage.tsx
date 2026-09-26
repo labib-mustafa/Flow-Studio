@@ -138,13 +138,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, opt
                   }}
                   className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors flex items-center justify-between ${
                     isSelected
-                      ? 'bg-blue-50/70 text-blue-700 hover:bg-blue-100/80 border-l-2 border-blue-600'
+                      ? 'bg-accent/10 text-accent hover:bg-accent/15 border-l-2 border-accent'
                       : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span>{opt.label}</span>
                   {isSelected && (
-                    <span className="material-symbols-outlined text-[14px] text-blue-600 font-bold leading-none select-none">
+                    <span className="material-symbols-outlined text-[14px] text-accent font-bold leading-none select-none">
                       done
                     </span>
                   )}
@@ -534,10 +534,10 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                   <button 
                     type="button"
                     onClick={() => setStep(1)}
-                    className={`flex items-center gap-3.5 w-full p-3.5 rounded-[14px] transition-all duration-300 text-left group ${step === 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/50 transform scale-[1.02]' : 'bg-white border border-transparent hover:border-gray-200 hover:bg-gray-50 text-gray-500 shadow-sm hover:shadow-md'}`}
+                    className={`flex items-center gap-3.5 w-full p-3.5 rounded-[14px] transition-all duration-300 text-left group ${step === 1 ? 'bg-primary text-white shadow-lg shadow-primary/20 transform scale-[1.02]' : 'bg-white border border-transparent hover:border-gray-200 hover:bg-gray-50 text-gray-500 shadow-sm hover:shadow-md'}`}
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${step === 1 ? 'bg-white/20' : 'bg-gray-50 group-hover:bg-blue-600/10'}`}>
-                      <span className={`material-symbols-outlined !text-[20px] ${step === 1 ? '!text-white' : 'group-hover:!text-blue-600'}`}>person</span>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${step === 1 ? 'bg-white/20' : 'bg-gray-50 group-hover:bg-primary/10'}`}>
+                      <span className={`material-symbols-outlined !text-[20px] ${step === 1 ? '!text-white' : 'group-hover:!text-accent'}`}>person</span>
                     </div>
                     <div>
                       <p className={`text-[13px] font-bold leading-tight ${step === 1 ? 'text-white' : 'text-slate-700'}`}>Client Basics</p>
@@ -548,10 +548,10 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                   <button 
                     type="button"
                     onClick={() => setStep(2)}
-                    className={`flex items-center gap-3.5 w-full p-3.5 rounded-[14px] transition-all duration-300 text-left group ${step === 2 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/50 transform scale-[1.02]' : 'bg-white border border-transparent hover:border-gray-200 hover:bg-gray-50 text-gray-500 shadow-sm hover:shadow-md'}`}
+                    className={`flex items-center gap-3.5 w-full p-3.5 rounded-[14px] transition-all duration-300 text-left group ${step === 2 ? 'bg-primary text-white shadow-lg shadow-primary/20 transform scale-[1.02]' : 'bg-white border border-transparent hover:border-gray-200 hover:bg-gray-50 text-gray-500 shadow-sm hover:shadow-md'}`}
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${step === 2 ? 'bg-white/20' : 'bg-gray-50 group-hover:bg-blue-600/10'}`}>
-                      <span className={`material-symbols-outlined !text-[20px] ${step === 2 ? '!text-white' : 'group-hover:!text-blue-600'}`}>link</span>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${step === 2 ? 'bg-white/20' : 'bg-gray-50 group-hover:bg-primary/10'}`}>
+                      <span className={`material-symbols-outlined !text-[20px] ${step === 2 ? '!text-white' : 'group-hover:!text-accent'}`}>link</span>
                     </div>
                     <div className="flex-1">
                       <p className={`text-[13px] font-bold leading-tight ${step === 2 ? 'text-white' : 'text-slate-700'}`}>Contact Info</p>
@@ -562,10 +562,10 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                   <button 
                     type="button"
                     onClick={() => setStep(3)}
-                    className={`flex items-center gap-3.5 w-full p-3.5 rounded-[14px] transition-all duration-300 text-left group ${step === 3 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/50 transform scale-[1.02]' : 'bg-white border border-transparent hover:border-gray-200 hover:bg-gray-50 text-gray-500 shadow-sm hover:shadow-md'}`}
+                    className={`flex items-center gap-3.5 w-full p-3.5 rounded-[14px] transition-all duration-300 text-left group ${step === 3 ? 'bg-primary text-white shadow-lg shadow-primary/20 transform scale-[1.02]' : 'bg-white border border-transparent hover:border-gray-200 hover:bg-gray-50 text-gray-500 shadow-sm hover:shadow-md'}`}
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${step === 3 ? 'bg-white/20' : 'bg-gray-50 group-hover:bg-blue-600/10'}`}>
-                      <span className={`material-symbols-outlined !text-[20px] ${step === 3 ? '!text-white' : 'group-hover:!text-blue-600'}`}>palette</span>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${step === 3 ? 'bg-white/20' : 'bg-gray-50 group-hover:bg-primary/10'}`}>
+                      <span className={`material-symbols-outlined !text-[20px] ${step === 3 ? '!text-white' : 'group-hover:!text-accent'}`}>palette</span>
                     </div>
                     <div className="flex-1">
                       <p className={`text-[13px] font-bold leading-tight ${step === 3 ? 'text-white' : 'text-slate-700'}`}>Style & Taste</p>
@@ -591,7 +591,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                           <div className="space-y-2">
                           <div className="flex items-center gap-3">
                             <h3 className="text-2xl font-bold text-slate-800">Client Basics</h3>
-                            <div className="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full">Required</div>
+                            <div className="px-2.5 py-1 bg-accent/5 text-accent text-[10px] font-black uppercase tracking-widest rounded-full">Required</div>
                           </div>
                           <p className="text-gray-400 text-sm">Please provide the primary contact and company information.</p>
                         </div>
@@ -604,7 +604,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                 Full Name
                               </label>
                               <input 
-                                className="w-full rounded-lg py-3 px-4 text-base bg-white border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 outline-none placeholder:text-gray-300 shadow-sm" 
+                                className="w-full rounded-lg py-3 px-4 text-base bg-white border border-gray-200 focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all duration-200 outline-none placeholder:text-gray-300 shadow-sm" 
                                 placeholder="Alexander Hamilton" 
                                 type="text"
                                 value={newName}
@@ -618,7 +618,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                 Company Name
                               </label>
                               <input 
-                                className="w-full rounded-lg py-3 px-4 text-base bg-white border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 outline-none placeholder:text-gray-300 shadow-sm" 
+                                className="w-full rounded-lg py-3 px-4 text-base bg-white border border-gray-200 focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all duration-200 outline-none placeholder:text-gray-300 shadow-sm" 
                                 placeholder="Treasury Dept. Solutions" 
                                 type="text"
                                 value={newCompany}
@@ -639,7 +639,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                   { label: 'Prospect', value: 'Prospect' },
                                   { label: 'Inactive', value: 'Inactive' }
                                 ]}
-                                buttonClassName="!py-3 !px-4 !text-base !bg-white !font-medium !rounded-lg border-gray-200 hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm"
+                                buttonClassName="!py-3 !px-4 !text-base !bg-white !font-medium !rounded-lg border-gray-200 hover:border-gray-300 hover:bg-white focus:border-accent focus:ring-4 focus:ring-accent/10 shadow-sm"
                               />
                             </div>
                           </div>
@@ -655,7 +655,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                               <div className="relative shrink-0">
                                 <div 
                                   onClick={handleTriggerAvatarUpload}
-                                  className="group relative w-20 h-20 rounded-2xl cursor-pointer overflow-hidden border border-slate-200 bg-slate-50 shadow-md transition-all hover:border-blue-500"
+                                  className="group relative w-20 h-20 rounded-2xl cursor-pointer overflow-hidden border border-slate-200 bg-slate-50 shadow-md transition-all hover:border-accent"
                                 >
                                   {newAvatarUrl ? (
                                     <img 
@@ -713,7 +713,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                 Physical Address
                             </label>
                             <textarea 
-                              className="w-full rounded-lg py-3 px-4 text-base bg-white border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 outline-none placeholder:text-gray-300 shadow-sm resize-none custom-scrollbar" 
+                              className="w-full rounded-lg py-3 px-4 text-base bg-white border border-gray-200 focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all duration-200 outline-none placeholder:text-gray-300 shadow-sm resize-none custom-scrollbar" 
                               placeholder="123 Creative Blvd, Design District, NY 10001, USA" 
                               rows={3}
                               value={newLocation}
@@ -744,7 +744,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                               <section className="space-y-6">
                                 <div className="flex items-center justify-between mb-4">
                                   <div className="flex items-center gap-4">
-                                    <div className="p-2.5 bg-white shadow-sm rounded-lg text-blue-600 border border-slate-100 flex items-center justify-center">
+                                    <div className="p-2.5 bg-white shadow-sm rounded-lg text-accent border border-slate-100 flex items-center justify-center">
                                       <span className="material-symbols-outlined text-[20px]">contact_mail</span>
                                     </div>
                                     <div>
@@ -757,7 +757,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                     onClick={() => {
                                       setIsManageTagsSidebarOpen(true);
                                     }}
-                                    className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-2 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                                    className="text-xs font-semibold text-accent hover:bg-accent/5 px-2 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
                                   >
                                     <span className="material-symbols-outlined text-[16px]">add</span>
                                     <span className="hidden sm:inline">Add Contact</span>
@@ -765,19 +765,19 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                 </div>
                                 <div className="space-y-3">
                                   {/* Primary Email */}
-                                  <div className="group relative bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-blue-500/30 transition-all duration-300">
+                                  <div className="group relative bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-accent/30 transition-all duration-300">
                                     <div className="absolute -top-2.5 left-4 bg-white px-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded shadow-sm">
                                       Email
                                     </div>
                                     <div className="flex items-start gap-4">
                                       <div className="mt-0.5">
-                                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600 shadow-sm border border-blue-100/50">
+                                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-accent/5 text-accent shadow-sm border border-accent/20">
                                           <span className="material-symbols-outlined text-[20px]">mail</span>
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0 pt-0.5">
                                         <div className="flex items-center justify-between mb-1.5">
-                                          <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Primary Email</h3>
+                                          <h3 className="text-sm font-bold text-slate-900 group-hover:text-accent transition-colors">Primary Email</h3>
                                           <div className="flex gap-1.5">
                                             <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">Brand</span>
                                             <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 hidden sm:inline-block">Direct</span>
@@ -856,7 +856,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                         <div className="flex items-center justify-between mb-1.5">
                                           <h3 className="text-sm font-bold text-slate-900 group-hover:text-green-600 transition-colors">Direct Line</h3>
                                           <div className="flex gap-1.5">
-                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-100">Office</span>
+                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-accent/5 text-accent border border-accent/20">Office</span>
                                           </div>
                                         </div>
                                         <div className="relative flex items-center">
@@ -880,7 +880,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                   </div>
 
                                   {/* Add New Type */}
-                                  <div className="group relative bg-slate-50 border-2 border-dashed border-blue-500/30 rounded-xl p-4 hover:border-blue-500/60 hover:bg-slate-50/80 transition-colors">
+                                  <div className="group relative bg-slate-50 border-2 border-dashed border-accent/30 rounded-xl p-4 hover:border-accent/60 hover:bg-slate-50/80 transition-colors">
                                     <div className="flex items-start gap-4">
                                       <div className="mt-0.5">
                                         <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-400 shadow-sm">
@@ -912,7 +912,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                         </div>
                                       </div>
                                       <div className="pt-0.5 flex gap-0.5 items-center">
-                                        <button type="button" className="p-1 text-slate-400 hover:text-blue-600 transition-colors rounded" title="Save">
+                                        <button type="button" className="p-1 text-slate-400 hover:text-accent transition-colors rounded" title="Save">
                                           <span className="material-symbols-outlined text-[16px]">check</span>
                                         </button>
                                         <button type="button" className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded" title="Cancel">
@@ -927,7 +927,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                               <section className="space-y-6">
                                 <div className="flex items-center justify-between mb-4">
                                   <div className="flex items-center gap-4">
-                                    <div className="p-2.5 bg-white shadow-sm rounded-lg text-blue-600 border border-slate-100 flex items-center justify-center">
+                                    <div className="p-2.5 bg-white shadow-sm rounded-lg text-accent border border-slate-100 flex items-center justify-center">
                                       <span className="material-symbols-outlined text-[20px]">public</span>
                                     </div>
                                     <div>
@@ -940,7 +940,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                     onClick={() => {
                                       setIsManageTagsSidebarOpen(true);
                                     }}
-                                    className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-2 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                                    className="text-xs font-semibold text-accent hover:bg-accent/5 px-2 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
                                   >
                                     <span className="material-symbols-outlined text-[16px]">add_link</span>
                                     <span className="hidden sm:inline">Add Domain</span>
@@ -986,7 +986,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                   </div>
 
                                   {/* Add New Domain Type */}
-                                  <div className="group relative bg-slate-50 border-2 border-dashed border-blue-500/30 rounded-xl p-4 hover:border-blue-500/60 hover:bg-slate-50/80 transition-colors">
+                                  <div className="group relative bg-slate-50 border-2 border-dashed border-accent/30 rounded-xl p-4 hover:border-accent/60 hover:bg-slate-50/80 transition-colors">
                                     <div className="flex items-start gap-4">
                                       <div className="mt-0.5">
                                         <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-400 shadow-sm">
@@ -1014,7 +1014,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                         </div>
                                       </div>
                                       <div className="pt-0.5 flex gap-0.5 items-center">
-                                        <button type="button" className="p-1 text-slate-400 hover:text-blue-600 transition-colors rounded" title="Save">
+                                        <button type="button" className="p-1 text-slate-400 hover:text-accent transition-colors rounded" title="Save">
                                           <span className="material-symbols-outlined text-[16px]">check</span>
                                         </button>
                                         <button type="button" className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded" title="Cancel">
@@ -1041,7 +1041,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                   onClick={() => {
                                     setIsManageTagsSidebarOpen(true);
                                   }}
-                                  className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-2 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                                  className="text-xs font-semibold text-accent hover:bg-accent/5 px-2 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
                                 >
                                   <span className="material-symbols-outlined text-[16px]">add</span>
                                   <span className="hidden sm:inline">Add Platform</span>
@@ -1050,13 +1050,13 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
 
                               <div className="space-y-3">
                                 {/* Facebook */}
-                                <div className="group relative bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-blue-500/30 transition-all duration-300">
+                                <div className="group relative bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-accent/30 transition-all duration-300">
                                   <div className="absolute -top-2.5 left-4 bg-white px-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded shadow-sm">
                                     Platform
                                   </div>
                                   <div className="flex items-start gap-4">
                                     <div className="mt-0.5">
-                                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-50 text-[#1877F2] shadow-sm border border-blue-100/30">
+                                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-accent/5 text-[#1877F2] shadow-sm border border-accent/30">
                                         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"></path></svg>
                                       </div>
                                     </div>
@@ -1083,13 +1083,13 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                 </div>
 
                                 {/* LinkedIn */}
-                                <div className="group relative bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-blue-700/30 transition-all duration-300">
+                                <div className="group relative bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-accent/30 transition-all duration-300">
                                   <div className="absolute -top-2.5 left-4 bg-white px-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded shadow-sm">
                                     Platform
                                   </div>
                                   <div className="flex items-start gap-4">
                                     <div className="mt-0.5">
-                                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-50 text-[#0A66C2] shadow-sm border border-blue-100/30">
+                                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-accent/5 text-[#0A66C2] shadow-sm border border-accent/30">
                                         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"></path></svg>
                                       </div>
                                     </div>
@@ -1114,7 +1114,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                 </div>
 
                                 {/* Add New Platform */}
-                                <div className="group relative bg-slate-50 border-2 border-dashed border-blue-500/30 rounded-xl p-4 hover:border-blue-500/60 hover:bg-slate-50/80 transition-colors">
+                                <div className="group relative bg-slate-50 border-2 border-dashed border-accent/30 rounded-xl p-4 hover:border-accent/60 hover:bg-slate-50/80 transition-colors">
                                   <div className="flex items-start gap-4">
                                     <div className="mt-0.5">
                                       <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-400 shadow-sm">
@@ -1142,7 +1142,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                       </div>
                                     </div>
                                     <div className="pt-0.5 flex gap-0.5 items-center">
-                                      <button type="button" className="p-1 text-slate-400 hover:text-blue-600 transition-colors rounded" title="Save">
+                                      <button type="button" className="p-1 text-slate-400 hover:text-accent transition-colors rounded" title="Save">
                                         <span className="material-symbols-outlined text-[16px]">check</span>
                                       </button>
                                       <button type="button" className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded" title="Cancel">
@@ -1173,7 +1173,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                           <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col bg-white lg:h-full relative shrink-0">
                             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0 bg-white z-10">
                               <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-blue-600">text_fields</span>
+                                <span className="material-symbols-outlined text-accent">text_fields</span>
                                 <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Typography & Fonts</h3>
                               </div>
                             </div>
@@ -1188,7 +1188,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                           value={font.style}
                                           onChange={(val) => handleUpdateFontStyle(idx, val)}
                                           options={['Headlines', 'Body Text', 'Accents', 'Display', 'Captions']}
-                                          buttonClassName="!border-none !bg-blue-50 !text-blue-600 hover:!bg-blue-100"
+                                          buttonClassName="!border-none !bg-accent/5 !text-accent hover:!bg-accent/10"
                                         />
                                       </div>
                                       
@@ -1207,7 +1207,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                                 setActiveFontDropdownIdx(prev => prev === idx ? null : prev);
                                               }, 200);
                                             }}
-                                            className="w-[185px] text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-blue-500 focus:bg-white focus:outline-none transition-all placeholder-slate-400"
+                                            className="w-[185px] text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-accent focus:bg-white focus:outline-none transition-all placeholder-slate-400"
                                             placeholder="Edit font (e.g., Inter)"
                                           />
 
@@ -1263,13 +1263,13 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                                     }}
                                                     className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center justify-between ${
                                                       isSelected 
-                                                        ? 'bg-blue-50/70 text-blue-700 hover:bg-blue-100/80 border-l-2 border-blue-600' 
+                                                        ? 'bg-accent/10 text-accent hover:bg-accent/15 border-l-2 border-accent' 
                                                         : 'text-slate-700 hover:bg-slate-50'
                                                     }`}
                                                   >
                                                     <span style={{ fontFamily: `"${suggestedFont}", sans-serif` }}>{suggestedFont}</span>
                                                     {isSelected ? (
-                                                      <div className="flex items-center gap-1 bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider shrink-0 mr-1 shadow-sm">
+                                                      <div className="flex items-center gap-1 bg-accent/10 text-accent px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider shrink-0 mr-1 shadow-sm">
                                                         <span className="material-symbols-outlined text-[9px] font-extrabold leading-none">done</span>
                                                         <span>Selected</span>
                                                       </div>
@@ -1344,7 +1344,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                           setIsAddFontDropdownVisible(false);
                                         }, 200);
                                       }}
-                                      className="w-full text-xs bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-slate-400"
+                                      className="w-full text-xs bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-accent focus:outline-none placeholder-slate-400"
                                     />                                     {/* Autocomplete Menu Dropdown for Adding Font */}
                                     {isAddFontDropdownVisible && (
                                       <div className="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 divide-y divide-slate-50 custom-scrollbar">
@@ -1397,13 +1397,13 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                               }}
                                               className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center justify-between ${
                                                 isSelected 
-                                                  ? 'bg-blue-50/70 text-blue-700 hover:bg-blue-100/80 border-l-2 border-blue-600' 
+                                                  ? 'bg-accent/10 text-accent hover:bg-accent/15 border-l-2 border-accent' 
                                                   : 'text-slate-700 hover:bg-slate-50'
                                               }`}
                                             >
                                               <span style={{ fontFamily: `"${suggestedFont}", sans-serif` }}>{suggestedFont}</span>
                                               {isSelected ? (
-                                                <div className="flex items-center gap-1 bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider shrink-0 mr-1 shadow-sm">
+                                                <div className="flex items-center gap-1 bg-accent/10 text-accent px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider shrink-0 mr-1 shadow-sm">
                                                   <span className="material-symbols-outlined text-[9px] font-extrabold leading-none">done</span>
                                                   <span>Selected</span>
                                                 </div>
@@ -1424,7 +1424,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                   <button 
                                     type="button" 
                                     onClick={handleAddFont}
-                                    className="bg-blue-600 text-white rounded-lg px-4 py-2 text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shrink-0 h-9"
+                                    className="bg-primary text-white rounded-lg px-4 py-2 text-xs font-bold hover:bg-primary-hover transition-colors flex items-center justify-center gap-1 shrink-0 h-9"
                                   >
                                     <span className="material-symbols-outlined text-sm">add</span>
                                     <span>Add</span>
@@ -1438,7 +1438,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                           <div className="w-full lg:w-1/2 flex flex-col bg-white lg:h-full relative shrink-0">
                             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0 bg-white z-10">
                               <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-blue-600">palette</span>
+                                <span className="material-symbols-outlined text-accent">palette</span>
                                 <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Brand Color Palette</h3>
                               </div>
                             </div>
@@ -1542,7 +1542,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                       placeholder="Color Label (e.g. Coral Accent)" 
                                       value={tempColorName}
                                       onChange={e => setTempColorName(e.target.value)}
-                                      className="w-full h-9 text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-none placeholder-slate-400 transition-all"
+                                      className="w-full h-9 text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 text-slate-800 focus:bg-white focus:ring-1 focus:ring-accent focus:border-accent focus:outline-none placeholder-slate-400 transition-all"
                                     />
                                   </div>
                                   <div className="w-[85px] shrink-0">
@@ -1550,13 +1550,13 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                                       type="text" 
                                       value={tempColorHex}
                                       onChange={e => setTempColorHex(e.target.value)}
-                                      className="w-full h-9 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg px-3 text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all"
+                                      className="w-full h-9 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg px-3 text-slate-800 focus:bg-white focus:ring-1 focus:ring-accent focus:border-accent focus:outline-none transition-all"
                                     />
                                   </div>
                                   <button 
                                     type="button" 
                                     onClick={handleAddColor}
-                                    className="bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shrink-0 h-9 cursor-pointer"
+                                    className="bg-primary text-white rounded-lg px-4 py-1.5 text-xs font-bold hover:bg-primary-hover transition-colors flex items-center justify-center gap-1 shrink-0 h-9 cursor-pointer"
                                   >
                                     <span className="material-symbols-outlined text-sm">add</span>
                                     <span>Add</span>
@@ -1598,7 +1598,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                   <button 
                     type="button"
                     onClick={nextStep}
-                    className="bg-blue-600 text-white px-8 py-2.5 rounded-[12px] text-xs font-bold shadow-md shadow-blue-200/50 hover:bg-blue-700 transition-all uppercase tracking-widest"
+                    className="bg-primary text-white px-8 py-2.5 rounded-[12px] text-xs font-bold shadow-md shadow-primary/20 hover:bg-primary-hover transition-all uppercase tracking-widest"
                   >
                     Continue
                   </button>
@@ -1606,7 +1606,7 @@ export const AddNewClientPage: React.FC<AddNewClientPageProps> = ({ isOpen, onCl
                   <button 
                     type="button"
                     onClick={() => handleCreateClient()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-[12px] text-xs font-bold shadow-md shadow-blue-200/50 transition-all flex items-center gap-2 uppercase tracking-widest"
+                    className="bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-[12px] text-xs font-bold shadow-md shadow-primary/20 transition-all flex items-center gap-2 uppercase tracking-widest"
                   >
                     <span>{clientToEditId ? 'Save Changes' : 'Create Client'}</span>
                     <span className="material-symbols-outlined !text-white !text-[16px]">{clientToEditId ? 'check' : 'add'}</span>

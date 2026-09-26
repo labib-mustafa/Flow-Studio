@@ -484,7 +484,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                           {selectedClient.initials}
                         </div>
                       )}
-                      <span className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-white rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500' : selectedClient.status === 'Prospect' ? 'bg-blue-500' : 'bg-slate-400'
+                      <span className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-white rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500' : selectedClient.status === 'Prospect' ? 'bg-accent' : 'bg-slate-400'
                         }`}></span>
                     </div>
 
@@ -519,13 +519,13 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                         <button
                           onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                           className={`text-[10px] px-2.5 py-1.5 rounded-full font-black uppercase tracking-widest flex items-center gap-1.5 border cursor-pointer transition-all duration-200 ${selectedClient.status === 'Active'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-250 hover:bg-emerald-100/50'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100/50'
                             : selectedClient.status === 'Prospect'
-                              ? 'bg-blue-50 text-blue-700 border-blue-250 hover:bg-blue-100/50'
-                              : 'bg-slate-50 text-slate-500 border-slate-305 hover:bg-slate-200/50'
+                              ? 'bg-accent/5 text-accent border-accent/30 hover:bg-accent/10'
+                              : 'bg-slate-50 text-slate-500 border-slate-300 hover:bg-slate-200/50'
                             }`}
                         >
-                          <span className={`size-1.5 rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500 animate-pulse' : selectedClient.status === 'Prospect' ? 'bg-blue-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                          <span className={`size-1.5 rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500 animate-pulse' : selectedClient.status === 'Prospect' ? 'bg-accent animate-pulse' : 'bg-slate-400'}`}></span>
                           {selectedClient.status}
                           <span className="material-symbols-outlined text-[14px] leading-none select-none text-slate-400">
                             expand_more
@@ -546,7 +546,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                                   className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 hover:bg-slate-50 ${selectedClient.status === statusVal ? 'bg-slate-50 text-slate-900 font-extrabold' : 'text-slate-500'
                                     }`}
                                 >
-                                  <span className={`size-1.5 rounded-full ${statusVal === 'Active' ? 'bg-emerald-500' : statusVal === 'Prospect' ? 'bg-blue-500' : 'bg-slate-400'}`}></span>
+                                  <span className={`size-1.5 rounded-full ${statusVal === 'Active' ? 'bg-emerald-500' : statusVal === 'Prospect' ? 'bg-accent' : 'bg-slate-400'}`}></span>
                                   {statusVal}
                                 </button>
                               ))}
@@ -575,7 +575,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
 
                       <button
                         onClick={() => setIsInvoiceModalOpen(true)}
-                        className="w-full py-3.5 px-4 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-[0.2em] hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-98 shadow-md hover:shadow-blue-600/20"
+                        className="w-full py-3.5 px-4 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-[0.2em] hover:bg-accent transition-all flex items-center justify-center gap-2 active:scale-98 shadow-md hover:shadow-primary/20"
                       >
                         <DollarSign className="size-3.5" /> Record Invoice
                       </button>
@@ -692,7 +692,7 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                           </div>
                           <div className="w-full bg-slate-100 rounded-full h-1.5">
                             <div
-                              className="bg-blue-600 h-1.5 rounded-full"
+                              className="bg-accent h-1.5 rounded-full"
                               style={{ width: `${selectedClient.speedRating * 20}%` }}
                             ></div>
                           </div>
@@ -773,10 +773,10 @@ export const ClientsPage: React.FC<ClientsPageProps> = ({
                           <div
                             key={idx}
                             className={`p-3 rounded-2xl border transition-all ${hist.statusType === 'ongoing'
-                              ? 'bg-blue-50/50 border-blue-100 hover:bg-blue-50'
+                              ? 'bg-accent/10 border-accent/20 hover:bg-accent/5'
                               : hist.statusType === 'upcoming'
                                 ? 'bg-slate-50/50 border-slate-200 hover:bg-slate-100'
-                                : 'bg-white border-slate-200 hover:border-emerald-250 hover:bg-emerald-50/10'
+                                : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/10'
                               }`}
                           >
                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider mb-2">

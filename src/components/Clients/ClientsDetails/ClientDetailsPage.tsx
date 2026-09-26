@@ -530,7 +530,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                       {selectedClient.initials}
                     </div>
                   )}
-                  <span className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500' : selectedClient.status === 'Prospect' ? 'bg-blue-500' : 'bg-slate-400'
+                  <span className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500' : selectedClient.status === 'Prospect' ? 'bg-accent' : 'bg-slate-400'
                     }`}></span>
                 </div>
                 <div>
@@ -543,11 +543,11 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                       className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${selectedClient.status === 'Active'
                         ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100/50'
                         : selectedClient.status === 'Prospect'
-                          ? 'text-blue-700 hover:bg-blue-100/50'
+                          ? 'text-accent hover:bg-accent/10'
                           : 'text-slate-600 hover:bg-slate-200/50'
                         }`}
                     >
-                      <span className={`size-1.5 rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500 animate-pulse' : selectedClient.status === 'Prospect' ? 'bg-blue-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                      <span className={`size-1.5 rounded-full ${selectedClient.status === 'Active' ? 'bg-emerald-500 animate-pulse' : selectedClient.status === 'Prospect' ? 'bg-accent animate-pulse' : 'bg-slate-400'}`}></span>
                       {selectedClient.status}
                       <span className="material-symbols-outlined text-[14px] leading-none select-none text-slate-400">
                         expand_more
@@ -580,7 +580,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                               className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 hover:bg-slate-50 ${selectedClient.status === statusVal ? 'bg-slate-50 text-slate-900 font-extrabold' : 'text-slate-500'
                                 }`}
                             >
-                              <span className={`size-1.5 rounded-full ${statusVal === 'Active' ? 'bg-emerald-500' : statusVal === 'Prospect' ? 'bg-blue-500' : 'bg-slate-400'}`}></span>
+                              <span className={`size-1.5 rounded-full ${statusVal === 'Active' ? 'bg-emerald-500' : statusVal === 'Prospect' ? 'bg-accent' : 'bg-slate-400'}`}></span>
                               {statusVal}
                             </button>
                           ))}
@@ -1041,7 +1041,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                           <h3 className="text-lg font-black tracking-tight text-slate-900">Latest Tasks</h3>
                           <button
                             onClick={() => setActiveTab('tasks')}
-                            className="text-xs font-bold text-slate-900 hover:text-blue-600 transition-colors"
+                            className="text-xs font-bold text-slate-900 hover:text-accent transition-colors"
                           >
                             Show all
                           </button>
@@ -1094,7 +1094,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                           <h3 className="text-lg font-black tracking-tight text-slate-900">Pinned Assets</h3>
                           <button
                             onClick={() => setActiveTab('files')}
-                            className="text-xs font-bold text-slate-900 hover:text-blue-600 transition-colors"
+                            className="text-xs font-bold text-slate-900 hover:text-accent transition-colors"
                           >
                             Manage
                           </button>
@@ -1116,7 +1116,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                                   <Trash2 className="size-3.5" />
                                 </button>
                               </div>
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm mb-4 ${asset.type === 'zip' ? 'text-indigo-600 bg-indigo-50' : 'text-blue-600 bg-blue-50'
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm mb-4 ${asset.type === 'zip' ? 'text-indigo-600 bg-indigo-50' : 'text-accent bg-accent/5'
                                 }`}>
                                 <span className="material-symbols-outlined fill-1 text-2xl">
                                   {asset.type === 'zip' ? 'folder_zip' : 'description'}
@@ -1170,7 +1170,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                             onClick={() => {
                               toast.info("Activity Log Audit", "Full operational audit is persistent. State synchronization synced successfully.");
                             }}
-                            className="text-xs font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer"
+                            className="text-xs font-bold text-slate-900 hover:text-accent transition-colors cursor-pointer"
                           >
                             View Log
                           </button>
@@ -1183,7 +1183,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                               <div key={log.id} className="relative flex gap-6 pb-8 last:pb-0 group">
                                 <div className="relative z-10 w-14 h-14 shrink-0 flex items-center justify-center">
                                   <div className={`w-10 h-10 rounded-full border-4 border-white flex items-center justify-center ${log.type === 'note'
-                                    ? 'bg-blue-50 text-blue-600'
+                                    ? 'bg-accent/5 text-accent'
                                     : log.type === 'task'
                                       ? 'bg-emerald-50 text-emerald-600'
                                       : 'bg-slate-100 text-slate-500'
@@ -1229,7 +1229,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                     <div className="flex-1 min-h-[500px] border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col">
                       {/* Header */}
                       <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-3 bg-slate-50/50">
-                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
                           <FolderOpen size={20} className="fill-current/20" />
                         </div>
                         <div>
@@ -1288,7 +1288,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
 
                         <div className="bg-slate-50 border border-slate-100 p-6 rounded-2xl flex items-center gap-4">
                           <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-800 shadow-sm shrink-0">
-                            <Calendar className="size-5 text-blue-500" />
+                            <Calendar className="size-5 text-accent" />
                           </div>
                           <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Cycle Maturity</p>
@@ -1465,7 +1465,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="group flex items-start w-full px-5 py-3 hover:bg-slate-50 transition-colors duration-150 text-left focus:outline-none focus:bg-slate-50"
                 >
                   <div className="flex-shrink-0 mr-4 mt-0.5">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl group-hover:scale-110 transition-transform duration-200">calendar_today</span>
+                    <span className="material-symbols-outlined text-accent text-xl group-hover:scale-110 transition-transform duration-200">calendar_today</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 mb-0.5 font-display">Book appointment</h3>
@@ -1481,7 +1481,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="group flex items-start w-full px-5 py-3 hover:bg-slate-50 transition-colors duration-150 text-left focus:outline-none focus:bg-slate-50"
                 >
                   <div className="flex-shrink-0 mr-4 mt-0.5">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl group-hover:scale-110 transition-transform duration-200">local_offer</span>
+                    <span className="material-symbols-outlined text-accent text-xl group-hover:scale-110 transition-transform duration-200">local_offer</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 mb-0.5 font-display">Add or edit tags</h3>
@@ -1497,7 +1497,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="group flex items-start w-full px-5 py-3 hover:bg-slate-50 transition-colors duration-150 text-left focus:outline-none focus:bg-slate-50"
                 >
                   <div className="flex-shrink-0 mr-4 mt-0.5">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl group-hover:scale-110 transition-transform duration-200">receipt_long</span>
+                    <span className="material-symbols-outlined text-accent text-xl group-hover:scale-110 transition-transform duration-200">receipt_long</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 mb-0.5 font-display">Create invoice</h3>
@@ -1513,7 +1513,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="group flex items-start w-full px-5 py-3 hover:bg-slate-50 transition-colors duration-150 text-left focus:outline-none focus:bg-slate-50"
                 >
                   <div className="flex-shrink-0 mr-4 mt-0.5">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl group-hover:scale-110 transition-transform duration-200">note_add</span>
+                    <span className="material-symbols-outlined text-accent text-xl group-hover:scale-110 transition-transform duration-200">note_add</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 mb-0.5 font-display">Add note</h3>
@@ -1529,7 +1529,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="group flex items-start w-full px-5 py-3 hover:bg-slate-50 transition-colors duration-150 text-left focus:outline-none focus:bg-slate-50"
                 >
                   <div className="flex-shrink-0 mr-4 mt-0.5">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl group-hover:scale-110 transition-transform duration-200">check_circle</span>
+                    <span className="material-symbols-outlined text-accent text-xl group-hover:scale-110 transition-transform duration-200">check_circle</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 mb-0.5 font-display">Create task</h3>
@@ -1545,7 +1545,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="group flex items-start w-full px-5 py-3 hover:bg-slate-50 transition-colors duration-150 text-left focus:outline-none focus:bg-slate-50"
                 >
                   <div className="flex-shrink-0 mr-4 mt-0.5">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl group-hover:scale-110 transition-transform duration-200">file_upload</span>
+                    <span className="material-symbols-outlined text-accent text-xl group-hover:scale-110 transition-transform duration-200">file_upload</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 mb-0.5 font-display">Upload files</h3>
@@ -1561,7 +1561,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="group flex items-start w-full px-5 py-3 hover:bg-slate-50 transition-colors duration-150 text-left focus:outline-none focus:bg-slate-50"
                 >
                   <div className="flex-shrink-0 mr-4 mt-0.5">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl group-hover:scale-110 transition-transform duration-200">description</span>
+                    <span className="material-symbols-outlined text-accent text-xl group-hover:scale-110 transition-transform duration-200">description</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-slate-800 mb-0.5 font-display">Attach documents</h3>
@@ -1570,7 +1570,7 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                 </button>
 
                 {/* Decorative ambient blurred backing shapes */}
-                <div className="absolute -z-10 top-0 right-0 w-44 h-44 bg-gradient-to-br from-blue-100 to-transparent rounded-full blur-3xl opacity-30 transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+                <div className="absolute -z-10 top-0 right-0 w-44 h-44 bg-gradient-to-br from-accent/10 to-transparent rounded-full blur-3xl opacity-30 transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
                 <div className="absolute -z-10 bottom-0 left-0 w-36 h-36 bg-gradient-to-tr from-yellow-100 to-transparent rounded-full blur-3xl opacity-30 transform -translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
               </div>
             </div>
@@ -1889,10 +1889,10 @@ export const ClientDetailsPage: React.FC<ClientDetailsPageProps> = ({
                   className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700 bg-slate-50 hover:bg-white dark:bg-slate-800/50 dark:hover:bg-slate-800 text-left transition-all group focus:outline-none"
                 >
                   <div className="flex items-center gap-3 font-display">
-                    <span className="material-symbols-outlined text-[#1978e5] text-xl">insert_drive_file</span>
+                    <span className="material-symbols-outlined text-accent text-xl">insert_drive_file</span>
                     <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-slate-950 dark:group-hover:text-white transition-colors">{doc.name}</span>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1978e5] bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">Attach</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-accent bg-accent/5 px-2 py-0.5 rounded-md">Attach</span>
                 </button>
               ))}
             </div>

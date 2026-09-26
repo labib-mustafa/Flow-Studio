@@ -166,7 +166,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
               )}
               <button
                 onClick={() => onNewProject?.(clientName)}
-                className="px-5 py-2.5 bg-blue-500 hover:bg-[#693ec8] text-white rounded-xl text-sm font-bold flex items-center gap-1.5 shadow-sm hover:shadow-indigo-500/10 transition-all active:scale-95 cursor-pointer"
+                className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-sm font-bold flex items-center gap-1.5 shadow-sm hover:shadow-primary/10 transition-all active:scale-95 cursor-pointer"
               >
                 <span className="text-base font-semibold leading-none">+</span> New project
               </button>

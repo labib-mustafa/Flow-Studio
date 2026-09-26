@@ -791,7 +791,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                 className={`w-full sm:w-auto px-6 py-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
                   isRunning
                     ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                    : 'bg-blue-605 hover:bg-blue-700 text-white border border-blue-650 shadow-lg shadow-blue-600/15 active:scale-[0.98]'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 shadow-lg shadow-blue-600/15 active:scale-[0.98]'
                 }`}
               >
                 {isRunning ? (
