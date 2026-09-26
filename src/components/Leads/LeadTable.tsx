@@ -1307,7 +1307,7 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
                   e.stopPropagation();
                   onMailClick?.(lead.id);
                 }}
-                className="size-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                className="size-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-accent hover:bg-accent/5 transition-all"
                 title="Send Email"
               >
                 <span className="material-symbols-outlined text-[16px]">mail</span>
@@ -1597,7 +1597,7 @@ export const LeadTable: React.FC<LeadTableProps> = ({ zoom = 1.0, onZoomChange, 
               }}
               className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-900 hover:bg-slate-100 transition-colors text-left w-full cursor-pointer border-none bg-transparent"
             >
-              <span className="material-symbols-outlined text-[16px] text-blue-600">info</span>
+              <span className="material-symbols-outlined text-[16px] text-accent">info</span>
               Lead Information
             </button>
 

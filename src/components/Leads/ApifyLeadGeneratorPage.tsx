@@ -348,13 +348,13 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
       {/* Main Header Banner */}
       <header className="px-8 py-5 border-b border-slate-200/80 bg-white/80 backdrop-blur-md shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-20 sticky top-0">
         <div className="flex items-center gap-3">
-          <div className="size-11 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <div className="size-11 rounded-2xl bg-gradient-to-br from-accent to-accent-hover text-white flex items-center justify-center shadow-lg shadow-accent/20">
             <Bot className="size-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">AI Prospect Scraper</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-accent/5 text-accent border border-accent/20">
                 PRO SPECTING
               </span>
             </div>
@@ -379,7 +379,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
         
         {/* Card 1: API Token & Account Status Panel */}
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-soft flex flex-col gap-6 relative overflow-hidden">
-          <div className="absolute right-0 top-0 size-48 bg-gradient-to-bl from-blue-50/30 to-transparent rounded-bl-full -z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 size-48 bg-gradient-to-bl from-accent/5 to-transparent rounded-bl-full -z-10 pointer-events-none" />
           
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="flex items-start gap-4 max-w-md">
@@ -389,7 +389,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
               <div>
                 <h3 className="text-sm font-extrabold tracking-tight text-slate-800">Apify Platform Connection</h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed font-semibold">
-                  Connect your Apify account. Leaving this empty runs the scraper in <strong className="text-blue-600">Demo Simulation Mode</strong> for quick previews.
+                  Connect your Apify account. Leaving this empty runs the scraper in <strong className="text-accent">Demo Simulation Mode</strong> for quick previews.
                 </p>
               </div>
             </div>
@@ -401,7 +401,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   placeholder="Enter Apify API Token (apify_api_...)"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full pl-4 pr-10 py-3 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-850 outline-none font-mono transition-all font-semibold"
+                  className="w-full pl-4 pr-10 py-3 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-850 outline-none font-mono transition-all font-semibold"
                 />
                 <button
                   type="button"
@@ -453,7 +453,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                     <span>Monthly Cloud Compute Usage:</span>
                     <span className="text-slate-900 font-extrabold">${formatUsd(usageInfo.monthlyUsageUsd)} / ${formatUsd(usageInfo.monthlyUsageLimitUsd)}</span>
                   </div>
-                  <span className={usageInfo.usagePercentage > 85 ? 'text-red-600 font-extrabold' : 'text-blue-600'}>
+                  <span className={usageInfo.usagePercentage > 85 ? 'text-red-600 font-extrabold' : 'text-accent'}>
                     {usageInfo.usagePercentage.toFixed(1)}% Used (${formatUsd(usageInfo.remainingUsd)} left)
                   </span>
                 </div>
@@ -464,7 +464,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                         ? 'bg-red-500'
                         : usageInfo.usagePercentage > 60
                         ? 'bg-amber-500'
-                        : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                        : 'bg-gradient-to-r from-accent to-accent-hover'
                     }`}
                     style={{ width: `${Math.max(3, usageInfo.usagePercentage)}%` }}
                   />
@@ -490,7 +490,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
           {/* Channel Selector Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-150 pb-4.5 flex-wrap gap-4">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <Sparkles className="size-4 text-blue-500" /> Select Prospect Channel
+              <Sparkles className="size-4 text-accent" /> Select Prospect Channel
             </h3>
 
             {/* Standard Flow Studio Pill Tabs */}
@@ -535,7 +535,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={gmapsConfig.searchTerms}
                       onChange={(e) => setGmapsConfig({ searchTerms: e.target.value })}
                       placeholder="e.g. Creative Studio, Dentist"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
@@ -548,7 +548,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={gmapsConfig.location}
                       onChange={(e) => setGmapsConfig({ location: e.target.value })}
                       placeholder="e.g. San Francisco, CA"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
@@ -561,14 +561,14 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={gmapsConfig.category}
                       onChange={(e) => setGmapsConfig({ category: e.target.value })}
                       placeholder="e.g. Advertising Agency"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-bold text-slate-700">Max Results Limit</label>
-                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-700 rounded border border-blue-100">{gmapsConfig.maxResults} leads</span>
+                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-accent/5 text-accent rounded border border-accent/20">{gmapsConfig.maxResults} leads</span>
                   </div>
                   <input
                     type="range"
@@ -576,7 +576,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                     max="50"
                     value={gmapsConfig.maxResults}
                     onChange={(e) => setGmapsConfig({ maxResults: parseInt(e.target.value) })}
-                    className="w-full accent-blue-600 cursor-pointer mt-3"
+                    className="w-full accent-accent cursor-pointer mt-3"
                   />
                 </div>
               </>
@@ -593,7 +593,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={igConfig.searchTarget}
                       onChange={(e) => setIgConfig({ searchTarget: e.target.value })}
                       placeholder="e.g. startups, model"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
@@ -602,7 +602,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   <select
                     value={igConfig.searchType}
                     onChange={(e) => setIgConfig({ searchType: e.target.value as any })}
-                    className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold cursor-pointer"
                   >
                     <option value="user">User Profiles</option>
                     <option value="hashtag">Hashtag Posts</option>
@@ -617,14 +617,14 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       type="number"
                       value={igConfig.minFollowers}
                       onChange={(e) => setIgConfig({ minFollowers: parseInt(e.target.value) || 500 })}
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-bold text-slate-700">Max Profiles Limit</label>
-                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-700 rounded border border-blue-100">{igConfig.maxProfiles} leads</span>
+                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-accent/5 text-accent rounded border border-accent/20">{igConfig.maxProfiles} leads</span>
                   </div>
                   <input
                     type="range"
@@ -632,7 +632,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                     max="50"
                     value={igConfig.maxProfiles}
                     onChange={(e) => setIgConfig({ maxProfiles: parseInt(e.target.value) })}
-                    className="w-full accent-blue-600 cursor-pointer mt-3"
+                    className="w-full accent-accent cursor-pointer mt-3"
                   />
                 </div>
               </>
@@ -649,7 +649,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={liConfig.jobTitle}
                       onChange={(e) => setLiConfig({ jobTitle: e.target.value })}
                       placeholder="e.g. CMO, VP Sales, Owner"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
@@ -662,7 +662,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={liConfig.industry}
                       onChange={(e) => setLiConfig({ industry: e.target.value })}
                       placeholder="e.g. Tech Services"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
@@ -675,14 +675,14 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={liConfig.location}
                       onChange={(e) => setLiConfig({ location: e.target.value })}
                       placeholder="e.g. United Kingdom"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-bold text-slate-700">Max Profiles Limit</label>
-                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-700 rounded border border-blue-100">{liConfig.maxProfiles} leads</span>
+                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-accent/5 text-accent rounded border border-accent/20">{liConfig.maxProfiles} leads</span>
                   </div>
                   <input
                     type="range"
@@ -690,7 +690,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                     max="50"
                     value={liConfig.maxProfiles}
                     onChange={(e) => setLiConfig({ maxProfiles: parseInt(e.target.value) })}
-                    className="w-full accent-blue-600 cursor-pointer mt-3"
+                    className="w-full accent-accent cursor-pointer mt-3"
                   />
                 </div>
               </>
@@ -707,7 +707,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={gsConfig.query}
                       onChange={(e) => setGsConfig({ query: e.target.value })}
                       placeholder="e.g. site:linkedin.com/in 'software architect' New York"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
@@ -720,14 +720,14 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                       value={gsConfig.targetDomain}
                       onChange={(e) => setGsConfig({ targetDomain: e.target.value })}
                       placeholder="e.g. github.com"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 outline-none font-semibold"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-accent/10 focus:border-accent text-slate-800 outline-none font-semibold"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-bold text-slate-700">Max Results Limit</label>
-                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-700 rounded border border-blue-100">{gsConfig.maxResults} leads</span>
+                    <span className="px-2 py-0.5 text-[10px] font-extrabold bg-accent/5 text-accent rounded border border-accent/20">{gsConfig.maxResults} leads</span>
                   </div>
                   <input
                     type="range"
@@ -735,7 +735,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                     max="50"
                     value={gsConfig.maxResults}
                     onChange={(e) => setGsConfig({ maxResults: parseInt(e.target.value) })}
-                    className="w-full accent-blue-600 cursor-pointer mt-3"
+                    className="w-full accent-accent cursor-pointer mt-3"
                   />
                 </div>
               </>
@@ -746,7 +746,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
           <div className="pt-5 border-t border-slate-100 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <Filter className="size-4 text-blue-500" /> Mandatory Contact Fields
+                <Filter className="size-4 text-accent" /> Mandatory Contact Fields
               </h3>
               <span className="text-[10px] font-semibold text-slate-400">
                 Show & import only prospects matching the checked elements below:
@@ -791,7 +791,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                 className={`w-full sm:w-auto px-6 py-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
                   isRunning
                     ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 shadow-lg shadow-blue-600/15 active:scale-[0.98]'
+                    : 'bg-primary hover:bg-primary-hover text-white border border-primary shadow-lg shadow-primary/15 active:scale-[0.98]'
                 }`}
               >
                 {isRunning ? (
@@ -824,7 +824,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                 </div>
                 <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/50">
                   <div
-                    className="h-full bg-blue-600 transition-all duration-300 rounded-full"
+                    className="h-full bg-accent transition-all duration-300 rounded-full"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -842,7 +842,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                 className="pt-2"
               >
                 <div className="bg-[#0b0f19] text-[#e2e8f0] p-5 rounded-2xl font-mono text-[11px] max-h-56 overflow-y-auto space-y-2 custom-scrollbar border border-slate-800 shadow-inner">
-                  {logs.length === 0 && <div className="text-slate-500 flex items-center gap-2"><span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />Worker idle. Ready to deploy scraper daemon...</div>}
+                  {logs.length === 0 && <div className="text-slate-500 flex items-center gap-2"><span className="size-1.5 rounded-full bg-accent animate-pulse" />Worker idle. Ready to deploy scraper daemon...</div>}
                   {logs.map((log) => (
                     <div key={log.id} className="flex items-start gap-3 py-0.5 border-b border-white/5 last:border-b-0 leading-relaxed">
                       <span className="text-slate-500 text-[10px] shrink-0 font-medium select-none">{log.timestamp}</span>
@@ -854,7 +854,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                             ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                             : log.level === 'error'
                             ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            : 'bg-accent/10 text-accent border border-accent/20'
                         }`}
                       >
                         {log.level}
@@ -877,7 +877,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
-                    <Users className="size-5 text-blue-500" /> Staged Leads Library
+                    <Users className="size-5 text-accent" /> Staged Leads Library
                   </h3>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">
                     {scrapedLeads.length} total
@@ -905,10 +905,10 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   <span>Emails:</span>
                   <span className="text-emerald-950 font-extrabold">{emailsCount}</span>
                 </div>
-                <div className="px-3.5 py-2 rounded-2xl bg-blue-50 text-blue-700 text-xs font-bold flex items-center gap-2 border border-blue-200">
-                  <PhoneCall className="size-3.5 text-blue-500" />
+                <div className="px-3.5 py-2 rounded-2xl bg-accent/5 text-accent text-xs font-bold flex items-center gap-2 border border-accent/20">
+                  <PhoneCall className="size-3.5 text-accent" />
                   <span>Phones:</span>
-                  <span className="text-blue-950 font-extrabold">{phonesCount}</span>
+                  <span className="text-accent-hover font-extrabold">{phonesCount}</span>
                 </div>
                 <div className="px-3.5 py-2 rounded-2xl bg-purple-50 text-purple-700 text-xs font-bold flex items-center gap-2 border border-purple-200">
                   <span className="text-purple-400">$</span>
@@ -938,7 +938,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   disabled={selectedIds.length === 0}
                   className={`px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
                     selectedIds.length > 0
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 shadow-md shadow-blue-600/10 active:scale-98'
+                      ? 'bg-primary hover:bg-primary-hover text-white border border-primary shadow-md shadow-primary/10 active:scale-98'
                       : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                   }`}
                 >
@@ -987,7 +987,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                           type="checkbox"
                           checked={selectedIds.length > 0 && selectedIds.length === filteredLeads.length}
                           onChange={handleToggleSelectAll}
-                          className="rounded border-slate-350 text-blue-650 focus:ring-blue-650 cursor-pointer size-4"
+                          className="rounded border-slate-300 accent-accent focus:ring-accent cursor-pointer size-4"
                         />
                       </th>
                       <th className="p-4 w-48">Prospect Name</th>
@@ -1008,7 +1008,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                           {scrapedLeads.length > 0 && (
                             <button
                               onClick={() => setMustHaveFilters({ email: false, phone: false, instagram: false, facebook: false, website: false })}
-                              className="text-xs font-extrabold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                              className="text-xs font-extrabold text-accent hover:text-accent-hover underline cursor-pointer"
                             >
                               Clear Mandatory Filters ({scrapedLeads.length} leads in background staging)
                             </button>
@@ -1023,7 +1023,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                             key={lead.id}
                             onClick={(e) => handleRowSelect(e, lead.id)}
                             className={`transition-colors cursor-pointer group ${
-                              isSelected ? 'bg-blue-50/20' : 'hover:bg-slate-50/50'
+                              isSelected ? 'bg-accent/5' : 'hover:bg-slate-50/50'
                             }`}
                           >
                             <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
@@ -1031,7 +1031,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={(e) => handleRowSelect(e as any, lead.id)}
-                                className="rounded border-slate-350 text-blue-650 focus:ring-blue-650 cursor-pointer size-4"
+                                className="rounded border-slate-300 accent-accent focus:ring-accent cursor-pointer size-4"
                               />
                             </td>
                             <td className="p-4 text-slate-900 font-extrabold truncate" title={lead.name}>{lead.name}</td>
@@ -1054,7 +1054,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                             <td className="p-4 truncate">
                               {lead.phone ? (
                                 <span className="text-slate-800 font-semibold flex items-center gap-1.5">
-                                  <PhoneCall className="size-3.5 text-blue-500 shrink-0" />
+                                  <PhoneCall className="size-3.5 text-accent shrink-0" />
                                   {lead.phone}
                                 </span>
                               ) : (
@@ -1092,7 +1092,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
                   exit={{ opacity: 0, y: 30, x: '-50%' }}
                   className="fixed bottom-8 left-1/2 z-[50] shadow-2xl border border-slate-800 bg-slate-950/95 backdrop-blur text-white rounded-2xl px-5 py-3.5 flex items-center gap-4"
                 >
-                  <span className="bg-blue-600 text-white font-mono px-3 py-0.5 rounded-full text-xs font-extrabold tracking-wide">
+                  <span className="bg-accent text-white font-mono px-3 py-0.5 rounded-full text-xs font-extrabold tracking-wide">
                     {selectedIds.length} Profiles Selected
                   </span>
                   
@@ -1100,7 +1100,7 @@ export const ApifyLeadGeneratorPage: React.FC<ApifyLeadGeneratorPageProps> = ({ 
 
                   <button
                     onClick={handleImportToLeadsStore}
-                    className="flex items-center gap-2 hover:text-blue-400 text-xs font-bold transition-colors cursor-pointer"
+                    className="flex items-center gap-2 hover:text-accent text-xs font-bold transition-colors cursor-pointer"
                   >
                     <UserPlus className="size-4" />
                     <span>Import to Leads Database</span>

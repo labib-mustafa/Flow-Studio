@@ -63,7 +63,7 @@ export const LeadInfoModal: React.FC<LeadInfoModalProps> = ({
       return {
         label: 'Apify Google Search Scraper',
         logoImg: '/assets/google-logos/google.png',
-        badgeBg: 'bg-blue-50 text-blue-700 border-blue-200'
+        badgeBg: 'bg-accent/5 text-accent border-accent/20'
       };
     }
     if (s.includes('linkedin')) {
@@ -163,7 +163,7 @@ export const LeadInfoModal: React.FC<LeadInfoModalProps> = ({
 
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                <Layers className="size-3 text-blue-600" /> Pipeline Stage
+                <Layers className="size-3 text-accent" /> Pipeline Stage
               </span>
               <div className="text-sm font-bold text-slate-800">
                 {lead.status || 'New'}
@@ -198,7 +198,7 @@ export const LeadInfoModal: React.FC<LeadInfoModalProps> = ({
           <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Info className="size-3.5 text-blue-400" /> Origin & Provenance Metadata
+                <Info className="size-3.5 text-accent" /> Origin & Provenance Metadata
               </span>
               <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-800 text-slate-300 border border-slate-700">
                 Verified Record
@@ -268,7 +268,7 @@ export const LeadInfoModal: React.FC<LeadInfoModalProps> = ({
                           onClose();
                           onMailClick(lead.id);
                         }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-accent hover:bg-accent/5 rounded-lg transition-colors cursor-pointer"
                         title="Send email"
                       >
                         <Send className="size-3.5" />
@@ -304,7 +304,7 @@ export const LeadInfoModal: React.FC<LeadInfoModalProps> = ({
                       href={lead.socials.startsWith('http') ? lead.socials : `https://${lead.socials}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-blue-600 hover:underline truncate block mt-0.5"
+                      className="font-semibold text-accent hover:underline truncate block mt-0.5"
                     >
                       {lead.socials}
                     </a>

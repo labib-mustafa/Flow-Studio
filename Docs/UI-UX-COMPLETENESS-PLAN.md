@@ -232,9 +232,33 @@ Notifications and the Files tab remain **unverified** — check before changing 
 
 **Migration note.** The light tokens must be handled at their call sites before deletion: `--color-border-light` (3 uses) and `--color-background-light` (1 use) need renaming; `--color-surface-light` is unused (0). The three dark tokens (`--color-background-dark`, `--color-surface-dark`, `--color-border-dark`) are unused (0) and were deleted outright per §11 of `Docs/DESIGN.md`.
 
-**Still outstanding — the 324 raw `blue-*` utilities (§1.1).** This is the largest single consistency item in the codebase and it is *not* mechanical: most are legitimate accent roles (icon tints, chips, links) that should become `accent`, but some are CTAs that should become monochrome `primary`, and `AddNewClientPage` (44 sites) needs a per-screen review rather than a blind replace. Sequence it as its own commit per screen group — Clients, Leads, Team, Files — so each is independently reviewable and revertible. `blue-500 #3b82f6`, `blue-600 #2563eb` and `blue-700 #1d4ed8` all collapse onto the single `accent` `#1978e5`.
+**Still outstanding — the raw `blue-*` utilities (§1.1).** This is the largest single consistency item in the codebase and it is *not* mechanical: most are legitimate accent roles (icon tints, chips, links) that should become `accent`, but some are CTAs that should become monochrome `primary`. Sequence it as its own commit per screen group so each is independently reviewable and revertible. `blue-500 #3b82f6`, `blue-600 #2563eb` and `blue-700 #1d4ed8` all collapse onto the single `accent` `#1978e5`.
 
-**Separate open issue.** `Docs/DESIGN.md` §2 also defines a *second* blue, `Brand Accent #3b82f6`, which is visually near-identical to `Primary`. The code reaches for it only as a raw hex, never as a token. Recommendation: collapse it into `Primary` unless a genuinely distinct accent is wanted — dumbing down to one blue removes a whole class of "which blue is this?" decisions.
+**Progress — re-measured 2026-09-26.**
+
+| Group | Sites | Status |
+|---|---|---|
+| Clients (`ClientsPage`, `ClientDetailsPage`, `AddNewClientPage`, `ClientCard`, `ProjectsPage`) | 116 | **Done** — commit `f134d62` |
+| Leads (`LeadsPage`, `LeadTable`, `LeadInfoModal`, `ImportModal`, `SentEmailsPage`, `EmailDraftsPage`, `ApifyLeadGeneratorPage`) | 108 | **Done** — 0 remaining, 7 files |
+| GlobalComponents | 89 | outstanding (21 files; `FileExplorer` 37) |
+| Projects | 46 | outstanding (10 files) |
+| Dashboard | 34 | outstanding (7 files) |
+| Team, Data, Sidebar, Reports, Settings, Calendar, BlockEditor, Billing | 57 | outstanding |
+| **Total remaining** | **334 across 55 files** | |
+
+**The migration is role-split, not a find-and-replace.** Four judgement calls recur, and each needs the surrounding JSX to answer:
+
+1. **`bg-blue-600` is ambiguous.** A `cursor-pointer` button with `hover:bg-blue-700` → `bg-primary`. A count badge or a sender avatar → `bg-accent`, because it *indicates*, not commits.
+2. **Dark surfaces break the monochrome CTA rule.** `primary` `#111111` is invisible on `bg-slate-950` toolbars, so those CTAs invert to `bg-white hover:bg-white/90 text-black` (matching the sibling buttons already there). Blue never returns to the action layer — only the count badge beside them is `bg-accent`. Now written up in `Docs/DESIGN.md` §2 as the **dark-surface exception**.
+3. **Status/identity maps keep their hue.** `bg-blue-100 text-blue-800` in a `sent / scheduled / paused / replied` ternary, and the per-source badge map in `LeadInfoModal` (Google Maps = emerald, Google Search = blue, LinkedIn = sky) are semantic data. Blue becomes `accent`; the sibling hues are left alone. Collapsing `sky` into `accent` here would make two distinct sources render identically.
+4. **Tints need explicit opacity, not a regex.** See the two bugs below.
+
+**Two bug classes this pass surfaced.**
+
+- **Invalid shade utilities render nothing.** `border-slate-350`, `text-blue-650` and `focus:ring-blue-650` in `ApifyLeadGeneratorPage` (checkbox, ×2) — same family as the `border-blue-250` / `border-emerald-250` / `border-slate-305` / `bg-blue-605` / `border-blue-650` found in the Clients pass. Tailwind has no shades between the hundreds, so these classes silently do nothing. Replaced with `border-slate-300 accent-accent focus:ring-accent`.
+- **Prefix collision inside the migration regex (self-inflicted, caught by verifying the diff).** The rule `bg-blue-50 → bg-accent/5` also matched the prefix of `bg-blue-500`, producing `bg-accent/50` and `bg-accent/50/10`. Both were repaired by hand. This is the *second* time a bulk colour regex has produced a silent visual regression in this cleanup, which is the argument for the guard in 0.6 below rather than more careful regexes.
+
+**Separate open issue — resolved 2026-09-26, by measurement rather than by decision.** `Docs/DESIGN.md` §2 also defined a *second* blue, `Brand Accent #3b82f6`, visually near-identical to `Primary`. It was never used as a token, only as raw hex. Checking where it actually survives: **10 sites, all of them data** — the moodboard shape/stroke palettes (`MoodboardItem`, `FloatingPropertyBar`), the task-status colour config (`StatusConfigPopover`), the comment-category dot (`TaskCommentsPopover`), and the Copilot content-insert default (`contentNavHandlers`). Collapsing those into `Primary` would delete user-selectable colours, so they stay and fall under the §3 "intentional flag/status map" exception.
 
 **0.3** ~~Move the purples into named tokens~~ — **Done 2026-09-26, with a deliberate deviation.** The plan above said to give `#7b68ee` a named token because "the drag/drop indicator colour is legitimate". That was the wrong call: the standing rule is that **blue is the sole accent**, so enshrining a purple token would have entrenched a fourth accent instead of removing it. All 33 uses (confined to `TaskPage`) were migrated instead:
 

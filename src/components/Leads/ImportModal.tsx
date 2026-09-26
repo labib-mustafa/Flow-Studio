@@ -287,7 +287,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
 
           {step === 2 && (
             <div className="space-y-5">
-              <div className="flex items-center gap-2.5 p-3.5 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 font-medium">
+              <div className="flex items-center gap-2.5 p-3.5 bg-accent/5 border border-accent/20 rounded-xl text-xs text-accent font-medium">
                 <AlertCircle className="size-4 shrink-0" />
                 <span>Map headers from <strong>{file?.name}</strong> to the target Fields. Matches are guessed automatically!</span>
               </div>
@@ -339,7 +339,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
                         <td className="px-4 py-2.5 font-bold text-slate-900">{row.name}</td>
                         <td className="px-4 py-2.5">{row.company}</td>
                         <td className="px-4 py-2.5">{row.email || 'N/A'}</td>
-                        <td className="px-4 py-2.5 text-blue-600">${row.estimated_value?.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-accent">${row.estimated_value?.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -88,7 +88,9 @@ Primary colors used across the application:
 >
 > **Rule of thumb:** if a user clicks it and it commits an action, it is `primary` (monochrome). If it draws attention, links, or indicates selection/focus, it is `accent` (blue).
 >
-> **⚠️ Settled in the spec, not yet true in the code.** `--color-accent` is presently the *token* blue only. The codebase still contains **324 raw Tailwind `blue-500 / blue-600 / blue-700` utilities across ~55 files** (44 of them in `AddNewClientPage` alone), plus one raw `#3b82f6`. So the app still ships **two blues in practice** — the token `#1978e5` and Tailwind's `#2563eb` / `#3b82f6`. Consolidating those onto `accent` is Phase 0/1 work. Until then: **do not add new `blue-*` utilities** — use `accent`.
+> **Dark-surface exception.** `primary` (`#111111`) has no contrast against dark chrome (the `bg-slate-950` bulk-action toolbars, the permanently-dark Copilot panel). There the action layer **inverts to white**: `bg-white hover:bg-white/90 text-black`. Blue does *not* return to the action layer on dark surfaces — `accent` stays reserved for count badges, selection and status, which is why the selection-count badge in those toolbars is `bg-accent text-white` while the buttons beside it are white.
+>
+> **⚠️ Settled in the spec, not yet true in the code.** `--color-accent` is presently the *token* blue only. The codebase still contains **334 raw Tailwind `blue-*` utilities across 55 files**, so the app still ships **two blues in practice** — the token `#1978e5` and Tailwind's `#2563eb`. Consolidating the rest onto `accent` is Phase 1 work; **Clients (116 sites) and Leads (108 sites) are migrated** as of 2026-09-26. The 10 surviving `#3b82f6` references are all **data**, not UI — the moodboard shape/stroke palettes, the task-status colour config, and category dots — and are in scope for the "intentional flag/status map" exception. Until the remaining groups land: **do not add new `blue-*` utilities** — use `accent`.
 
 ---
 

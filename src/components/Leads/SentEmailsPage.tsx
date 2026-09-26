@@ -93,7 +93,7 @@ export const SentEmailsPage: React.FC<SentEmailsPageProps> = ({ onBack }) => {
                 <div key={email.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm shrink-0 border border-blue-100">
+                      <div className="size-10 rounded-full bg-accent/5 flex items-center justify-center text-accent font-bold text-sm shrink-0 border border-accent/20">
                         {lead?.name?.charAt(0) || '?'}
                       </div>
                       <div className="flex flex-col min-w-0">

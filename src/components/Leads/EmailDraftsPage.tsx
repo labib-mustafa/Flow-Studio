@@ -301,7 +301,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                     </button>
                     <button 
                       onClick={handleCreateNew}
-                      className="bg-[#1069ff] hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md"
+                      className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md"
                     >
                       <Plus className="w-4 h-4" />
                       New Draft
@@ -320,7 +320,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 z-10 bg-white/95 backdrop-blur-sm px-2 py-1.5 rounded-xl shadow-sm border border-slate-100">
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleEdit(tpl); }}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors outline-none"
+                            className="p-1.5 text-slate-400 hover:text-accent hover:bg-accent/5 rounded-lg transition-colors outline-none"
                             title="Edit Template"
                           >
                             <Edit2 className="size-4" />
@@ -452,7 +452,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                         <div className="flex flex-col gap-12">
                           {allMessages.map(msg => (
                             <div key={msg.id} className="flex items-start gap-5 group">
-                              <div className={`shrink-0 size-10 rounded-full flex items-center justify-center font-bold text-[15px] shadow-sm ${msg.type === 'sent' ? 'bg-slate-100 text-slate-600' : 'bg-blue-600 text-white'}`}>
+                              <div className={`shrink-0 size-10 rounded-full flex items-center justify-center font-bold text-[15px] shadow-sm ${msg.type === 'sent' ? 'bg-slate-100 text-slate-600' : 'bg-accent text-white'}`}>
                                 {msg.type === 'sent' ? 'Me' : thread.lead?.name.charAt(0)}
                               </div>
                               <div className="flex-1 flex flex-col min-w-0 pt-1">
@@ -511,12 +511,12 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                               <div className="flex items-center gap-4">
                                 <div className="flex items-center shadow-sm rounded-full">
                                   <button 
-                                    className="bg-[#1069ff] hover:bg-blue-700 text-white text-[13px] font-semibold px-4 py-2 rounded-l-full transition-colors h-[34px] flex items-center tracking-wide"
+                                    className="bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold px-4 py-2 rounded-l-full transition-colors h-[34px] flex items-center tracking-wide"
                                   >
                                     Send
                                   </button>
-                                  <div className="w-[1px] h-[34px] bg-blue-700/50" />
-                                  <button className="bg-[#1069ff] hover:bg-blue-700 text-white px-2 rounded-r-full transition-colors h-[34px] flex items-center justify-center">
+                                  <div className="w-[1px] h-[34px] bg-white/20" />
+                                  <button className="bg-primary hover:bg-primary-hover text-white px-2 rounded-r-full transition-colors h-[34px] flex items-center justify-center">
                                     <ChevronDown className="size-3.5" />
                                   </button>
                                 </div>
@@ -638,7 +638,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                                             <span className="text-slate-500">Step {item.stepIndex} Follow-up:</span>
                                             <span className={`font-bold uppercase tracking-wider text-[9px] px-1.5 py-0.5 rounded-full ${
                                               item.status === 'sent' ? 'bg-green-100 text-green-800' :
-                                              item.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                              item.status === 'scheduled' ? 'bg-accent/10 text-accent' :
                                               item.status === 'paused' ? 'bg-amber-100 text-amber-800' :
                                               item.status === 'replied_stopped' ? 'bg-purple-100 text-purple-800' :
                                               'bg-slate-100 text-slate-800'
@@ -676,7 +676,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                   await processQueue();
                   toast.success('Queue Processed', 'Due scheduled emails processed successfully.');
                 }}
-                className="bg-[#1069ff] hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
               >
                 <Clock className="w-4 h-4" />
                 Process Due Emails Now
@@ -744,7 +744,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                                         toast.error('Send Failed', `Failed to send: ${res.error}`);
                                       }
                                     }}
-                                    className="px-2 py-1 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg transition-all"
+                                    className="px-2 py-1 text-[11px] font-bold text-accent bg-accent/5 border border-accent/20 hover:bg-accent/10 rounded-lg transition-all"
                                   >
                                     Send Now
                                   </button>
@@ -902,7 +902,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                 </div>
                 <button 
                   onClick={() => setSettingsForm({ ...settingsForm, useTeamEmail: !settingsForm.useTeamEmail })}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${settingsForm.useTeamEmail ? 'bg-[#1069ff]' : 'bg-slate-200'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${settingsForm.useTeamEmail ? 'bg-accent' : 'bg-slate-200'}`}
                   role="switch"
                   aria-checked={settingsForm.useTeamEmail}
                 >
@@ -944,7 +944,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
                         </button>
                         
                         <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
-                          <HelpCircle className="w-5 h-5 text-blue-400" />
+                          <HelpCircle className="w-5 h-5 text-accent" />
                           <h3 className="text-base font-bold text-white tracking-tight">Connection Guide</h3>
                         </div>
 
@@ -1008,7 +1008,7 @@ export const EmailDraftsPage: React.FC<EmailDraftsPageProps> = ({ onBack }) => {
               </div>
               <button 
                 onClick={() => setSettingsForm({ ...settingsForm, syncAllEmails: !settingsForm.syncAllEmails })}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${settingsForm.syncAllEmails ? 'bg-[#1069ff]' : 'bg-slate-200'}`}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${settingsForm.syncAllEmails ? 'bg-accent' : 'bg-slate-200'}`}
                 role="switch"
                 aria-checked={settingsForm.syncAllEmails}
               >

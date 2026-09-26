@@ -179,7 +179,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
       {selectedLeadIds && selectedLeadIds.length > 0 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in shadow-2xl border border-white/10 bg-slate-950 backdrop-blur-md text-white rounded-2xl px-4 py-2.5 flex items-center gap-3">
           {/* Selected count */}
-          <span className="bg-blue-600 text-white font-mono px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0">
+          <span className="bg-accent text-white font-mono px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0">
             {selectedLeadIds.length} Selected
           </span>
 
@@ -217,7 +217,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ onNavigate }) => {
 
           <button
             onClick={() => setIsBulkMailModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
+            className="bg-white hover:bg-white/90 text-black font-medium px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
           >
             <Mail className="w-3.5 h-3.5" />
             Bulk Mail
